@@ -71,6 +71,7 @@ import {
     computePaymentStatus,
     getDaysUntilRenewal,
 } from "../data/paymentsData";
+import { BACKEND_ORIGIN } from "../config/backend";
 
 
 
@@ -959,19 +960,28 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
 // ─── File URL helper ─────────────────────────────────────────────────────────
 // Resolve the backend origin dynamically — mirrors the logic in axios.ts.
 const getBackendOrigin = (): string => {
-    const envUrl = (import.meta as { env?: Record<string, string> }).env?.VITE_BACKEND_URL;
-    if (envUrl) {
-        // Strip any trailing /api path so we get just the origin.
-        try { return new URL(envUrl).origin; } catch { return envUrl; }
-    }
-    // When using the IIS reverse-proxy (/api) the frontend and backend share
-    // the same origin, so window.location.origin is the correct base for files.
-    return window.location.origin;
+    // Hard-coded backend origin for file URLs
+    return BACKEND_ORIGIN;
 };
 
 const getFileUrl = (f?: string | null): string => {
     if (!f) return "";
-    if (f.startsWith("http") || f.startsWith("data:")) return f;
+    if (f.startsWith("data:")) return f;
+
+    // If backend saved/returned an absolute URL (e.g. http://10.100.104.157/uploads/...),
+    // rewrite it to our hard-coded base (localhost:3000) so all images start the same way.
+    if (f.startsWith("http://") || f.startsWith("https://")) {
+        try {
+            const u = new URL(f);
+            const pathname = u.pathname.replace(/\\/g, "/");
+            const fileBase = getBackendOrigin();
+            if (pathname.startsWith("/api/uploads/")) return `${fileBase}${pathname.replace(/^\/api/, "")}`;
+            if (pathname.startsWith("/uploads/")) return `${fileBase}${pathname}`;
+            return f;
+        } catch {
+            // If parsing fails, fall through to relative handling below.
+        }
+    }
 
     const fileBase = getBackendOrigin();
     const normalized = f.replace(/\\/g, "/");

@@ -1,24 +1,10 @@
 import axios from 'axios';
-
-// Get the backend URL dynamically based on environment
-const getBackendURL = () => {
-    // Check for custom backend URL in environment variables (set via import.meta.env)
-    const backendUrlFromEnv = import.meta.env.VITE_BACKEND_URL;
-
-    if (backendUrlFromEnv) {
-        console.log('Using backend URL from env:', backendUrlFromEnv);
-        return backendUrlFromEnv;
-    }
-
-    // Fallback: use IIS reverse proxy
-    const backendUrl = `/api`;
-    console.log('Using default backend URL:', backendUrl);
-    return backendUrl;
-};
+import { BACKEND_API_BASE } from "../config/backend";
 
 // Create Axios instance
 const api = axios.create({
-    baseURL: getBackendURL(),
+    // Hard-coded backend base URL
+    baseURL: BACKEND_API_BASE,
     headers: {
         'Content-Type': 'application/json',
     },

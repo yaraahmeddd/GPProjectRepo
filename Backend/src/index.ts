@@ -32,6 +32,7 @@ import { memberTeamRouter } from './routes/MemberTeamRoutes';
 import participantRegistrationRoutes from './routes/participantRegistration';
 import AttendanceRoutes from './routes/AttendanceRoutes';
 import PaymobRoutes from './routes/PaymobRoutes';
+import { initializeFolderStructure } from './utils/localFileStorage';
 
 // Load environment variables
 dotenv.config();
@@ -201,6 +202,10 @@ AppDataSource.initialize()
     await ensureMediaPostsTable();
     await ensureAuditLogsTable();
     console.log('✅ media_posts table is ready');
+
+    // Initialize upload folder structure
+    await initializeFolderStructure();
+    console.log('✅ Upload folder structure initialized');
 
     // Initialize default membership plans
     const { initializeDefaultPlans } = await import('./utils/initializePlans');

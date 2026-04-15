@@ -130,26 +130,26 @@ router.get('/pending', authenticate, authorizeViewTeamMembers, controller.getPen
 
 /**
  * APPROVE - Approve a pending team member
- * POST /api/team-members/:member_id/approve
+ * POST /api/team-members/:team_member_id/approve
  */
-router.post('/:member_id/approve', authenticate, authorizeViewTeamMembers, controller.approveTeamMember);
+router.post('/:team_member_id/approve', authenticate, authorizeViewTeamMembers, controller.approveTeamMember);
 
 /**
  * READ - Get single team member by ID
- * GET /api/team-members/:member_id
+ * GET /api/team-members/:team_member_id
  */
-router.get('/:member_id', authenticate, authorizeViewTeamMembers, controller.getTeamMember);
+router.get('/:team_member_id', authenticate, authorizeViewTeamMembers, controller.getTeamMember);
 
 /**
  * ASSIGN SPORTS - Assign sports to a team member
- * POST /api/team-members/:member_id/sports
+ * POST /api/team-members/:team_member_id/sports
  * Body: { sportIds: number[] }
  */
-router.post('/:member_id/sports', authenticate, authorizeViewTeamMembers, controller.assignSportsToTeamMember);
+router.post('/:team_member_id/sports', authenticate, authorizeViewTeamMembers, controller.assignSportsToTeamMember);
 
 /**
  * UPDATE - Update team member with sports
- * PUT /api/team-members/:member_id
+ * PUT /api/team-members/:team_member_id
  * Body: {
  *   first_name_en?: string,
  *   first_name_ar?: string,
@@ -163,20 +163,20 @@ router.post('/:member_id/sports', authenticate, authorizeViewTeamMembers, contro
  *   sport_ids?: number[] (array of sport IDs - replaces existing)
  * }
  */
-router.put('/:member_id', authenticate, authorizeViewTeamMembers, controller.updateTeamMember);
+router.put('/:team_member_id', authenticate, authorizeViewTeamMembers, controller.updateTeamMember);
 
 /**
  * DELETE (Soft) - Deactivate team member account
- * PUT /api/team-members/:member_id/deactivate
+ * PUT /api/team-members/:team_member_id/deactivate
  * Deactivates the associated account without deleting data
  */
-router.put('/:member_id/deactivate', authenticate, authorizeViewTeamMembers, controller.deactivateTeamMember);
+router.put('/:team_member_id/deactivate', authenticate, authorizeViewTeamMembers, controller.deactivateTeamMember);
 
 /**
  * DELETE (Hard) - Permanently delete team member
- * DELETE /api/team-members/:member_id
+ * DELETE /api/team-members/:team_member_id
  * Permanently deletes team member and associated account
  */
-router.delete('/:member_id', authenticate, authorizeViewTeamMembers, controller.deleteTeamMember);
+router.delete('/:team_member_id', authenticate, authorizeViewTeamMembers, controller.deleteTeamMember);
 
 export default router;

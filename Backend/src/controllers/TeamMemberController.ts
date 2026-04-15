@@ -171,13 +171,13 @@ export class TeamMemberController {
 
     getStatus = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
-            if (!member_id) {
-                res.status(400).json({ error: 'member_id is required' });
+            const { team_member_id } = req.params as Record<string, string>;
+            if (!team_member_id) {
+                res.status(400).json({ error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
                 res.status(400).json({ error: 'member_id must be a valid number' });
                 return;
@@ -194,13 +194,13 @@ export class TeamMemberController {
 
     getDetails = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            const { team_member_id } = req.params as Record<string, string>;
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
                 res.status(400).json({ success: false, error: 'member_id must be a valid number' });
                 return;
@@ -408,24 +408,24 @@ export class TeamMemberController {
 
     /**
      * READ - Get single team member by ID
-     * GET /api/team-members/:member_id
+     * GET /api/team-members/:team_member_id
      */
     getTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
+            const { team_member_id } = req.params as Record<string, string>;
 
-            console.log('GET /team-members/:member_id called with:', { member_id });
+            console.log('GET /team-members/:team_member_id called with:', { team_member_id });
 
-            if (!member_id) {
-                console.warn('Missing member_id parameter');
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            if (!team_member_id) {
+                console.warn('Missing team_member_id parameter');
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
-                console.warn('Invalid member_id (NaN):', member_id);
-                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                console.warn('Invalid team_member_id (NaN):', team_member_id);
+                res.status(400).json({ success: false, error: 'team_member_id must be a valid number' });
                 return;
             }
 
@@ -468,18 +468,18 @@ export class TeamMemberController {
 
     /**
      * UPDATE - Update team member with sports
-     * PUT /api/team-members/:member_id
+     * PUT /api/team-members/:team_member_id
      */
     updateTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
+            const { team_member_id } = req.params as Record<string, string>;
 
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
                 res.status(400).json({ success: false, error: 'member_id must be a valid number' });
                 return;
@@ -506,20 +506,20 @@ export class TeamMemberController {
 
     /**
      * DELETE (Soft) - Deactivate team member account
-     * PUT /api/team-members/:member_id/deactivate
+     * PUT /api/team-members/:team_member_id/deactivate
      */
     deactivateTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
+            const { team_member_id } = req.params as Record<string, string>;
 
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
-                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                res.status(400).json({ success: false, error: 'team_member_id must be a valid number' });
                 return;
             }
 
@@ -534,20 +534,20 @@ export class TeamMemberController {
 
     /**
      * DELETE (Hard) - Permanently delete team member account
-     * DELETE /api/team-members/:member_id
+     * DELETE /api/team-members/:team_member_id
      */
     deleteTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
+            const { team_member_id } = req.params as Record<string, string>;
 
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
-                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                res.status(400).json({ success: false, error: 'team_member_id must be a valid number' });
                 return;
             }
 
@@ -576,19 +576,19 @@ export class TeamMemberController {
     };
 
     /**
-     * POST /api/team-members/:member_id/approve
+     * POST /api/team-members/:team_member_id/approve
      * Approves a pending team member
      */
     approveTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            const { team_member_id } = req.params as Record<string, string>;
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
-                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                res.status(400).json({ success: false, error: 'team_member_id must be a valid number' });
                 return;
             }
             const result = await this.service.approveTeamMember(memberId);
@@ -602,16 +602,16 @@ export class TeamMemberController {
 
     /**
      * Assign sports to a team member
-     * POST /api/team-members/:member_id/sports
+     * POST /api/team-members/:team_member_id/sports
      * Body: { sportIds: number[] }
      */
     assignSportsToTeamMember = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { member_id } = req.params as Record<string, string>;
+            const { team_member_id } = req.params as Record<string, string>;
             const { sportIds } = req.body as Record<string, unknown>;
 
-            if (!member_id) {
-                res.status(400).json({ success: false, error: 'member_id is required' });
+            if (!team_member_id) {
+                res.status(400).json({ success: false, error: 'team_member_id is required' });
                 return;
             }
 
@@ -620,9 +620,9 @@ export class TeamMemberController {
                 return;
             }
 
-            const memberId = Number(member_id);
+            const memberId = Number(team_member_id);
             if (isNaN(memberId)) {
-                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                res.status(400).json({ success: false, error: 'team_member_id must be a valid number' });
                 return;
             }
 

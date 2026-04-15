@@ -195,7 +195,22 @@ export default function RegistrationManagementPage() {
 
     const getFileUrl = (filename: string | undefined) => {
         if (!filename) return "/placeholder-image.png";
-        if (filename.startsWith("http") || filename.startsWith("data:")) return filename;
+        if (filename.startsWith("data:")) return filename;
+
+        // Rewrite absolute /uploads URLs to localhost so everything starts with:
+        // http://localhost:3000/uploads/...
+        if (filename.startsWith("http://") || filename.startsWith("https://")) {
+            try {
+                const u = new URL(filename);
+                const pathname = u.pathname.replace(/\\/g, "/");
+                const fileBase = "http://localhost:3000";
+                if (pathname.startsWith("/api/uploads/")) return `${fileBase}${pathname.replace(/^\/api/, "")}`;
+                if (pathname.startsWith("/uploads/")) return `${fileBase}${pathname}`;
+                return filename;
+            } catch {
+                // Fall through to relative handling
+            }
+        }
 
         const fileBase = "http://localhost:3000";
         const normalized = filename.replace(/\\/g, "/");
@@ -530,7 +545,7 @@ export default function RegistrationManagementPage() {
                                 <div className="w-32 h-40 border border-black flex items-center justify-center bg-gray-50 overflow-hidden">
                                     {selectedRecord?.photo ? (
                                         <img
-                                            src={selectedRecord.photo.startsWith('http') ? selectedRecord.photo : getFileUrl(selectedRecord.photo)}
+                                            src={getFileUrl(selectedRecord.photo)}
                                             alt="Member"
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
