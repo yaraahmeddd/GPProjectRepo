@@ -276,18 +276,13 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
 
         try {
             setFieldsLoading(true);
-            const res = await api.get("/fields", {
-                params: {
-                    sport_id: selectedSportId,
-                    status: "active",
-                },
-            });
+            // Only show fields that are explicitly available for booking
+            const res = await api.get(`/members/bookings/fields/${selectedSportId}`);
             const payload = (res.data?.data ?? res.data) as ApiField[];
             const fieldsRes = Array.isArray(payload) ? payload : [];
-            const availableFields = fieldsRes.filter(f => !f.status || String(f.status).toLowerCase() === "active");
-            setFields(availableFields);
-            if (availableFields.length > 0) {
-                setSelectedFieldId(String(availableFields[0].id));
+            setFields(fieldsRes);
+            if (fieldsRes.length > 0) {
+                setSelectedFieldId(String(fieldsRes[0].id));
             } else {
                 setSelectedFieldId("");
             }

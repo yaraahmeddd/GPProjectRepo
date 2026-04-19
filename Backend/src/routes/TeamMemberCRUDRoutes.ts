@@ -179,4 +179,10 @@ router.put('/:team_member_id/deactivate', authenticate, authorizeViewTeamMembers
  */
 router.delete('/:team_member_id', authenticate, authorizeViewTeamMembers, controller.deleteTeamMember);
 
+/**
+ * GET - Get team member bookings
+ * GET /api/team-members/:member_id/bookings
+ */
+router.get('/:member_id/bookings', authenticate, controller.getTeamMemberBookings);
+
 export default router;

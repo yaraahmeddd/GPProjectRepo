@@ -259,6 +259,7 @@ export class FieldService {
       where: {
         sport_id: sportId,
         status: 'active',
+        is_available_for_booking: true,
       },
       relations: ['sport', 'branch', 'operating_hours'],
     });

@@ -194,13 +194,13 @@ export class TeamMemberController {
 
     getDetails = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { team_member_id } = req.params as Record<string, string>;
-            if (!team_member_id) {
-                res.status(400).json({ success: false, error: 'team_member_id is required' });
+            const { member_id } = req.params as Record<string, string>;
+            if (!member_id) {
+                res.status(400).json({ success: false, error: 'member_id is required' });
                 return;
             }
 
-            const memberId = Number(team_member_id);
+            const memberId = Number(member_id);
             if (isNaN(memberId)) {
                 res.status(400).json({ success: false, error: 'member_id must be a valid number' });
                 return;
@@ -642,6 +642,33 @@ export class TeamMemberController {
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error('Error in assignSportsToTeamMember:', error);
+            res.status(400).json({ success: false, error: errorMessage });
+        }
+    };
+
+    /**
+     * Get team member bookings
+     * GET /api/team-members/:member_id/bookings
+     */
+    getTeamMemberBookings = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { member_id } = req.params as Record<string, string>;
+            if (!member_id) {
+                res.status(400).json({ success: false, error: 'member_id is required' });
+                return;
+            }
+
+            const memberId = Number(member_id);
+            if (isNaN(memberId)) {
+                res.status(400).json({ success: false, error: 'member_id must be a valid number' });
+                return;
+            }
+
+            const bookings = await this.service.getTeamMemberBookings(memberId);
+            res.status(200).json({ success: true, data: bookings });
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Error in getTeamMemberBookings:', error);
             res.status(400).json({ success: false, error: errorMessage });
         }
     };

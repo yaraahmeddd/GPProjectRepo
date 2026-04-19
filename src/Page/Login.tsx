@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-const HUCLogo = "/assets/HUC logo.jpeg";
+const HUCLogo = "/assets/HUC_logo.jpeg";
 const HUCPictureFull = "/assets/HUC Picture Full.jpg";
 const HUCFootball = "/assets/HUC football.jpg";
 import { AuthService } from '../services/authService';

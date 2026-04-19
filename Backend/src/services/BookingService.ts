@@ -188,6 +188,7 @@ export class BookingService {
     if (!field) {
       throw new Error("Field not found");
     }
+    this.assertFieldBookable(field);
 
     // Check for all conflicts (bookings and training schedules)
     const conflictCheck = await this.checkAllConflicts(
@@ -463,6 +464,14 @@ export class BookingService {
     return crypto.randomBytes(32).toString("hex");
   }
 
+  private assertFieldBookable(field: Field): void {
+    // Server-side safety net: prevent booking / slot browsing for fields that are not bookable.
+    if (field.status !== "active" || !field.is_available_for_booking) {
+      // Keep "not available" in message because controllers map it to 400s.
+      throw new Error("Field is not available for booking");
+    }
+  }
+
   /**
    * Get operating hours for a field
    */
@@ -534,6 +543,7 @@ export class BookingService {
     if (!field) {
       throw new Error("Field not found");
     }
+    this.assertFieldBookable(field);
 
     // Parse date and get day of week
     const targetDate = new Date(date);
@@ -726,6 +736,7 @@ export class BookingService {
     if (!field) {
       throw new Error("Field not found");
     }
+    this.assertFieldBookable(field);
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -815,4 +826,3 @@ export class BookingService {
     return query.getMany();
   }
 }
-

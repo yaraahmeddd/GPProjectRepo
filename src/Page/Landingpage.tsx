@@ -13,7 +13,7 @@ import Clubs from "../Component/LandingPageComponents/Clubs";
 import SportDetailedPG from "./SportDetailedPG";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCoverflow } from 'swiper/modules';
-const HUCLogo = "/assets/HUC logo.jpeg";
+const HUCLogo = "/assets/HUC_logo.jpeg";
 const CapuniLogo = "/assets/capuni.png";
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -375,8 +375,7 @@ const App = () => {
                       يعد نادي جامعة العاصمة منظمة للأكاديميات الرياضية، وكل منظمة تتطور مع أحدث المعايير الرياضية والتدريبية. نحن نستهدف إلى توفير المزيد من الفرص والتنافس والتطوير للأعضاء من جميع الأعمار.
                     </p>
                     <button onClick={() => setActiveTab("Sports")} className="border-2 border-[#f8941c] text-[#f8941c] hover:bg-[#f8941c] hover:text-white px-8 py-3 rounded-full transition-all duration-300 font-bold text-lg">
-                      اشترك الآن
-                    </button>
+                      اكتشف الرياضات                    </button>
                   </div>
                   <div className="flex justify-center">
                     <div className="grid grid-cols-6 gap-6 max-w-md">
@@ -432,32 +431,6 @@ const App = () => {
             </section>
 
             {/* Testimonials */}
-            <section className="py-26 bg-gray-50 relative overflow-hidden">
-              <div className="container mx-auto px-6 relative z-10">
-                <SectionTitle
-                  title="آراء عملائنا"
-                  subtitle="شوف تجارب الأعضاء الحقيقية معانا وازاي النادي فرق في حياتهم."
-                  isDark={false}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {testimonials.map((t, index) => (
-                    <div key={index} className="bg-[#1a2b4d] rounded-[2rem] p-8 hover:-translate-y-2 transition-all duration-300 shadow-lg hover:shadow-2xl border border-white/10">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-14 h-14 bg-gradient-to-br from-[#2596be] to-[#0e1c38] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md border border-white/10">
-                          {t.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg text-white">{t.name}</h3>
-                          <span className="text-[#f8941c] text-xs font-bold">عضو مميز</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-300 mb-6 leading-relaxed font-normal">"{t.text}"</p>
-                      <div className="flex gap-1 border-t border-white/10 pt-4">{renderStars(t.rating)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
 
             {/* Stats */}
             {/* <div className="bg-[#0e1c38] text-white py-10 border-b border-white/10">

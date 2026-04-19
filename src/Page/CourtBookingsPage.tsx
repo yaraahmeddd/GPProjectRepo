@@ -41,8 +41,6 @@ import {
     RefreshCw,
     Link2,
     Check,
-    Mail,
-    MessageCircle,
 } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import type { Booking, BookingStatus } from "../data/bookingsData";
@@ -980,88 +978,68 @@ function ShareBookingDialog({
 }) {
     const [copied, setCopied] = useState(false);
 
-    const copyToClipboard = () => {
-        void navigator.clipboard.writeText(shareUrl).then(() => {
+    const copyToClipboard = async () => {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(shareUrl);
+            } else {
+                // Fallback for non-https environment or unsupported clipboard API
+                const textArea = document.createElement("textarea");
+                textArea.value = shareUrl;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand("copy");
+                } catch (err) {
+                    console.error("Fallback copy failed", err);
+                }
+                textArea.remove();
+            }
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        });
+        } catch (error) {
+            console.error("Copy failed", error);
+        }
     };
 
-    const shareButtons = [
-        {
-            label: "واتساب",
-            icon: <MessageCircle className="h-5 w-5" />,
-            color: "text-green-600 border-green-200 hover:bg-green-50",
-            action: () => window.open(`https://wa.me/?text=${encodeURIComponent("رابط الحجز ")}${encodeURIComponent(shareUrl)}`, "_blank"),
-        },
-        {
-            label: copied ? "تم ✓" : "نسخ الرابط",
-            icon: copied ? <Check className="h-5 w-5" /> : <Link2 className="h-5 w-5" />,
-            color: copied ? "text-emerald-600 border-emerald-300 hover:bg-emerald-50" : "text-slate-600 border-slate-200 hover:bg-slate-50",
-            action: copyToClipboard,
-        },
-        {
-            label: "تويتر",
-            icon: <span className="text-base font-black leading-none">𝕏</span>,
-            color: "text-slate-800 border-slate-200 hover:bg-slate-50",
-            action: () => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent("رابط الحجز")}`, "_blank"),
-        },
-        {
-            label: "بريد",
-            icon: <Mail className="h-5 w-5" />,
-            color: "text-blue-600 border-blue-200 hover:bg-blue-50",
-            action: () => window.open(`mailto:?subject=${encodeURIComponent("رابط الحجز")}&body=${encodeURIComponent(shareUrl)}`, "_blank"),
-        },
-    ];
+    const shortUrl = shareUrl ? shareUrl.replace(window.location.origin, '') : '';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-[800px] max-h-[90vh] overflow-y-auto" dir="rtl">
+            <DialogContent className="w-[95vw] max-w-[400px] max-h-[90vh] overflow-y-auto" dir="rtl">
                 <DialogHeader className="text-center items-center pb-1 shrink-0">
                     <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100">
                         <Check className="h-6 w-6 text-emerald-600" />
                     </div>
                     <DialogTitle className="text-base">تمت الإضافة بنجاح ✓</DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground">
-                        شارك رابط الدعوة مع اللاعبين
+                        شارك رابط الدعوة التوضيحي مع اللاعبين
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Share buttons */}
-                <div className="flex justify-center gap-5 py-3">
-                    {shareButtons.map((btn) => (
-                        <button
-                            key={btn.label}
-                            type="button"
-                            onClick={btn.action}
-                            className={`flex flex-col items-center gap-1.5 group`}
-                        >
-                            <span className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors ${btn.color}`}>
-                                {btn.icon}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">
-                                {btn.label}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-
                 {/* Link box */}
                 {shareUrl && (
-                    <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2.5 mb-2">
-                        <p className="flex-1 truncate text-[11px] text-muted-foreground font-mono" title={shareUrl} dir="ltr">
-                            {shareUrl}
-                        </p>
-                        <button
+                    <div className="flex flex-col gap-3 py-4">
+                        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+                            <p className="flex-1 truncate text-sm text-foreground font-mono font-medium text-left" title={shareUrl} dir="ltr">
+                                {shortUrl.length > 25 ? `...${shortUrl.slice(-25)}` : shortUrl}
+                            </p>
+                        </div>
+                        <Button
                             type="button"
                             onClick={copyToClipboard}
-                            className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${copied
-                                ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                            className={`w-full rounded-xl py-6 text-base font-bold transition-all gap-2 ${copied
+                                ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                                : ""
                                 }`}
                         >
-                            {copied ? "تم ✓" : "نسخ"}
-                        </button>
+                            {copied ? <Check className="h-5 w-5" /> : <Link2 className="h-5 w-5" />}
+                            {copied ? "تم النسخ بنجاح" : "نسخ الرابط"}
+                        </Button>
                     </div>
                 )}
 
@@ -1307,8 +1285,7 @@ export default function CourtBookingsPage() {
             setAddDialogOpen(false);
             setEditBooking(null);
             // Build the correct invite URL pointing to InvitationPage (/invite/:token)
-            const shareUrl = shareToken ? `${window.location.origin}/invite/${shareToken}` : null;
-            if (shareUrl) {
+            const shareUrl = shareToken ? `${window.location.origin}/bookings/share/${shareToken}` : null;            if (shareUrl) {
                 setPendingShareUrl(shareUrl);
                 setShareDialogOpen(true);
             } else {

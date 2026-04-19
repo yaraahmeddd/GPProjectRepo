@@ -4,7 +4,7 @@ import { CalendarDays, Clock, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-const hucLogo = "/assets/HUC logo.jpeg";
+const hucLogo = "/assets/HUC_logo.jpeg";
 
 const WEEKDAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const MONTHS_AR = [

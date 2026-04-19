@@ -16,7 +16,7 @@ import {
   Image as ImageIcon,
   Upload,
 } from "lucide-react";
-const hucLogo = "/assets/HUC logo.jpeg";
+const hucLogo = "/assets/HUC_logo.jpeg";
 const capuniLogo = "/assets/capuni.png";
 
 interface PublicBookingDetails {

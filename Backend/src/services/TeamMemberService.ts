@@ -799,5 +799,34 @@ export class TeamMemberService {
             message: 'Sports assigned successfully'
         };
     }
+
+    async getTeamMemberBookings(teamMemberId: number) {
+        try {
+            // Find the team member
+            const teamMember = await this.teamMemberRepo.findOne({
+                where: { id: teamMemberId }
+            });
+
+            if (!teamMember) {
+                throw new Error(`Team member with ID ${teamMemberId} not found`);
+            }
+
+            // Import Booking entity
+            const Booking = (await import('../entities/Booking')).Booking;
+            const bookingRepository = AppDataSource.getRepository(Booking);
+
+            // Get all bookings for this team member
+            const bookings = await bookingRepository.find({
+                where: { team_member_id: teamMemberId },
+                relations: ['sport'],
+                order: { start_time: 'ASC' }
+            });
+
+            return bookings;
+        } catch (error) {
+            console.error(`Error getting bookings for team member ${teamMemberId}:`, error);
+            throw error;
+        }
+    }
 }
 

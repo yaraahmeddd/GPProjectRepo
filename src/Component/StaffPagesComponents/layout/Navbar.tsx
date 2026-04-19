@@ -4,7 +4,7 @@ import { ROLE_LABELS } from "../../../types/auth";
 import { LogOut, User } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { resolveFileUrl } from "../../../utils/fileUrl";
-const hucLogo = "/assets/HUC logo.jpeg";
+const hucLogo = "/assets/HUC_logo.jpeg";
 
 // ─── Logout Modal ─────────────────────────────────────────────
 interface LogoutModalProps {

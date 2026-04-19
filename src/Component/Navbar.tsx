@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Menu, X, User } from "lucide-react";
-const HUCLogo = "/assets/HUC logo.jpeg";
+const HUCLogo = "/assets/HUC_logo.jpeg";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface NavbarProps {
