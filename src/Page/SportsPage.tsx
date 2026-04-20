@@ -714,7 +714,7 @@ export default function SportsPage() {
     <div className="h-full overflow-y-auto p-6 pb-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">إدارة الرياضات</h1>
-        <RoleGuard privilege="sports.create">
+        <RoleGuard privilege="CREATE_SPORT">
           <Button onClick={openAdd} className="gap-2">
             <Plus className="h-4 w-4" />
             إضافة رياضة
@@ -791,12 +791,12 @@ export default function SportsPage() {
                     <TableCell className="font-poppins">{sport.price}</TableCell>
                     <TableCell className="whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <RoleGuard privilege="sports.edit">
+                        <RoleGuard privilege="UPDATE_SPORT">
                           <Button size="sm" variant="outline" onClick={() => void openEdit(sport)} className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground">
                             <Pencil className="h-3 w-3" /> تعديل
                           </Button>
                         </RoleGuard>
-                        <RoleGuard privilege="sports.delete">
+                        <RoleGuard privilege="DELETE_SPORT">
                           <Button size="sm" variant="outline" onClick={() => setDeleteId(sport.id)} className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground">
                             <Trash2 className="h-3 w-3" /> حذف
                           </Button>

@@ -3,6 +3,7 @@ import api from '../api/axios';
 import './staffDashboard.css';
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Plus, Image as ImageIcon, Video, Calendar, Trash2, Edit3, X, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 
 // ========== TYPE DEFINITIONS ==========
 interface MediaPost {
@@ -813,6 +814,7 @@ const MediaGallery: React.FC = () => {
                     <MediaTabs activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
                     {/* Add Media Button */}
+                    <RoleGuard privilege="media.create">
                     <button
                         onClick={() => { setSelectedPost(null); setIsCreateModalOpen(true); }}
                         className="group flex items-center gap-3 px-8 py-3.5 bg-[var(--huc-accent-orange)] hover:opacity-90 text-white rounded-2xl font-black shadow-xl shadow-[var(--huc-accent-orange)]/20 transition-all hover:-translate-y-1 active:scale-95 whitespace-nowrap"
@@ -820,6 +822,7 @@ const MediaGallery: React.FC = () => {
                         <Plus size={22} className="group-hover:rotate-90 transition-transform duration-300" />
                         <span>إضافة وسائط جديدة</span>
                     </button>
+                    </RoleGuard>
                 </div>
 
                 {loading ? (
@@ -844,18 +847,22 @@ const MediaGallery: React.FC = () => {
                                             <AlbumCard post={post} onClick={() => openPost(post)} />
                                             {/* Action Buttons Overlay */}
                                             <div className="absolute top-4 left-4 flex flex-col gap-2 translate-x-4 opacity-0 group-hover/card:translate-x-0 group-hover/card:opacity-100 transition-all duration-300 z-10">
+                                                <RoleGuard privilege="media.edit">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setSelectedPost(post); setIsCreateModalOpen(true); }}
                                                     className="w-10 h-10 bg-white/95 backdrop-blur-md rounded-xl shadow-xl text-[var(--huc-accent-blue)] hover:bg-[var(--huc-accent-blue)] hover:text-white flex items-center justify-center transition-all"
                                                 >
                                                     <Edit3 size={18} />
                                                 </button>
+                                                </RoleGuard>
+                                                <RoleGuard privilege="media.delete">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDelete(post.id); }}
                                                     className="w-10 h-10 bg-white/95 backdrop-blur-md rounded-xl shadow-xl text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
+                                                </RoleGuard>
                                             </div>
                                         </div>
                                     ))}
@@ -877,18 +884,22 @@ const MediaGallery: React.FC = () => {
                                         <div key={post.id} className="relative group/vid">
                                             <VideoCard post={post} onClick={() => openPost(post)} />
                                             <div className="absolute top-4 left-4 flex flex-col gap-2 translate-x-4 opacity-0 group-hover/vid:translate-x-0 group-hover/vid:opacity-100 transition-all duration-300 z-10">
+                                                <RoleGuard privilege="media.edit">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setSelectedPost(post); setIsCreateModalOpen(true); }}
                                                     className="w-10 h-10 bg-white/95 backdrop-blur-md rounded-xl shadow-xl text-[var(--huc-accent-blue)] hover:bg-[var(--huc-accent-blue)] hover:text-white flex items-center justify-center transition-all"
                                                 >
                                                     <Edit3 size={18} />
                                                 </button>
+                                                </RoleGuard>
+                                                <RoleGuard privilege="media.delete">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDelete(post.id); }}
                                                     className="w-10 h-10 bg-white/95 backdrop-blur-md rounded-xl shadow-xl text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
+                                                </RoleGuard>
                                             </div>
                                         </div>
                                     ))}
