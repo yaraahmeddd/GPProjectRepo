@@ -54,7 +54,7 @@ const FALLBACK_PAGES: Array<{ path: string; privilege?: string }> = [
   { path: "/staff/dashboard/memberships", privilege: "VIEW_MEMBERSHIP_PLANS" },
   { path: "/staff/dashboard/finance", privilege: "VIEW_FINANCE" },
   // { path: "/staff/dashboard/tasks", privilege: "VIEW_TASKS" },
-  { path: "/staff/dashboard/media-gallery"           /* no privilege */ },
+  { path: "/staff/dashboard/media-gallery", privilege: "media.view" },
   { path: "/staff/dashboard/audit-log", privilege: "audit.view" },
   { path: "/staff/dashboard/admin/staff/manage", privilege: "STAFF_CREATE" },
   { path: "/staff/dashboard/profile"                 /* always accessible */ },
@@ -113,8 +113,8 @@ const StaffDashboard = () => {
             <Route path="members/new" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><StaffAddMemberPage /></ProtectedRoute>} />
             <Route path="members/new-team" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><StaffAddTeamMemberPage /></ProtectedRoute>} />
             <Route path="members/card-print" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><CardPrintPage /></ProtectedRoute>} />
-            <Route path="media-gallery" element={<MediaGalleryDashboard />} />
-            <Route path="media-gallery/:id" element={<MediaGalleryPostPage />} />
+            <Route path="media-gallery" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryDashboard /></ProtectedRoute>} />
+            <Route path="media-gallery/:id" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryPostPage /></ProtectedRoute>} />
             <Route path="faculties" element={<ProtectedRoute requiredPrivilege="VIEW_FACULTIES"><FacultyManagementPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

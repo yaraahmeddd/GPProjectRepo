@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Search, RefreshCw, Shield, ChevronRight, ChevronLeft, Loader2,
-    Users, ArrowRight, Trash2, RotateCcw, AlertTriangle,
+    Users, ArrowRight, Trash2, RotateCcw, AlertTriangle, Lock,
 } from "lucide-react";
 import api from "../api/axios";
 import { StaffService } from "../services/staffService";
@@ -44,6 +44,11 @@ type GrantedPrivilege = {
     nameAr: string;
     nameEn: string;
     module: string;
+    source: "direct" | "package" | "default"; // NEW
+    can_revoke: boolean; // NEW
+    package_id?: number; // NEW
+    package_code?: string; // NEW
+    reason?: string; // NEW
     markedForRevocation: boolean;
 };
 
@@ -79,12 +84,18 @@ const ROLE_LABELS: Record<string, string> = {
     STAFF: "موظف",
 };
 
+// Source labels and colors
+const SOURCE_LABELS: Record<string, { ar: string; color: string }> = {
+    direct: { ar: "مباشر", color: "emerald" },
+    package: { ar: "من حزمة", color: "blue" },
+    default: { ar: "افتراضي", color: "amber" },
+};
+
 const parseGrantedPrivileges = (response: unknown): Omit<GrantedPrivilege, "markedForRevocation">[] => {
     const out: Omit<GrantedPrivilege, "markedForRevocation">[] = [];
     if (!isRecord(response)) return out;
 
     const payload = response.data ?? response;
-    // Direct path: backend returns { success, privileges: [...] }
     const arr: unknown[] = Array.isArray((payload as Record<string, unknown>).privileges)
         ? (payload as Record<string, unknown>).privileges as unknown[]
         : Array.isArray(payload)
@@ -104,6 +115,11 @@ const parseGrantedPrivileges = (response: unknown): Omit<GrantedPrivilege, "mark
             nameAr: String(item.name_ar ?? ""),
             nameEn: String(item.name_en ?? ""),
             module: String(item.module ?? "General"),
+            source: (item.source as string) ?? "direct", // NEW
+            can_revoke: item.can_revoke !== false, // NEW - default to true if not present
+            package_id: Number(item.package_id) || undefined, // NEW
+            package_code: String(item.package_code ?? "") || undefined, // NEW
+            reason: String(item.reason ?? ""), // NEW
         });
     });
     return out;
@@ -198,15 +214,28 @@ export default function RevokePrivilegesPage() {
     const [loadingPrivileges, setLoadingPrivileges] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [failedAttempts, setFailedAttempts] = useState<Array<{ privilege_id: number; error: string; code: string }>>([]);
 
     const fetchPrivileges = useCallback(async (staffId: number) => {
         setLoadingPrivileges(true);
+        setFailedAttempts([]);
         try {
             const res = await StaffService.getPrivileges(staffId);
             const parsed = parseGrantedPrivileges(res);
             setGrantedPrivileges(parsed.map((p) => ({ ...p, markedForRevocation: false })));
-        } catch {
-            toast({ title: "خطأ", description: "فشل تحميل صلاحيات الموظف", variant: "destructive" });
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message 
+                || error?.response?.data?.error 
+                || error?.message 
+                || "فشل تحميل صلاحيات الموظف";
+            
+            console.error('Error fetching privileges:', error);
+            
+            toast({ 
+                title: "خطأ", 
+                description: errorMessage, 
+                variant: "destructive" 
+            });
             setGrantedPrivileges([]);
         } finally {
             setLoadingPrivileges(false);
@@ -232,7 +261,9 @@ export default function RevokePrivilegesPage() {
         );
     };
 
-    const markAll = () => setGrantedPrivileges((prev) => prev.map((p) => ({ ...p, markedForRevocation: true })));
+    const markAll = () => setGrantedPrivileges((prev) =>
+        prev.map((p) => ({ ...p, markedForRevocation: !p.markedForRevocation }))
+    );
     const clearAll = () => setGrantedPrivileges((prev) => prev.map((p) => ({ ...p, markedForRevocation: false })));
 
     const markedIds = useMemo(
@@ -243,16 +274,30 @@ export default function RevokePrivilegesPage() {
     const handleRevoke = async () => {
         if (!selectedStaff || markedIds.length === 0) return;
         setIsSaving(true);
+        setFailedAttempts([]);
         try {
-            await StaffService.revokePrivileges(selectedStaff.id, markedIds, "Revoked from revoke-privileges page");
-            toast({
-                title: "تم سحب الصلاحيات",
-                description: `تم سحب ${markedIds.length} صلاحية من ${selectedStaff.nameAr || selectedStaff.nameEn} بنجاح.`,
-            });
-            // Re-fetch to reflect deletions
+            const result = await StaffService.revokePrivileges(selectedStaff.id, markedIds, "Revoked from revoke-privileges page");
+
+            if (result.failed_attempts && result.failed_attempts.length > 0) {
+                setFailedAttempts(result.failed_attempts);
+                const successCount = result.successful_revokes || 0;
+                toast({
+                    title: "تم سحب البعض",
+                    description: `تم سحب ${successCount} صلاحية بنجاح. ${result.failed_revokes} صلاحية لم يمكن سحبها مباشرة.`,
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "تم سحب الصلاحيات",
+                    description: `تم سحب ${markedIds.length} صلاحية من ${selectedStaff.nameAr || selectedStaff.nameEn} بنجاح.`,
+                });
+            }
+
+            // Re-fetch to reflect changes
             await fetchPrivileges(selectedStaff.id);
-        } catch {
-            toast({ title: "فشل السحب", description: "حدث خطأ أثناء سحب الصلاحيات", variant: "destructive" });
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || error?.message || "حدث خطأ أثناء سحب الصلاحيات";
+            toast({ title: "فشل السحب", description: errorMessage, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -602,31 +647,63 @@ export default function RevokePrivilegesPage() {
                                 <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                     {group.items.map((priv) => {
                                         const marked = priv.markedForRevocation;
+
                                         return (
                                             <button
                                                 key={priv.code}
                                                 type="button"
                                                 onClick={() => toggleRevoke(priv.code)}
-                                                className={`w-full text-right flex items-start gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all cursor-pointer group ${marked
-                                                    ? "bg-rose-50 border-rose-300 shadow-sm"
-                                                    : "bg-background border-border hover:border-rose-200 hover:bg-rose-50/40"
-                                                    }`}
+                                                className={`w-full text-right flex items-start gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all cursor-pointer group ${
+                                                    marked
+                                                        ? "bg-rose-50 border-rose-300 shadow-sm"
+                                                        : "bg-background border-border hover:border-rose-200 hover:bg-rose-50/40"
+                                                }`}
                                             >
-                                                <div className={`mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${marked
-                                                    ? "bg-rose-500 text-white"
-                                                    : "bg-emerald-100 text-emerald-600 group-hover:bg-rose-100 group-hover:text-rose-500"
-                                                    }`}>
+                                                {/* Checkbox/Icon */}
+                                                <div className={`mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                                    marked
+                                                        ? "bg-rose-500 text-white"
+                                                        : "bg-emerald-100 text-emerald-600 group-hover:bg-rose-100 group-hover:text-rose-500"
+                                                }`}>
                                                     {marked
                                                         ? <Trash2 className="w-3.5 h-3.5" />
                                                         : <Shield className="w-3.5 h-3.5" />}
                                                 </div>
+
+                                                {/* Text */}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className={`text-xs font-semibold leading-tight truncate ${marked ? "text-rose-800 line-through" : "text-foreground"}`}>
+                                                    <p className={`text-xs font-semibold leading-tight truncate ${
+                                                        marked ? "text-rose-800 line-through" : "text-foreground"
+                                                    }`}>
                                                         {priv.nameAr || priv.nameEn || priv.code}
                                                     </p>
-                                                    <p className={`text-[10px] font-mono mt-0.5 truncate ${marked ? "text-rose-500 line-through" : "text-muted-foreground"}`}>
+                                                    <p className={`text-[10px] font-mono mt-0.5 truncate ${
+                                                        marked ? "text-rose-500 line-through" : "text-muted-foreground"
+                                                    }`}>
                                                         {priv.code}
                                                     </p>
+
+                                                    {/* Source badge */}
+                                                    <div className="mt-1.5 flex items-center gap-1">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[9px] h-5 px-1.5 ${
+                                                                priv.source === "direct"
+                                                                    ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                                                                    : priv.source === "package"
+                                                                        ? "bg-blue-100 text-blue-700 border-blue-300"
+                                                                        : "bg-amber-100 text-amber-700 border-amber-300"
+                                                            }`}
+                                                        >
+                                                            {SOURCE_LABELS[priv.source]?.ar || priv.source}
+                                                        </Badge>
+
+                                                        {priv.source === "package" && priv.package_code && (
+                                                            <span className="text-[8px] text-muted-foreground truncate">
+                                                                ({priv.package_code})
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </button>
                                         );
@@ -636,6 +713,20 @@ export default function RevokePrivilegesPage() {
                         ))
                     )}
                 </div>
+
+                {/* Failed attempts warning */}
+                {failedAttempts.length > 0 && (
+                    <div className="mx-6 mb-4 p-3 rounded-lg bg-red-50 border-2 border-red-200">
+                        <p className="text-xs font-semibold text-red-800 mb-2">⚠️ لم يمكن سحب {failedAttempts.length} صلاحية:</p>
+                        <ul className="space-y-1">
+                            {failedAttempts.map((attempt, idx) => (
+                                <li key={idx} className="text-[11px] text-red-700">
+                                    • <span className="font-mono">{attempt.error}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             {/* Sticky footer */}

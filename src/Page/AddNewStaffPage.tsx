@@ -249,6 +249,7 @@ export default function AddNewStaffPage() {
   const [selectedPackageKeys, setSelectedPackageKeys] = useState<string[]>([]);
   const [allPrivileges, setAllPrivileges] = useState<PrivilegeApiItem[]>([]);
   const [selectedExtraPrivilegeIds, setSelectedExtraPrivilegeIds] = useState<number[]>([]);
+  const [excludedPackagePrivilegeIds, setExcludedPackagePrivilegeIds] = useState<number[]>([]);
   const [packagePrivilegeCodesByKey, setPackagePrivilegeCodesByKey] = useState<Record<string, string[]>>({});
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [loadingPrivileges, setLoadingPrivileges] = useState(false);
@@ -464,6 +465,23 @@ export default function AddNewStaffPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPackages]); // intentionally excludes packagePrivilegeCodesByKey to prevent a feedback loop
 
+  // Clean up excluded privileges when packages change
+  useEffect(() => {
+    if (excludedPackagePrivilegeIds.length === 0) return;
+    
+    // Get all current package privilege IDs
+    const currentPackagePrivilegeIds = new Set<number>();
+    selectedPackagePrivilegeCodes.forEach((code) => {
+      const priv = allPrivileges.find((p) => p.code === code);
+      if (priv) currentPackagePrivilegeIds.add(priv.id);
+    });
+
+    // Remove excluded privileges that are no longer in any selected package
+    setExcludedPackagePrivilegeIds((prev) =>
+      prev.filter((id) => currentPackagePrivilegeIds.has(id))
+    );
+  }, [selectedPackagePrivilegeCodes, allPrivileges]);
+
   const togglePackage = useCallback((pkgKey: string) => {
     setSelectedPackageKeys((prev) => {
       const isSelected = prev.includes(pkgKey);
@@ -471,11 +489,20 @@ export default function AddNewStaffPage() {
     });
   }, []);
 
-  const toggleExtraPrivilege = useCallback((privilegeId: number) => {
-    setSelectedExtraPrivilegeIds((prev) => {
-      const isSelected = prev.includes(privilegeId);
-      return isSelected ? prev.filter((id) => id !== privilegeId) : [...prev, privilegeId];
-    });
+  const togglePrivilege = useCallback((privilegeId: number, isInPackage: boolean) => {
+    if (isInPackage) {
+      // Toggle in excluded privileges
+      setExcludedPackagePrivilegeIds((prev) => {
+        const isExcluded = prev.includes(privilegeId);
+        return isExcluded ? prev.filter((id) => id !== privilegeId) : [...prev, privilegeId];
+      });
+    } else {
+      // Toggle in extra privileges
+      setSelectedExtraPrivilegeIds((prev) => {
+        const isSelected = prev.includes(privilegeId);
+        return isSelected ? prev.filter((id) => id !== privilegeId) : [...prev, privilegeId];
+      });
+    }
   }, []);
 
 
@@ -488,8 +515,6 @@ export default function AddNewStaffPage() {
         .map((pkg) => pkg.backendId!);
 
       const extraPrivileges = selectedExtraPrivilegeIds;
-      const combinedPrivilegeIds = Array.from(new Set([...extraPrivileges]));
-
 
       const payload = {
         first_name_en: data.first_name_en,
@@ -517,12 +542,21 @@ export default function AddNewStaffPage() {
         await StaffService.assignPackages(newStaffId, selectedBackendPackageIds);
       }
 
-      // Grant individual privileges (from local packages + extras)
-      if (combinedPrivilegeIds.length > 0) {
+      // Grant individual extra privileges (outside of packages)
+      if (extraPrivileges.length > 0) {
         await StaffService.grantPrivileges(
           newStaffId,
-          combinedPrivilegeIds,
+          extraPrivileges,
           "Assigned during staff creation"
+        );
+      }
+
+      // Revoke excluded package privileges (create overrides with is_granted=false)
+      if (excludedPackagePrivilegeIds.length > 0) {
+        await StaffService.revokePrivileges(
+          newStaffId,
+          excludedPackagePrivilegeIds,
+          "Excluded from package during staff creation"
         );
       }
 
@@ -540,6 +574,7 @@ export default function AddNewStaffPage() {
       reset();
       setSelectedPackageKeys([]);
       setSelectedExtraPrivilegeIds([]);
+      setExcludedPackagePrivilegeIds([]);
     } catch (error) {
       console.error("Failed to register staff", error);
       toast({
@@ -796,8 +831,8 @@ export default function AddNewStaffPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-muted/30">
                   <div>
-                    <p className="text-sm font-semibold">صلاحيات إضافية</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">فوق ما تشمله الحزمة المختارة</p>
+                    <p className="text-sm font-semibold">صلاحيات فردية</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">اختر صلاحيات إضافية مباشرة</p>
                   </div>
                   {selectedExtraPrivilegeIds.length > 0 && (
                     <span className="text-xs font-medium bg-primary/10 text-primary px-2.5 py-1 rounded-full">
@@ -808,12 +843,7 @@ export default function AddNewStaffPage() {
 
                 {/* Body */}
                 <div className="p-6">
-                  {selectedPackageKeys.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 py-8 text-center">
-                      <span className="text-3xl">🔒</span>
-                      <p className="text-sm text-muted-foreground">اختر حزمة أولاً لتتمكن من إضافة صلاحيات فردية</p>
-                    </div>
-                  ) : loadingPrivileges ? (
+                  {loadingPrivileges ? (
                     <div className="flex items-center gap-2 py-6 justify-center text-sm text-muted-foreground">
                       <span className="animate-spin">⏳</span> جاري تحميل الصلاحيات...
                     </div>
@@ -875,21 +905,24 @@ export default function AddNewStaffPage() {
                             {activeGroup.items.map((privilege) => {
                               const inPackage = selectedPackagePrivilegeCodes.has(privilege.code);
                               const isExtra = selectedExtraPrivilegeIds.includes(privilege.id);
+                              const isExcluded = excludedPackagePrivilegeIds.includes(privilege.id);
+                              const isSelected = inPackage && !isExcluded;
 
                               return (
                                 <button
                                   key={privilege.id}
                                   type="button"
-                                  disabled={inPackage}
-                                  onClick={() => toggleExtraPrivilege(privilege.id)}
+                                  onClick={() => togglePrivilege(privilege.id, inPackage)}
                                   className={`
                                     group flex items-center gap-3 p-3 rounded-lg border text-right
                                     transition-all duration-150 w-full
-                                    ${inPackage
-                                      ? "border-emerald-200 bg-emerald-50/60 cursor-not-allowed"
-                                      : isExtra
-                                        ? "border-primary/40 bg-primary/5 shadow-sm"
-                                        : "border-border bg-card hover:border-primary/30 hover:bg-muted/40"
+                                    ${isSelected
+                                      ? "border-emerald-200 bg-emerald-50/60"
+                                      : isExcluded
+                                        ? "border-red-200 bg-red-50/60"
+                                        : isExtra
+                                          ? "border-primary/40 bg-primary/5 shadow-sm"
+                                          : "border-border bg-card hover:border-primary/30 hover:bg-muted/40"
                                     }
                                   `}
                                 >
@@ -897,14 +930,26 @@ export default function AddNewStaffPage() {
                                   <div className={`
                                     shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center
                                     transition-colors duration-150
-                                    ${inPackage
+                                    ${isSelected
                                       ? "border-emerald-400 bg-emerald-400"
-                                      : isExtra
-                                        ? "border-primary bg-primary"
-                                        : "border-muted-foreground/50 group-hover:border-primary/60"
+                                      : isExcluded
+                                        ? "border-red-400 bg-white"
+                                        : isExtra
+                                          ? "border-primary bg-primary"
+                                          : "border-muted-foreground/50 group-hover:border-primary/60"
                                     }
                                   `}>
-                                    {(inPackage || isExtra) && (
+                                    {isSelected && (
+                                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    )}
+                                    {isExcluded && (
+                                      <svg className="w-2.5 h-2.5 text-red-400" fill="none" viewBox="0 0 12 12">
+                                        <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                      </svg>
+                                    )}
+                                    {isExtra && (
                                       <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
                                         <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                       </svg>
@@ -913,7 +958,7 @@ export default function AddNewStaffPage() {
 
                                   {/* Text */}
                                   <div className="flex-1 text-right min-w-0">
-                                    <p className={`text-xs font-medium truncate ${inPackage ? "text-emerald-700" : "text-foreground"
+                                    <p className={`text-xs font-medium truncate ${isSelected ? "text-emerald-700" : isExcluded ? "text-red-700" : "text-foreground"
                                       }`}>
                                       {privilege.name_ar || privilege.name_en || privilege.code}
                                     </p>
@@ -923,9 +968,14 @@ export default function AddNewStaffPage() {
                                   </div>
 
                                   {/* State badge */}
-                                  {inPackage && (
+                                  {isSelected && (
                                     <span className="shrink-0 text-[9px] font-medium text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded uppercase tracking-wide">
                                       في الحزمة
+                                    </span>
+                                  )}
+                                  {isExcluded && (
+                                    <span className="shrink-0 text-[9px] font-medium text-red-600 bg-red-100 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                      مستثنى
                                     </span>
                                   )}
                                 </button>
@@ -935,12 +985,18 @@ export default function AddNewStaffPage() {
                         )}
 
                         {/* Footer legend */}
-                        <div className="flex items-center gap-4 pt-2 text-[10px] text-muted-foreground border-t border-border">
+                        <div className="flex flex-wrap items-center gap-4 pt-2 text-[10px] text-muted-foreground border-t border-border">
                           <span className="flex items-center gap-1">
                             <span className="w-3 h-3 rounded border-2 border-emerald-400 bg-emerald-400 inline-flex items-center justify-center">
                               <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                             </span>
                             مشمول في الحزمة
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-3 h-3 rounded border-2 border-red-400 bg-white inline-flex items-center justify-center">
+                              <svg className="w-2 h-2 text-red-400" fill="none" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                            </span>
+                            مستثنى من الحزمة
                           </span>
                           <span className="flex items-center gap-1">
                             <span className="w-3 h-3 rounded border-2 border-primary bg-primary inline-flex items-center justify-center">
