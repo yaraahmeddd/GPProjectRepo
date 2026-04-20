@@ -28,6 +28,7 @@ const TeamMemberSportPaymentPage = lazy(() => import('./Page/TeamMemberSportPaym
 const MemberSportPaymentPage = lazy(() => import('./Page/MemberSportPaymentPage'));
 const InvitationPage = lazy(() => import('./Page/InvitationPage'));
 const JoinBookingPage = lazy(() => import('./Page/JoinBookingPage'));
+const SecurityDashboardPage = lazy(() => import('./Page/SecurityDashboardPage'));
 
 const Router: React.FC = () => {
   return (
@@ -55,6 +56,7 @@ const Router: React.FC = () => {
             <Route path="/news/:id" element={<PublicPostDetailsPage />} />
             <Route path="/lastNews" element={<Navigate to="/?tab=lastNews" replace />} />
             <Route path="/bookings/share/:shareToken" element={<JoinBookingPage />} />
+            <Route path="/security/bookings" element={<SecurityDashboardPage />} />
 
             {/* Protected Routes - Staff */}
             <Route
