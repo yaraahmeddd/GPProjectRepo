@@ -175,7 +175,7 @@ export default function FacultyManagementPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">إدارة الكليات</h1>
-                <RoleGuard privilege="faculties.create">
+                <RoleGuard privilege="CREATE_FACULTY">
                     <Button className="gap-2" onClick={openAdd}>
                         <Plus className="h-4 w-4" />
                         إضافة كلية
@@ -227,17 +227,17 @@ export default function FacultyManagementPage() {
                                         <TableCell dir="ltr" className="text-left font-medium text-foreground">{faculty.name_en}</TableCell>
                                         <TableCell className="whitespace-nowrap text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <RoleGuard privilege="faculties.edit">
+                                                <RoleGuard privilege="UPDATE_FACULTY">
                                                     <Button size="sm" variant="outline" className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground" onClick={() => openEdit(faculty)}>
                                                         <Pencil className="h-3 w-3" /> تعديل
                                                     </Button>
                                                 </RoleGuard>
-                                                <RoleGuard privilege="faculties.delete">
+                                                <RoleGuard privilege="DELETE_FACULTY">
                                                     <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setDeleteId(faculty.id)}>
                                                         <Trash2 className="h-3 w-3" /> حذف
                                                     </Button>
                                                 </RoleGuard>
-                                                <RoleGuard privilege="faculties.assign">
+                                                <RoleGuard privilege="ASSIGN_FACULTY_TO_MEMBER">
                                                     <Button size="sm" variant="outline" className="gap-1" onClick={() => setAssignFaculty(faculty)}>
                                                         <Eye className="h-3 w-3" /> تعيين عضو
                                                     </Button>

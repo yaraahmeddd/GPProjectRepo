@@ -48,15 +48,18 @@ const queryClient = new QueryClient();
 // in this list that they have access to. The profile page has no privilege
 // requirement so it is always the ultimate fallback.
 const FALLBACK_PAGES: Array<{ path: string; privilege?: string }> = [
-  { path: "/staff/dashboard/registrations", privilege: "VIEW_MEMBERS" },
+  { path: "/staff/dashboard/registrations", privilege: "MANAGE_MEMBERSHIP_REQUEST" },
   { path: "/staff/dashboard/members/manage", privilege: "VIEW_MEMBERS" },
+  { path: "/staff/dashboard/members/new", privilege: "CREATE_MEMBER" },
+  { path: "/staff/dashboard/members/new-team-member", privilege: "ADD_TEAM_MEMBER" },
   { path: "/staff/dashboard/sports", privilege: "VIEW_SPORTS" },
   { path: "/staff/dashboard/memberships", privilege: "VIEW_MEMBERSHIP_PLANS" },
-  { path: "/staff/dashboard/finance", privilege: "VIEW_FINANCE" },
+  { path: "/staff/dashboard/finance/subscriptions", privilege: "VIEW_FINANCE" },
   // { path: "/staff/dashboard/tasks", privilege: "VIEW_TASKS" },
-  { path: "/staff/dashboard/media-gallery"           /* no privilege */ },
-  { path: "/staff/dashboard/audit-log", privilege: "audit.view" },
-  { path: "/staff/dashboard/admin/staff/manage", privilege: "STAFF_CREATE" },
+  { path: "/staff/dashboard/media-gallery", privilege: "media.view" },
+  { path: "/staff/dashboard/audit-log", privilege: "VIEW_AUDIT_LOGS" },
+  { path: "/staff/dashboard/faculties", privilege: "VIEW_FACULTIES" },
+  { path: "/staff/dashboard/admin/staff/manage", privilege: "VIEW_STAFF" },
   { path: "/staff/dashboard/profile"                 /* always accessible */ },
 ];
 
@@ -87,34 +90,32 @@ const StaffDashboard = () => {
             <Route index element={<SmartIndexRedirect />} />
             <Route path="sports" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><SportsPage /></ProtectedRoute>} />
             {/* <Route path="sports/requests" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><SportsRequestsPage /></ProtectedRoute>} /> */}
-            <Route path="sports/courts" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><CourtsManagementPage /></ProtectedRoute>} />
+            <Route path="sports/courts" element={<ProtectedRoute requiredPrivilege="VIEW_FIELDS"><CourtsManagementPage /></ProtectedRoute>} />
             <Route path="sports/bookings" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><CourtBookingsPage /></ProtectedRoute>} />
             <Route path="sports/invitations" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><ManageInvitationsPage /></ProtectedRoute>} />
             {/* <Route path="sports/attendance" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><AttendancePage /></ProtectedRoute>} /> */}
-            <Route path="sports/teams" element={<ProtectedRoute requiredPrivilege="VIEW_SPORTS"><TeamsManagementPage /></ProtectedRoute>} />
+            <Route path="sports/teams" element={<ProtectedRoute requiredPrivilege="VIEW_TEAMS"><TeamsManagementPage /></ProtectedRoute>} />
             <Route path="profile" element={<StaffProfile />} />
             <Route path="memberships" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERSHIP_PLANS"><MembershipsPage /></ProtectedRoute>} />
-            <Route path="registrations" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><RegistrationManagementPage /></ProtectedRoute>} />
-            <Route path="membership-form" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><MembershipFormPage /></ProtectedRoute>} />
-            {/* <Route path="finance" element={<ProtectedRoute requiredPrivilege="VIEW_FINANCE"><FinancePage /></ProtectedRoute>} /> */}
+            <Route path="registrations" element={<ProtectedRoute requiredPrivilege="MANAGE_MEMBERSHIP_REQUEST"><RegistrationManagementPage /></ProtectedRoute>} />
+            {/* <Route path="membership-form" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><MembershipFormPage /></ProtectedRoute>} /> */}
             <Route path="finance/subscriptions" element={<ProtectedRoute requiredPrivilege="VIEW_FINANCE"><SubscriptionsPage /></ProtectedRoute>} />
-            {/* <Route path="tasks" element={<ProtectedRoute requiredPrivilege="VIEW_TASKS"><TaskApprovalPage /></ProtectedRoute>} /> */}
             <Route path="admin/privileges" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><AdminPrivilegesPage /></ProtectedRoute>} />
             <Route path="admin/privilege-packages" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><PrivilegePackageAdminPage /></ProtectedRoute>} />
-            <Route path="audit-log" element={<ProtectedRoute requiredPrivilege="audit.view"><AuditLogPage /></ProtectedRoute>} />
-            <Route path="admin/staff/new" element={<ProtectedRoute requiredPrivilege="STAFF_CREATE"><AddNewStaffPage /></ProtectedRoute>} />
-            <Route path="admin/staff/list" element={<ProtectedRoute requiredPrivilege="STAFF_CREATE"><StaffListPage /></ProtectedRoute>} />
-            <Route path="admin/staff/manage" element={<ProtectedRoute requiredPrivilege="STAFF_CREATE"><StaffManagementPage /></ProtectedRoute>} />
+            <Route path="audit-log" element={<ProtectedRoute requiredPrivilege="VIEW_AUDIT_LOGS"><AuditLogPage /></ProtectedRoute>} />
+            <Route path="admin/staff/new" element={<ProtectedRoute requiredPrivilege="CREATE_STAFF"><AddNewStaffPage /></ProtectedRoute>} />
+            <Route path="admin/staff/list" element={<ProtectedRoute requiredPrivilege="VIEW_STAFF"><StaffListPage /></ProtectedRoute>} />
+            <Route path="admin/staff/manage" element={<ProtectedRoute requiredPrivilege="VIEW_STAFF"><StaffManagementPage /></ProtectedRoute>} />
             <Route path="admin/staff/assign-privileges" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><AssignStaffPrivilegesPage /></ProtectedRoute>} />
             <Route path="admin/staff/revoke-privileges" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><RevokePrivilegesPage /></ProtectedRoute>} />
             <Route path="members/manage" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><MemberManagementPage /></ProtectedRoute>} />
-            <Route path="members/sports" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><SportsMembersPage /></ProtectedRoute>} />
-            <Route path="members/sports-view" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><SportManagementPage /></ProtectedRoute>} />
-            <Route path="members/new" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><StaffAddMemberPage /></ProtectedRoute>} />
-            <Route path="members/new-team" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><StaffAddTeamMemberPage /></ProtectedRoute>} />
+            <Route path="members/sports" element={<ProtectedRoute requiredPrivilege="ASSIGN_SPORT_TO_MEMBER"><SportsMembersPage /></ProtectedRoute>} />
+            <Route path="members/sports-view" element={<ProtectedRoute requiredPrivilege="VIEW_TEAM_MEMBERS"><SportManagementPage /></ProtectedRoute>} />
+            <Route path="members/new" element={<ProtectedRoute requiredPrivilege="CREATE_MEMBER"><StaffAddMemberPage /></ProtectedRoute>} />
+            <Route path="members/new-team-member" element={<ProtectedRoute requiredPrivilege="ADD_TEAM_MEMBER"><StaffAddTeamMemberPage /></ProtectedRoute>} />
             <Route path="members/card-print" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><CardPrintPage /></ProtectedRoute>} />
-            <Route path="media-gallery" element={<MediaGalleryDashboard />} />
-            <Route path="media-gallery/:id" element={<MediaGalleryPostPage />} />
+            <Route path="media-gallery" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryDashboard /></ProtectedRoute>} />
+            <Route path="media-gallery/:id" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryPostPage /></ProtectedRoute>} />
             <Route path="faculties" element={<ProtectedRoute requiredPrivilege="VIEW_FACULTIES"><FacultyManagementPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

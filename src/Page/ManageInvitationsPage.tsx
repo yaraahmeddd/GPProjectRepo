@@ -16,6 +16,8 @@ import {
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
+
 import { useToast } from "../hooks/use-toast";
 import api from "../api/axios";
 import { Button } from "../Component/StaffPagesComponents/ui/button";
@@ -601,14 +603,16 @@ export default function ManageInvitationsPage() {
               {/* Footer Actions */}
               <div className="p-6 border-t bg-slate-50 mt-auto">
                 {selectedInv.status !== "cancelled" && (
-                  <Button 
-                    variant="destructive" 
-                    className="w-full gap-2"
-                    onClick={() => setCancelDialog(selectedInv)}
-                  >
-                    <ShieldAlert className="h-4 w-4" />
-                    إلغاء الحجز والدعوة نهائياً
-                  </Button>
+                  <RoleGuard privilege="SCHEDULE_MATCH">
+                    <Button 
+                      variant="destructive" 
+                      className="w-full gap-2"
+                      onClick={() => setCancelDialog(selectedInv)}
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                      إلغاء الحجز والدعوة نهائياً
+                    </Button>
+                  </RoleGuard>
                 )}
               </div>
             </motion.div>
