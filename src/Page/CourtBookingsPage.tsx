@@ -295,17 +295,20 @@ function TimeSlotPicker({
     onChange,
     placeholder,
     minValue,
+    allowedOptions,
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder: string;
     minValue?: string;
+    allowedOptions?: { value: string; label: string }[];
 }) {
     const [open, setOpen] = useState(false);
-    const selected = TIME_OPTIONS.find((t) => t.value === value);
+    const baseOptions = allowedOptions ?? TIME_OPTIONS;
+    const selected = baseOptions.find((t) => t.value === value) ?? TIME_OPTIONS.find((t) => t.value === value);
     const filteredOptions = minValue
-        ? TIME_OPTIONS.filter((t) => t.value > minValue)
-        : TIME_OPTIONS;
+        ? baseOptions.filter((t) => t.value > minValue)
+        : baseOptions;
 
     return (
         <Popover open={open} onOpenChange={setOpen} modal>
@@ -338,6 +341,9 @@ function TimeSlotPicker({
                             {slot.label}
                         </button>
                     ))}
+                    {filteredOptions.length === 0 && (
+                        <p className="col-span-3 text-center text-xs text-muted-foreground py-4">لا توجد أوقات متاحة</p>
+                    )}
                 </div>
             </PopoverContent>
         </Popover>
@@ -575,6 +581,8 @@ function BookingFormDialog({
     isSubmitting?: boolean;
 }) {
     const isEdit = editBooking !== null;
+
+    // ── Hooks first (Rules of Hooks: useState before any derived values) ──────
     const [form, setForm] = useState<BookingForm>(() =>
         isEdit && editBooking
             ? {
@@ -591,8 +599,47 @@ function BookingFormDialog({
             : emptyBookingForm(defaultCourtId, defaultDate, defaultFrom)
     );
     const { toast } = useToast();
-
     const [lookupState, setLookupState] = useState<"idle" | "loading" | "found" | "notfound">("idle");
+
+    // ── Derived values (form is safe to use now) ──────────────────────────────
+    // Today's date string (YYYY-MM-DD) — used as the min date
+    const todayStr = new Date().toISOString().split('T')[0];
+    // Current time string (HH:MM) — used to block past slots when today is selected
+    const now = new Date();
+    const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // Bookings that block slots on the selected court + date (exclude self when editing)
+    const relevantBookings = form.courtId && form.date
+        ? bookings.filter(
+            b => b.courtId === form.courtId &&
+                b.date === form.date &&
+                b.status !== 'cancelled' &&
+                (!editBooking || b.id !== editBooking.id)
+        )
+        : [];
+
+    // Compute available FROM times:
+    // • If today: hide slots at or before current time
+    // • Hide slots whose start falls inside an existing booking/training window
+    const availableFromTimes = TIME_OPTIONS.filter(t => {
+        if (form.date === todayStr && t.value <= nowTimeStr) return false;
+        return !relevantBookings.some(b => t.value >= b.from && t.value < b.to);
+    });
+
+    // Compute available TO times:
+    // • Must be after form.from
+    // • Must not go past the start of the next blocking booking
+    const nextBlockStart = form.from
+        ? relevantBookings
+            .filter(b => b.from >= form.from)
+            .sort((a, b) => a.from.localeCompare(b.from))[0]?.from
+        : undefined;
+
+    const availableToTimes = TIME_OPTIONS.filter(t => {
+        if (t.value <= (form.from || '')) return false;
+        if (nextBlockStart && t.value > nextBlockStart) return false;
+        return true;
+    });
 
     useEffect(() => {
         const numericId = form.memberId.trim().replace(/\D/g, "");
@@ -653,6 +700,14 @@ function BookingFormDialog({
             toast({ title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول المطلوبة.", variant: "destructive" });
             return;
         }
+        if (form.date < todayStr) {
+            toast({ title: "تاريخ غير صالح", description: "لا يمكن إضافة حجز في تاريخ ماضٍ.", variant: "destructive" });
+            return;
+        }
+        if (form.date === todayStr && form.from <= nowTimeStr) {
+            toast({ title: "وقت مضى", description: "لا يمكن الحجز في وقت سبق الساعة الحالية.", variant: "destructive" });
+            return;
+        }
         if (form.from >= form.to) {
             toast({ title: "توقيت خاطئ", description: "وقت النهاية يجب أن يكون بعد وقت البداية.", variant: "destructive" });
             return;
@@ -703,8 +758,9 @@ function BookingFormDialog({
                                     type="date"
                                     dir="ltr"
                                     className="text-left"
+                                    min={todayStr}
                                     value={form.date}
-                                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                                    onChange={(e) => setForm({ ...form, date: e.target.value, from: "", to: "" })}
                                 />
                             </div>
 
@@ -714,6 +770,7 @@ function BookingFormDialog({
                                     value={form.from}
                                     onChange={(v) => setForm({ ...form, from: v, to: form.to && form.to <= v ? "" : form.to })}
                                     placeholder="البداية"
+                                    allowedOptions={availableFromTimes}
                                 />
                             </div>
 
@@ -723,7 +780,7 @@ function BookingFormDialog({
                                     value={form.to}
                                     onChange={(v) => setForm({ ...form, to: v })}
                                     placeholder="النهاية"
-                                    minValue={form.from}
+                                    allowedOptions={availableToTimes}
                                 />
                             </div>
                         </div>
@@ -1205,8 +1262,24 @@ export default function CourtBookingsPage() {
             void fetchCalendar();
         } catch (err: unknown) {
             const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "فشل إلغاء الحجز";
-            toast({ title: "فشل إلغاء الحجز", description: msg, variant: "destructive" });
+            const serverMsg = e?.responseData?.error || e?.responseData?.message || e?.message || "";
+
+            // If backend says already cancelled/completed or booking doesn't exist → UI was stale. Sync silently.
+            const alreadyDone =
+                serverMsg.toLowerCase().includes("cannot cancel") ||
+                serverMsg.toLowerCase().includes("cancelled") ||
+                serverMsg.toLowerCase().includes("not found") ||
+                e?.status === 404 ||
+                e?.status === 409;
+
+            if (alreadyDone) {
+                void fetchCalendar(); // refresh to show real DB state
+                return;
+            }
+
+            // Real failure — show error and refresh
+            void fetchCalendar();
+            toast({ title: "فشل إلغاء الحجز", description: serverMsg || "حدث خطأ غير متوقع", variant: "destructive" });
         }
     };
 
@@ -1285,7 +1358,7 @@ export default function CourtBookingsPage() {
             setAddDialogOpen(false);
             setEditBooking(null);
             // Build the correct invite URL pointing to InvitationPage (/invite/:token)
-            const shareUrl = shareToken ? `${window.location.origin}/bookings/share/${shareToken}` : null;            if (shareUrl) {
+            const shareUrl = shareToken ? `${window.location.origin}/bookings/share/${shareToken}` : null; if (shareUrl) {
                 setPendingShareUrl(shareUrl);
                 setShareDialogOpen(true);
             } else {
@@ -1535,13 +1608,12 @@ export default function CourtBookingsPage() {
                         return (
                             <div
                                 key={toISODate(day)}
-                                className={`py-2 px-1 text-center text-xs font-semibold border-l border-border ${
-                                    isToday
+                                className={`py-2 px-1 text-center text-xs font-semibold border-l border-border ${isToday
                                         ? "bg-primary/15 text-primary border-b-primary/40"
                                         : isPast
                                             ? "opacity-40 bg-muted/20 text-foreground"
                                             : "text-foreground"
-                                }`}
+                                    }`}
                             >
                                 <div>{dayOfWeekLabel(day)}</div>
                                 <div className={`text-[10px] font-normal mt-0.5 ${isToday ? "text-primary font-medium" : "text-muted-foreground"
@@ -1581,13 +1653,12 @@ export default function CourtBookingsPage() {
                         return (
                             <div
                                 key={dateStr}
-                                className={`relative border-l border-border ${
-                                    isPast
+                                className={`relative border-l border-border ${isPast
                                         ? "bg-muted/30 opacity-60"
                                         : isToday
                                             ? "bg-primary/[0.06]"
                                             : ""
-                                }`}
+                                    }`}
                                 style={{ height: HOUR_SLOTS.length * 64 }}
                             >
                                 {/* Hour grid lines */}
@@ -1681,11 +1752,9 @@ export default function CourtBookingsPage() {
                                             <button
                                                 key={booking.id}
                                                 type="button"
-                                                onClick={isPast ? undefined : () => setActiveBooking(booking)}
+                                                onClick={() => setActiveBooking(booking)}
                                                 aria-label={`حجز مؤكد — ${booking.member?.nameAr ?? "حجز مؤكد"}`}
-                                                className={`absolute rounded-lg bg-emerald-100 border border-emerald-300 transition-colors p-2 overflow-hidden text-right w-[calc(100%-8px)] ${
-                                                    isPast ? "cursor-not-allowed" : "hover:bg-emerald-200 cursor-pointer"
-                                                }`}
+                                                className="absolute rounded-lg bg-emerald-100 border border-emerald-300 transition-colors p-2 overflow-hidden text-right w-[calc(100%-8px)] hover:bg-emerald-200 cursor-pointer"
                                                 style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                             >
                                                 <p className="text-[11px] font-semibold text-emerald-800 truncate leading-tight">
@@ -1703,11 +1772,9 @@ export default function CourtBookingsPage() {
                                             <button
                                                 key={booking.id}
                                                 type="button"
-                                                onClick={isPast ? undefined : () => setActiveBooking(booking)}
+                                                onClick={() => setActiveBooking(booking)}
                                                 aria-label="وقت محجوب"
-                                                className={`absolute rounded-lg bg-rose-100 border border-rose-300 transition-colors flex flex-col items-center justify-center gap-1 w-[calc(100%-8px)] ${
-                                                    isPast ? "cursor-not-allowed" : "hover:bg-rose-200 cursor-pointer"
-                                                }`}
+                                                className="absolute rounded-lg bg-rose-100 border border-rose-300 transition-colors flex flex-col items-center justify-center gap-1 w-[calc(100%-8px)] hover:bg-rose-200 cursor-pointer"
                                                 style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                             >
                                                 <Lock className="h-3 w-3 text-rose-600" />
@@ -1720,11 +1787,9 @@ export default function CourtBookingsPage() {
                                         <button
                                             key={booking.id}
                                             type="button"
-                                            onClick={isPast ? undefined : () => setActiveBooking(booking)}
+                                            onClick={() => setActiveBooking(booking)}
                                             aria-label="حجز ملغي"
-                                            className={`absolute rounded-lg bg-muted/40 border border-dashed border-border flex items-center justify-center opacity-50 w-[calc(100%-8px)] ${
-                                                isPast ? "cursor-not-allowed" : ""
-                                            }`}
+                                            className="absolute rounded-lg bg-muted/40 border border-dashed border-border flex items-center justify-center opacity-50 w-[calc(100%-8px)] hover:opacity-70 cursor-pointer"
                                             style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                         >
                                             <span className="text-[10px] text-muted-foreground line-through">ملغي</span>

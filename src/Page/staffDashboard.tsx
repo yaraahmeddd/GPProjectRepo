@@ -39,6 +39,7 @@ import SubscriptionsPage from "./SubscriptionsPage";
 import { useAuth } from "../context/AuthContext";
 import CardPrintPage from "./CardPrintPage";
 import ManageInvitationsPage from "./ManageInvitationsPage";
+import FacultyManagementPage from "./FacultyManagementPage";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ const StaffDashboard = () => {
             <Route path="members/card-print" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><CardPrintPage /></ProtectedRoute>} />
             <Route path="media-gallery" element={<MediaGalleryDashboard />} />
             <Route path="media-gallery/:id" element={<MediaGalleryPostPage />} />
+            <Route path="faculties" element={<ProtectedRoute requiredPrivilege="VIEW_FACULTIES"><FacultyManagementPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>

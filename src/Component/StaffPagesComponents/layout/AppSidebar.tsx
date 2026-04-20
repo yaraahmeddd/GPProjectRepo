@@ -21,6 +21,7 @@ import {
   Users,
   Dumbbell,
   Link2,
+  Building,
 } from "lucide-react";
 import { PAYMENT_ALERTS } from "../../../data/paymentsData";
 
@@ -197,6 +198,12 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "النظام",
     collapsible: true,
     items: [
+      {
+        title: "إدارة الكليات",
+        icon: Building,
+        path: "/staff/dashboard/faculties",
+        privilege: "VIEW_FACULTIES",
+      },
       {
         title: "باقات الصلاحيات",
         icon: Shield,
