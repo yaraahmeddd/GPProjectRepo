@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import StaffController from '../controllers/StaffController';
 import { authenticate } from '../middleware/auth';
+import { authorizePrivilege } from '../middleware/authorizePrivilege';
 
 const router = Router();
 
@@ -14,17 +15,18 @@ const router = Router();
 // Staff Types
 router.get('/types', StaffController.getStaffTypes);
 
-// Privilege Management
-router.get('/privileges', authenticate, StaffController.getPrivileges);
+// Privilege Management - require VIEW_PRIVILEGES or MANAGE_PRIVILEGES
+router.get('/privileges', authorizePrivilege('VIEW_PRIVILEGES'), StaffController.getPrivileges);
 
 // Privilege Packages (CRUD operations)
-router.get('/packages', authenticate, StaffController.getPrivilegePackages);
-router.post('/packages', authenticate, StaffController.createPrivilegePackage);
-router.get('/packages/:packageId', authenticate, StaffController.getPrivilegePackageById);
-router.put('/packages/:packageId', authenticate, StaffController.updatePrivilegePackage);
-router.delete('/packages/:packageId', authenticate, StaffController.deletePrivilegePackage);
-router.put('/packages/:packageId/privileges', authenticate, StaffController.updatePackagePrivileges);
-router.get('/packages/:packageId/privileges', authenticate, StaffController.getPackagePrivileges);
+// GET operations require VIEW_PRIVILEGES, POST/PUT/DELETE require MANAGE_PRIVILEGES
+router.get('/packages', authorizePrivilege('VIEW_PRIVILEGES'), StaffController.getPrivilegePackages);
+router.post('/packages', authorizePrivilege('MANAGE_PRIVILEGES'), StaffController.createPrivilegePackage);
+router.get('/packages/:packageId', authorizePrivilege('VIEW_PRIVILEGES'), StaffController.getPrivilegePackageById);
+router.put('/packages/:packageId', authorizePrivilege('MANAGE_PRIVILEGES'), StaffController.updatePrivilegePackage);
+router.delete('/packages/:packageId', authorizePrivilege('MANAGE_PRIVILEGES'), StaffController.deletePrivilegePackage);
+router.put('/packages/:packageId/privileges', authorizePrivilege('MANAGE_PRIVILEGES'), StaffController.updatePackagePrivileges);
+router.get('/packages/:packageId/privileges', authorizePrivilege('VIEW_PRIVILEGES'), StaffController.getPackagePrivileges);
 
 // Staff CRUD Operations
 // IMPORTANT: Register endpoint requires authentication

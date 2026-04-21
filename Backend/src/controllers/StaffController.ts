@@ -79,27 +79,6 @@ export class StaffController {
    */
   static async getPrivileges(req: Request, res: Response): Promise<void> {
     try {
-      // Check authorization - only ADMIN (1) and EXECUTIVE_MANAGER (2) can view privileges
-      const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
-
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authorization required',
-        });
-        return;
-      }
-
-      const staffTypeId = user.staff_type_id as number;
-
-      if (staffTypeId !== 1 && staffTypeId !== 2) {
-        res.status(403).json({
-          success: false,
-          message: 'Only administrators and executive managers can view privileges',
-        });
-        return;
-      }
-
       const { module } = req.query;
       const requestedModule = module as string | undefined;
 

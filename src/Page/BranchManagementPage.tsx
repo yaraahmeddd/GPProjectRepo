@@ -30,6 +30,8 @@ export interface Branch {
     name_en?: string;
     location_ar?: string;
     location_en?: string;
+    phone?: string;
+    status?: 'active' | 'inactive' | 'archived';
     sports_count?: number; 
 }
 
@@ -49,7 +51,7 @@ export default function BranchManagementPage() {
     // Modals state
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editBranch, setEditBranch] = useState<Branch | null>(null);
-    const [form, setForm] = useState({ code: "", name_ar: "", name_en: "", location_ar: "", location_en: "" });
+    const [form, setForm] = useState({ code: "", name_ar: "", name_en: "", location_ar: "", location_en: "", phone: "", status: "active" });
     const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
     const [saveLoading, setSaveLoading] = useState(false);
     
@@ -78,7 +80,7 @@ export default function BranchManagementPage() {
     // Handlers
     const openAdd = () => {
         setEditBranch(null);
-        setForm({ code: "", name_ar: "", name_en: "", location_ar: "", location_en: "" });
+        setForm({ code: "", name_ar: "", name_en: "", location_ar: "", location_en: "", phone: "", status: "active" });
         setFormErrors({});
         setIsAddOpen(true);
     };
@@ -90,7 +92,9 @@ export default function BranchManagementPage() {
             name_ar: branch.name_ar || "", 
             name_en: branch.name_en || "", 
             location_ar: branch.location_ar || "", 
-            location_en: branch.location_en || "" 
+            location_en: branch.location_en || "",
+            phone: branch.phone || "",
+            status: branch.status || "active"
         });
         setFormErrors({});
         setIsAddOpen(true);
@@ -110,7 +114,9 @@ export default function BranchManagementPage() {
                 name_ar: form.name_ar, 
                 name_en: form.name_en, 
                 location_ar: form.location_ar, 
-                location_en: form.location_en 
+                location_en: form.location_en,
+                phone: form.phone,
+                status: form.status
             };
             if (editBranch) {
                 await api.put(`/branches/${editBranch.id}`, body);
@@ -462,6 +468,7 @@ export default function BranchManagementPage() {
                                         <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">اسم الفرع</th>
                                         <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الكود</th>
                                         <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الموقع</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الحالة</th>
                                         <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">الرياضات المرتبطة</th>
                                         <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">الإجراءات</th>
                                     </tr>
@@ -490,6 +497,21 @@ export default function BranchManagementPage() {
                                                 {/* Location */}
                                                 <td className="px-6 py-3.5 align-middle text-zinc-500 font-medium tracking-wide">
                                                     {branch.location_ar || branch.location_en || "—"}
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className="px-6 py-3.5 align-middle">
+                                                    {branch.status ? (
+                                                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-widest border ${
+                                                            branch.status === 'active' 
+                                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                                                : branch.status === 'inactive'
+                                                                ? 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                                                                : 'bg-amber-100 text-amber-700 border-amber-200'
+                                                        }`}>
+                                                            {branch.status === 'active' ? 'نشط' : branch.status === 'inactive' ? 'معطل' : 'مؤرشف'}
+                                                        </span>
+                                                    ) : "—"}
                                                 </td>
 
                                                 {/* Sports Count */}
@@ -549,7 +571,7 @@ export default function BranchManagementPage() {
                                             {/* EXPANDED PANEL HERE */}
                                             {expandedBranchId === branch.id && (
                                                 <tr className="bg-zinc-50/80 border-b border-zinc-200/80">
-                                                    <td colSpan={6} className="p-0 border-r-4 border-r-emerald-500 shadow-inner">
+                                                    <td colSpan={7} className="p-0 border-r-4 border-r-emerald-500 shadow-inner">
                                                         <div className="p-6">
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <h4 className="text-[13px] font-bold text-zinc-800 flex items-center gap-2">
@@ -703,6 +725,19 @@ export default function BranchManagementPage() {
                                 className={formErrors.location_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}
                             />
                             {formErrors.location_en?.length > 0 && <span className="text-xs text-destructive">{formErrors.location_en[0]}</span>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">الحالة</Label>
+                            <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as 'active' | 'inactive' | 'archived' })}>
+                                <SelectTrigger id="status">
+                                    <SelectValue placeholder="اختر الحالة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">نشط</SelectItem>
+                                    <SelectItem value="inactive">معطل</SelectItem>
+                                    <SelectItem value="archived">مؤرشف</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

@@ -33,6 +33,9 @@ export class Branch {
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'active' })
+  status: string; // active, inactive, archived
+
   @CreateDateColumn()
   created_at: Date;
 

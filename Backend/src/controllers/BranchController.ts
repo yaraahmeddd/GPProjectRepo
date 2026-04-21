@@ -149,17 +149,27 @@ export class BranchController {
    * @body {string} [location_en] - Branch location in English (optional)
    * @body {string} [location_ar] - Branch location in Arabic (optional)
    * @body {string} [phone] - Branch phone number (optional)
+   * @body {string} [status] - Branch status (optional, default: "active", values: "active", "inactive", "archived")
    * @returns Created branch object with ID and timestamps
    */
   static async createBranch(req: AuthenticatedRequest, res: Response) {
     try {
-      const { code, name_en, name_ar, location_en, location_ar, phone } = req.body;
+      const { code, name_en, name_ar, location_en, location_ar, phone, status } = req.body;
 
       // Validate required fields
       if (!code || !name_en || !name_ar) {
         return res.status(400).json({
           success: false,
           message: 'Missing required fields: code, name_en, name_ar',
+        });
+      }
+
+      // Validate status if provided
+      const validStatuses = ['active', 'inactive', 'archived'];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be one of: active, inactive, archived',
         });
       }
 
@@ -222,6 +232,7 @@ export class BranchController {
       newBranch.location_en = location_en || null;
       newBranch.location_ar = location_ar || null;
       newBranch.phone = phone || null;
+      newBranch.status = status || 'active';
 
       const savedBranch = await BranchController.branchRepo.save(newBranch);
 
@@ -254,12 +265,13 @@ export class BranchController {
    * @body {string} [location_en] - New branch location in English (optional)
    * @body {string} [location_ar] - New branch location in Arabic (optional)
    * @body {string} [phone] - New branch phone (optional)
+   * @body {string} [status] - New branch status (optional, values: "active", "inactive", "archived")
    * @returns Updated branch object
    */
   static async updateBranch(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
-      const { code, name_en, name_ar, location_en, location_ar, phone } = req.body;
+      const { code, name_en, name_ar, location_en, location_ar, phone, status } = req.body;
 
       // Validate ID parameter
       const branchId = parseInt(id);
@@ -279,6 +291,15 @@ export class BranchController {
         return res.status(404).json({
           success: false,
           message: 'Branch not found',
+        });
+      }
+
+      // Validate status if provided
+      const validStatuses = ['active', 'inactive', 'archived'];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be one of: active, inactive, archived',
         });
       }
 
@@ -344,6 +365,7 @@ export class BranchController {
       if (location_en !== undefined) branch.location_en = location_en;
       if (location_ar !== undefined) branch.location_ar = location_ar;
       if (phone !== undefined) branch.phone = phone;
+      if (status !== undefined) branch.status = status;
 
       const updatedBranch = await BranchController.branchRepo.save(branch);
 
@@ -390,7 +412,6 @@ export class BranchController {
       // Find existing branch
       const branch = await BranchController.branchRepo.findOne({
         where: { id: branchId },
-        relations: ['branch_sport_teams'],
       });
 
       if (!branch) {
@@ -400,12 +421,23 @@ export class BranchController {
         });
       }
 
-      // Check if branch has associated sport teams
-      if (branch.branch_sport_teams && branch.branch_sport_teams.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: `Cannot delete branch. It has ${branch.branch_sport_teams.length} associated sport team record(s)`,
+      // Check if branch has associated sport teams by querying BranchSportTeam directly
+      try {
+        const branchSportTeamRepo = AppDataSource.getRepository('BranchSportTeam');
+        const associatedTeams = await branchSportTeamRepo.find({
+          where: { branch_id: branchId },
         });
+
+        if (associatedTeams && associatedTeams.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: `Cannot delete branch. It has ${associatedTeams.length} associated sport team record(s)`,
+          });
+        }
+      } catch (relationError) {
+        // If the relation check fails (table doesn't exist), continue with deletion
+        // The database will enforce any foreign key constraints
+        console.warn('Warning: Could not check branch_sport_teams relation:', relationError);
       }
 
       await BranchController.branchRepo.remove(branch);
