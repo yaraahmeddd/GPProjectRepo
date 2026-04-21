@@ -66,6 +66,7 @@ import {
 } from "../Component/StaffPagesComponents/ui/tooltip";
 
 import { Badge } from "../Component/StaffPagesComponents/ui/badge";
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import {
     PAYMENTS_MAP,
     computePaymentStatus,
@@ -918,29 +919,24 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
             {/* ── Footer ── */}
 
             <div className="border-t border-border px-5 py-3 bg-muted/20 shrink-0 flex items-center gap-2">
-
+                <RoleGuard privilege="DELETE_MEMBER">
                 <Button variant="destructive" size="sm" className="gap-1.5" onClick={onDelete}>
-
                     <Trash2 className="w-4 h-4" /> حذف
-
                 </Button>
+                </RoleGuard>
 
                 <div className="flex gap-2 mr-auto">
-
+                    <RoleGuard privilege="MANAGE_MEMBER_BLOCK">
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={onChangeStatus}>
-
                         <Shield className="w-4 h-4" /> تغيير الحالة
-
                     </Button>
-
+                    </RoleGuard>
+                    <RoleGuard privilege="UPDATE_MEMBER">
                     <Button size="sm" className="gap-1.5" onClick={onEdit}>
-
                         <Pencil className="w-4 h-4" /> تعديل
-
                     </Button>
-
+                    </RoleGuard>
                 </div>
-
             </div>
 
         </div>
@@ -2613,6 +2609,7 @@ export default function MemberManagementPage() {
 
 
 
+                                                        <RoleGuard privilege="UPDATE_MEMBER">
                                                         <Tooltip>
 
                                                             <TooltipTrigger asChild>
@@ -2638,6 +2635,7 @@ export default function MemberManagementPage() {
                                                             <TooltipContent side="top" className="text-xs">تعديل</TooltipContent>
 
                                                         </Tooltip>
+                                                        </RoleGuard>
 
 
 
@@ -2655,6 +2653,7 @@ export default function MemberManagementPage() {
 
                                                             <DropdownMenuContent align="end" className="text-xs">
 
+                                                                <RoleGuard privilege="MANAGE_MEMBER_BLOCK">
                                                                 <DropdownMenuItem onClick={() => openStatus(row)} className="gap-2">
 
                                                                     <Shield className="w-3.5 h-3.5" />
@@ -2662,7 +2661,9 @@ export default function MemberManagementPage() {
                                                                     تغيير الحالة
 
                                                                 </DropdownMenuItem>
+                                                                </RoleGuard>
 
+                                                                <RoleGuard privilege="DELETE_MEMBER">
                                                                 <DropdownMenuItem onClick={() => openDelete(row)} className="gap-2 text-red-600 focus:text-red-600">
 
                                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -2670,6 +2671,7 @@ export default function MemberManagementPage() {
                                                                     حذف العضو
 
                                                                 </DropdownMenuItem>
+                                                                </RoleGuard>
 
                                                             </DropdownMenuContent>
 

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
 import {
   BadgeCheck,
+  Briefcase,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ import {
   Users,
   Dumbbell,
   Link2,
+  Building,
 } from "lucide-react";
 import { PAYMENT_ALERTS } from "../../../data/paymentsData";
 
@@ -65,7 +67,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         title: "طلبات التسجيل",
         icon: ClipboardList,
         path: "/staff/dashboard/registrations",
-        privilege: "VIEW_MEMBERS",
+        privilege: "MANAGE_MEMBERSHIP_REQUEST",
       },
       {
         title: "إدارة الأعضاء",
@@ -77,13 +79,13 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         title: "إضافة عضو نادي",
         icon: UserPlus,
         path: "/staff/dashboard/members/new",
-        privilege: "VIEW_MEMBERS",
+        privilege: "CREATE_MEMBER",
       },
       {
         title: "إضافة لاعب فريق",
         icon: UserPlus,
-        path: "/staff/dashboard/members/new-team",
-        privilege: "VIEW_MEMBERS",
+        path: "/staff/dashboard/members/new-team-member",
+        privilege: "ADD_TEAM_MEMBER",
       },
     ],
   },
@@ -123,25 +125,25 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         title: "الفرق",
         icon: Users,
         path: "/staff/dashboard/sports/teams",
-        privilege: "VIEW_SPORTS",
+        privilege: "VIEW_TEAMS",
       },
       {
         title: "الملاعب والفيلدات",
         icon: MapPin,
         path: "/staff/dashboard/sports/courts",
-        privilege: "VIEW_SPORTS",
+        privilege: "VIEW_FIELDS",
       },
       {
         title: "تعيين الرياضات",
         icon: Shield,
         path: "/staff/dashboard/members/sports",
-        privilege: "VIEW_MEMBERS",
+        privilege: "ASSIGN_SPORT_TO_MEMBER",
       },
       {
         title: "الأعضاء بالرياضة",
         icon: Users,
         path: "/staff/dashboard/members/sports-view",
-        privilege: "VIEW_MEMBERS",
+        privilege: "VIEW_TEAM_MEMBERS",
       },
     ],
   },
@@ -181,13 +183,13 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         title: "إضافة موظف جديد",
         icon: UserPlus,
         path: "/staff/dashboard/admin/staff/new",
-        privilege: "STAFF_CREATE",
+        privilege: "CREATE_STAFF",
       },
       {
         title: "إدارة الموظفين",
         icon: Users,
         path: "/staff/dashboard/admin/staff/manage",
-        privilege: "STAFF_CREATE",
+        privilege: "VIEW_STAFF",
       },
     ],
   },
@@ -197,6 +199,24 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "النظام",
     collapsible: true,
     items: [
+      {
+        title: "إدارة الفروع",
+        icon: Building,
+        path: "/staff/dashboard/branches",
+        privilege: "VIEW_BRANCHES",
+      },
+      {
+        title: "إدارة الكليات",
+        icon: Building,
+        path: "/staff/dashboard/faculties",
+        privilege: "VIEW_FACULTIES",
+      },
+      {
+        title: "إدارة المهن",
+        icon: Briefcase,
+        path: "/staff/dashboard/professions",
+        privilege: "VIEW_PROFESSIONS",
+      },
       {
         title: "باقات الصلاحيات",
         icon: Shield,
@@ -219,7 +239,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         title: "سجل التدقيق",
         icon: ScrollText,
         path: "/staff/dashboard/audit-log",
-        privilege: "audit.view",
+        privilege: "VIEW_AUDIT_LOGS",
       },
     ],
   },

@@ -16,6 +16,7 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../Component/StaffPagesComponents/ui/select";
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import { useNavigate } from "react-router-dom";
 import { StaffService } from "../services/staffService";
 
@@ -423,12 +424,16 @@ function DetailPanel({ row, details, privileges, loading, roleName, onDelete, st
                     </>
                 ) : (
                     <>
-                        <Button size="sm" className="flex-1 gap-1.5" onClick={startEdit}>
-                            <Pencil className="w-3.5 h-3.5" /> تعديل
-                        </Button>
-                        <Button size="sm" variant="destructive" className="flex-1 gap-1.5" onClick={onDelete}>
-                            <Trash2 className="w-3.5 h-3.5" /> إلغاء تفعيل
-                        </Button>
+                        <RoleGuard privilege="UPDATE_STAFF">
+                            <Button size="sm" className="flex-1 gap-1.5" onClick={startEdit}>
+                                <Pencil className="w-3.5 h-3.5" /> تعديل
+                            </Button>
+                        </RoleGuard>
+                        <RoleGuard privilege="TERMINATE_STAFF">
+                            <Button size="sm" variant="destructive" className="flex-1 gap-1.5" onClick={onDelete}>
+                                <Trash2 className="w-3.5 h-3.5" /> إلغاء تفعيل
+                            </Button>
+                        </RoleGuard>
                     </>
                 )}
             </div>
@@ -645,14 +650,16 @@ export default function StaffManagementPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => navigate("/staff/dashboard/admin/staff/new")}
-                    >
-                        <UserPlus className="w-4 h-4" />
-                        موظف جديد
-                    </Button>
+                    <RoleGuard privilege="CREATE_STAFF">
+                        <Button
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => navigate("/staff/dashboard/admin/staff/new")}
+                        >
+                            <UserPlus className="w-4 h-4" />
+                            موظف جديد
+                        </Button>
+                    </RoleGuard>
                 </div>
             </div>
 
@@ -829,24 +836,29 @@ export default function StaffManagementPage() {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            title="تعديل"
-                                                            onClick={(e) => { e.stopPropagation(); void openDetail(row, true); }}
-                                                            className="p-1.5 rounded-md hover:bg-amber-100 text-amber-600 transition-colors"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            title="إلغاء تفعيل"
-                                                            onClick={() => {
-                                                                setSelectedRow(row);
-                                                                setDeleteTarget(row);
-                                                                setDeleteOpen(true);
-                                                            }}
-                                                            className="p-1.5 rounded-md hover:bg-rose-100 text-rose-600 transition-colors"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <RoleGuard privilege="UPDATE_STAFF">
+                                                            <button
+                                                                title="تعديل"
+                                                                onClick={(e) => { e.stopPropagation(); void openDetail(row, true); }}
+                                                                className="p-1.5 rounded-md hover:bg-amber-100 text-amber-600 transition-colors"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                        </RoleGuard>
+                                                        <RoleGuard privilege="TERMINATE_STAFF">
+                                                            <button
+                                                                title="إلغاء تفعيل"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedRow(row);
+                                                                    setDeleteTarget(row);
+                                                                    setDeleteOpen(true);
+                                                                }}
+                                                                className="p-1.5 rounded-md hover:bg-rose-100 text-rose-600 transition-colors"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </RoleGuard>
                                                     </div>
                                                 </td>
                                             </tr>
