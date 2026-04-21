@@ -268,7 +268,9 @@ export class StaffService {
 
   /**
    * Revoke a privilege from a staff member
-   * Used when removing a privilege that was part of an assigned package
+   * Uses override system: adds staff_privileges_override with is_granted=false
+   * This works for any privilege source (direct, package, or default)
+   * Packages remain assigned - the override simply denies this specific privilege
    */
   async revokePrivilege(
     staffId: number,
@@ -288,21 +290,56 @@ export class StaffService {
       throw new Error('Privilege not found');
     }
 
-    // Create override to revoke
+    // Get final privileges to verify the privilege is actually granted
+    const finalPrivileges = await PrivilegeCalculationService.calculateFinalPrivileges(staffId);
+    const privilegeInfo = finalPrivileges.find((p: Record<string, unknown>) => p.id === privilegeId);
+
+    if (!privilegeInfo) {
+      throw new Error('Privilege not found in staff member final privileges - cannot revoke');
+    }
+
+    // Check if override already exists
+    const existingOverride = await this.staffPrivilegeOverrideRepository.findOne({
+      where: { staff_id: staffId, privilege_id: privilegeId },
+    });
+
+    if (existingOverride && !existingOverride.is_granted) {
+      // Already revoked
+      return {
+        success: false,
+        message: `Privilege '${privilege.code}' is already revoked for this staff member`,
+      };
+    }
+
+    // Create or update override to revoke this privilege
+    const source = privilegeInfo.source as string;
+    const sourceInfo = source === 'package' 
+      ? ` (from package '${privilegeInfo.package_code}')` 
+      : source === 'default' 
+        ? ' (default privilege)' 
+        : '';
+
     await this.staffPrivilegeOverrideRepository.save({
       staff_id: staffId,
       privilege_id: privilegeId,
       is_granted: false,
       assigned_by: assignedById,
-      reason: reason || `Revoked ${privilege.code} privilege`,
+      reason: reason || `Revoked ${privilege.code}${sourceInfo}`,
     });
 
-    // Log activity
-    console.log(`[PRIVILEGE_REVOKED] Staff ${staffId}: Revoked ${privilege.code} by ${assignedById}`);
+    console.log(
+      `[PRIVILEGE_REVOKED] Staff ${staffId}: Revoked ${privilege.code} (source: ${source}) by user ${assignedById}`
+    );
 
     return {
       success: true,
       message: `Revoked privilege '${privilege.code}' successfully`,
+      source,
+      note: source === 'package' 
+        ? `This privilege was removed from package assignment '${privilegeInfo.package_code}'. The package remains assigned.`
+        : source === 'default'
+          ? 'This default privilege is now denied for this staff member only.'
+          : 'This directly-granted privilege has been revoked.',
     };
   }
 

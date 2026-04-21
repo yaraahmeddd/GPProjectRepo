@@ -16,6 +16,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { CalendarDays, ChevronDown, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,13 +62,14 @@ const endOf = (d: Date): Date => {
     return c;
 };
 
-const PRESETS: Preset[] = [
+// Return pure data from preset definitions, translate via hook later
+const PRESETS: Omit<Preset, 'label'> & { key: string; get: () => DateRange }[] = [
     {
-        label: "اليوم",
+        key: "dateRange.today",
         get: () => { const t = toISO(today()); return { from: t, to: t }; },
     },
     {
-        label: "آخر 7 أيام",
+        key: "dateRange.last7Days",
         get: () => {
             const t = today();
             const f = new Date(t); f.setDate(f.getDate() - 6);
@@ -75,7 +77,7 @@ const PRESETS: Preset[] = [
         },
     },
     {
-        label: "آخر 30 يوماً",
+        key: "dateRange.last30Days",
         get: () => {
             const t = today();
             const f = new Date(t); f.setDate(f.getDate() - 29);
@@ -83,14 +85,14 @@ const PRESETS: Preset[] = [
         },
     },
     {
-        label: "هذا الشهر",
+        key: "dateRange.thisMonth",
         get: () => {
             const t = today();
             return { from: toISO(startOf(t)), to: toISO(endOf(t)) };
         },
     },
     {
-        label: "الشهر الماضي",
+        key: "dateRange.lastMonth",
         get: () => {
             const t = today();
             const first = new Date(t.getFullYear(), t.getMonth() - 1, 1);
@@ -99,21 +101,21 @@ const PRESETS: Preset[] = [
         },
     },
     {
-        label: "هذا العام",
+        key: "dateRange.thisYear",
         get: () => {
             const y = today().getFullYear();
             return { from: `${y}-01-01`, to: `${y}-12-31` };
         },
     },
     {
-        label: "العام الماضي",
+        key: "dateRange.lastYear",
         get: () => {
             const y = today().getFullYear() - 1;
             return { from: `${y}-01-01`, to: `${y}-12-31` };
         },
     },
     {
-        label: "آخر سنة",
+        key: "dateRange.last1Year",
         get: () => {
             const t = today();
             const f = new Date(t); f.setFullYear(f.getFullYear() - 1);
@@ -136,8 +138,8 @@ function rangeLabel(value: DateRange): string | null {
     if (!value.from && !value.to) return null;
     if (value.from === value.to) return fmtDate(value.from!);
     if (value.from && value.to) return `${fmtDate(value.from)} — ${fmtDate(value.to)}`;
-    if (value.from) return `من ${fmtDate(value.from)}`;
-    return `حتى ${fmtDate(value.to!)}`;
+    if (value.from) return `${fmtDate(value.from)} →`;
+    return `→ ${fmtDate(value.to!)}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -145,9 +147,11 @@ function rangeLabel(value: DateRange): string | null {
 export default function DateRangeFilter({
     value,
     onChange,
-    placeholder = "فلترة بالتاريخ",
+    placeholder,
     className = "",
 }: DateRangeFilterProps) {
+    const { t } = useTranslation(["common"]);
+    const finalPlaceholder = placeholder || t("dateRange.placeholder");
     const [open, setOpen] = useState(false);
     const [customFrom, setCustomFrom] = useState(value.from ?? "");
     const [customTo, setCustomTo] = useState(value.to ?? "");
@@ -203,7 +207,7 @@ export default function DateRangeFilter({
             >
                 <CalendarDays className="w-4 h-4 shrink-0" />
                 <span className="max-w-[220px] truncate">
-                    {label ?? placeholder}
+                    {label ?? finalPlaceholder}
                 </span>
                 {hasValue ? (
                     <X
@@ -229,21 +233,21 @@ export default function DateRangeFilter({
                             const isActive = value.from === presetRange.from && value.to === presetRange.to;
                             return (
                                 <button
-                                    key={preset.label}
+                                    key={preset.key}
                                     type="button"
                                     onClick={() => {
                                         onChange(presetRange);
                                         setOpen(false);
                                     }}
                                     className={`
-                    px-3 py-1.5 rounded-lg text-sm text-right transition-colors
+                    px-3 py-1.5 rounded-lg text-sm text-start transition-colors
                     ${isActive
                                             ? "bg-primary text-primary-foreground font-semibold"
                                             : "hover:bg-muted text-foreground"
                                         }
                   `}
                                 >
-                                    {preset.label}
+                                    {t(preset.key)}
                                 </button>
                             );
                         })}
@@ -252,11 +256,11 @@ export default function DateRangeFilter({
                     {/* Custom date range */}
                     <div className="p-3 space-y-2">
                         <p className="text-[11px] font-semibold text-muted-foreground tracking-wide uppercase">
-                            نطاق مخصص
+                            {t("dateRange.customRange")}
                         </p>
                         <div className="flex items-center gap-2">
                             <div className="flex-1">
-                                <label className="text-[10px] text-muted-foreground mb-0.5 block">من</label>
+                                <label className="text-[10px] text-muted-foreground mb-0.5 block">{t("dateRange.from")}</label>
                                 <input
                                     type="date"
                                     value={customFrom}
@@ -271,7 +275,7 @@ export default function DateRangeFilter({
                                 />
                             </div>
                             <div className="flex-1">
-                                <label className="text-[10px] text-muted-foreground mb-0.5 block">إلى</label>
+                                <label className="text-[10px] text-muted-foreground mb-0.5 block">{t("dateRange.to")}</label>
                                 <input
                                     type="date"
                                     value={customTo}
@@ -297,7 +301,7 @@ export default function DateRangeFilter({
                   hover:opacity-90 transition-opacity disabled:opacity-40
                 "
                             >
-                                تطبيق
+                                {t("dateRange.apply")}
                             </button>
                             {hasValue && (
                                 <button
@@ -308,7 +312,7 @@ export default function DateRangeFilter({
                     hover:bg-muted transition-colors
                   "
                                 >
-                                    مسح
+                                    {t("dateRange.clear")}
                                 </button>
                             )}
                         </div>

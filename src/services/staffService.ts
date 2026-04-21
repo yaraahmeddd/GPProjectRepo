@@ -69,8 +69,19 @@ export const StaffService = {
      * GET /staff/:id/final-privileges
      */
     getPrivileges: async (id: number) => {
-        const response = await api.get(`/staff/${id}/final-privileges`);
-        return response.data;
+        try {
+            const response = await api.get(`/staff/${id}/final-privileges`);
+            return response.data;
+        } catch (error: any) {
+            console.error(`Failed to fetch privileges for staff ${id}:`, {
+                status: error?.response?.status,
+                statusText: error?.response?.statusText,
+                message: error?.response?.data?.message,
+                error: error?.response?.data?.error,
+                details: error?.response?.data,
+            });
+            throw error;
+        }
     },
 
     /**
@@ -173,12 +184,22 @@ export const StaffService = {
     /**
      * Revoke privileges from a staff member
      * POST /staff/:id/revoke-privilege
+     * Returns 200 on success, 409 on partial failure with failed_attempts
      */
     revokePrivileges: async (staffId: number, privilegeIds: number[], reason?: string) => {
-        const response = await api.post(`/staff/${staffId}/revoke-privilege`, {
-            privilege_ids: privilegeIds,
-            ...(reason ? { reason } : {}),
-        });
-        return response.data;
+        try {
+            const response = await api.post(`/staff/${staffId}/revoke-privilege`, {
+                privilege_ids: privilegeIds,
+                ...(reason ? { reason } : {}),
+            });
+            return response.data;
+        } catch (error: any) {
+            // Handle 409 Conflict - partial failure with detailed failure info
+            if (error?.response?.status === 409 && error?.response?.data) {
+                // Return the error data so caller can process failed_attempts
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 };

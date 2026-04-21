@@ -1,10 +1,22 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Navbar } from "./Navbar";
 import { AppSidebar } from "./AppSidebar";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 export function MainLayout({ children }: { children: ReactNode }) {
+  const { isRTL } = useLanguage();
+
+  useEffect(() => {
+    const savedLang = Object.keys(localStorage).includes('dashboard-lang') 
+      ? localStorage.getItem('dashboard-lang') 
+      : 'ar';
+    const rtl = savedLang === 'ar';
+    document.dir = rtl ? 'rtl' : 'ltr';
+    document.documentElement.lang = savedLang || 'ar';
+  }, []);
+
   return (
-    <div className="h-screen bg-background huc-app huc-page overflow-hidden" dir="rtl">
+    <div className="h-screen bg-background huc-app huc-page overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
       <Navbar />
       <AppSidebar />
       {/*
@@ -14,8 +26,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
         Form/scroll pages use overflow-y-auto on their own containers.
       */}
       <main
-        className="pt-16 h-screen overflow-hidden transition-[padding-right] duration-[250ms] ease-in-out min-w-0"
-        style={{ paddingRight: "var(--sidebar-width, 256px)" }}
+        className="pt-16 h-screen overflow-hidden transition-[margin-inline-start] duration-[250ms] ease-in-out min-w-0"
+        style={{ marginInlineStart: "var(--sidebar-width, 256px)" }}
       >
         <div className="h-[calc(100vh-4rem)] min-w-0 overflow-y-auto">
           {children}

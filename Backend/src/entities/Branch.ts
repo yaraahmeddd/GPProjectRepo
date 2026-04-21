@@ -5,7 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
+  OneToMany,
 } from 'typeorm';
+import { BranchSportTeam } from './BranchSportTeam';
 
 @Entity('branches')
 @Unique(['code'])
@@ -36,4 +38,8 @@ export class Branch {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  // Relations
+  @OneToMany(() => BranchSportTeam, (team) => team.branch, { eager: false })
+  branch_sport_teams: BranchSportTeam[];
 }

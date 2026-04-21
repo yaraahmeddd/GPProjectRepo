@@ -191,7 +191,7 @@ app.use('/api/audit-logs', AuditLogRoutes);
 app.use('/api/media-posts', MediaPostRoutes);
 app.use('/api/faculties', FacultyRoutes);
 app.use('/api/branches', BranchRoutes);
-app.use('/api/branch-sports', BranchSportRoutes);
+app.use('/api', BranchSportRoutes);
 app.use('/api/professions', ProfessionRoutes);
 app.use('/api/seed', SeedRoutes);
 app.use('/api/paymob', PaymobRoutes);
