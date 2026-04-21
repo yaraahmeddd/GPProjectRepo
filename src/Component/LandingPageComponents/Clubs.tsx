@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useRef } from 'react';
 
 interface FormData {
@@ -49,6 +50,7 @@ interface ClubsProps {
 }
 
 const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
+  const { t } = useTranslation("landing");
   const asset = (name: string) => `/assets/${name}`;
   const [selectedClub, setSelectedClub] = useState<string>('maadi');
   const [formData, setFormData] = useState<FormData>({
@@ -214,14 +216,14 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="font-cairo bg-gray-50" dir="rtl">
+    <div className="font-cairo bg-gray-50" >
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-[#0e1c38] hero-pattern">
         <div className="gradient-overlay">
           <div className="container mx-auto px-4 py-20 md:py-32">
             <div className="max-w-4xl mx-auto text-center text-white animate-fade-in">
               <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
-                الفروع
+                {t("clubs.title", "الفروع")}
               </h1>
             </div>
           </div>
@@ -241,7 +243,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
               {/* Left: Dropdown */}
               <div className="flex flex-col gap-6">
                 <div>
-                  <label className="block text-[#0e1c38] font-bold mb-3 text-lg">اختر الفرع</label>
+                  <label className="block text-[#0e1c38] font-bold mb-3 text-lg">{t("clubs.select_branch", "اختر الفرع")}</label>
                   <select
                     value={selectedClub}
                     onChange={(e) => setSelectedClub(e.target.value)}
@@ -252,7 +254,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                     }}
                   >
                     {clubsData.map((club) => (
-                      <option key={club.id} value={club.id} style={{ backgroundColor: '#0e1c38', color: 'white' }}>{club.nameAr}</option>
+                      <option key={club.id} value={club.id} style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
                     ))}
                   </select>
                 </div>
@@ -265,20 +267,20 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                         <path id="Path_8" data-name="Path 8" d="M29.352,0A20.439,20.439,0,0,0,8.9,20.452,20.761,20.761,0,0,0,10.661,28.8c5.113,11.135,14.941,22.952,17.782,26.3a1.112,1.112,0,0,0,1.7,0c2.9-3.352,12.669-15.169,17.782-26.36A19.849,19.849,0,0,0,49.69,20.4,20.33,20.33,0,0,0,29.352,0Zm0,31.076A10.624,10.624,0,1,1,39.919,20.452,10.644,10.644,0,0,1,29.352,31.076Z" transform="translate(-8.9 0)" fill="#0e1c38" />
                       </g>
                     </svg>
-                    <span className="font-bold">العنوان</span>
+                    <span className="font-bold">{t("common.address", "العنوان")}</span>
                   </button>
                 </div>
               </div>
 
               {/* Middle: Image */}
               <div className="flex justify-center lg:justify-center">
-                <img src={asset('club.png')} alt={currentClub.nameAr} className="w-full max-w-sm h-auto object-contain drop-shadow-2xl" />
+                <img src={asset('club.png')} alt={t(`clubs.names.${currentClub.id}`, currentClub.nameAr)} className="w-full max-w-sm h-auto object-contain drop-shadow-2xl" />
               </div>
 
               {/* Right: Content */}
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-4xl font-bold text-[#0e1c38] mb-2">{currentClub.nameAr}</h3>
+                  <h3 className="text-4xl font-bold text-[#0e1c38] mb-2">{t(`clubs.names.${currentClub.id}`, currentClub.nameAr)}</h3>
                   <div className="w-16 h-1 bg-[#FDBF00]"></div>
                 </div>
 
@@ -287,28 +289,28 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                     <div className="w-1 h-12 bg-[#FDBF00]"></div>
                     <div>
                       <div className="text-4xl font-bold text-[#FDBF00]">{currentClub.courts}</div>
-                      <div className="text-[#0e1c38] text-sm">ملاعب</div>
+                      <div className="text-[#0e1c38] text-sm">{t("clubs.courts", "ملاعب")}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-1 h-12 bg-[#FDBF00]"></div>
                     <div>
                       <div className="text-4xl font-bold text-[#FDBF00]">{currentClub.pools}</div>
-                      <div className="text-[#0e1c38] text-sm">حمامات سباحة</div>
+                      <div className="text-[#0e1c38] text-sm">{t("clubs.pools", "حمامات سباحة")}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-1 h-12 bg-[#FDBF00]"></div>
                     <div>
                       <div className="text-4xl font-bold text-[#FDBF00]">{currentClub.restaurants}</div>
-                      <div className="text-[#0e1c38] text-sm">مطاعم</div>
+                      <div className="text-[#0e1c38] text-sm">{t("clubs.restaurants", "مطاعم")}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-1 h-12 bg-[#FDBF00]"></div>
                     <div>
                       <div className="text-4xl font-bold text-[#FDBF00]">{currentClub.kidsArea}</div>
-                      <div className="text-[#0e1c38] text-sm">منطقة أطفال</div>
+                      <div className="text-[#0e1c38] text-sm">{t("clubs.kids_area", "منطقة أطفال")}</div>
                     </div>
                   </div>
                 </div>
@@ -324,7 +326,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-16">
-              <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-12">الأكاديميات الرياضية</h2>
+              <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-12">{t("clubs.academies_title", "الأكاديميات الرياضية")}</h2>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
                 {/* Left: Dropdown and Content */}
@@ -337,10 +339,10 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                         paddingRight: '20px'
                       }}
                     >
-                      <option value="football" style={{ backgroundColor: '#0e1c38', color: 'white' }}>كرة القدم</option>
-                      <option value="tennis" style={{ backgroundColor: '#0e1c38', color: 'white' }}>التنس</option>
-                      <option value="swimming" style={{ backgroundColor: '#0e1c38', color: 'white' }}>السباحة</option>
-                      <option value="basketball" style={{ backgroundColor: '#0e1c38', color: 'white' }}>كرة السلة</option>
+                      <option value="football" style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t("sports.names.football", "كرة القدم")}</option>
+                      <option value="tennis" style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t("sports.names.tennis", "التنس")}</option>
+                      <option value="swimming" style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t("sports.names.swimming", "السباحة")}</option>
+                      <option value="basketball" style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t("sports.names.basketball", "كرة السلة")}</option>
                     </select>
                   </div>
 
@@ -352,7 +354,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       </svg>
                       <div>
                         <div className="text-4xl font-bold text-[#FDBF00]">554</div>
-                        <div className="text-white font-semibold">لاعبين</div>
+                        <div className="text-white font-semibold">{t("clubs.players", "لاعبين")}</div>
                       </div>
                     </div>
 
@@ -362,7 +364,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       </svg>
                       <div>
                         <div className="text-4xl font-bold text-[#FDBF00]">16</div>
-                        <div className="text-white font-semibold">مدربين</div>
+                        <div className="text-white font-semibold">{t("clubs.coaches", "مدربين")}</div>
                       </div>
                     </div>
 
@@ -372,23 +374,23 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       </svg>
                       <div>
                         <div className="text-4xl font-bold text-[#FDBF00]">3</div>
-                        <div className="text-white font-semibold">ملاعب</div>
+                        <div className="text-white font-semibold">{t("clubs.courts", "ملاعب")}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Description */}
                   <p className="text-white leading-relaxed text-base">
-                    الأكاديمية هي واحدة من أكبر أكاديميات كرة القدم في المنطقة. يبدأ التسجيل من 4 سنوات لكلا الجنسين. يتم تقييم اللاعبين على أساس ربع سنوي.
+                    {t("clubs.academy_desc", "الأكاديمية هي واحدة من أكبر أكاديميات كرة القدم في المنطقة. يبدأ التسجيل من 4 سنوات لكلا الجنسين. يتم تقييم اللاعبين على أساس ربع سنوي.")}
                   </p>
 
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button onClick={() => window.location.href = '/re'} className="flex-1 border-2 border-[#FDBF00] text-white py-3 px-6 rounded-lg font-bold hover:bg-[#FDBF00] hover:text-white transition-all duration-300">
-                      كن عضوا
+                      {t("clubs.become_member", "كن عضوا")}
                     </button>
                     <button onClick={() => onNavigate?.('Sports')} className="flex-1 border-2 border-gray-900 text-white py-3 px-6 rounded-lg font-bold hover:bg-gray-900 hover:text-white transition-all duration-300">
-                      المزيد من التفاصيل
+                      {t("clubs.more_details", "المزيد من التفاصيل")}
                     </button>
                   </div>
                 </div>
@@ -415,16 +417,16 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
               {/* Left: Content */}
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-5xl md:text-6xl font-extrabold text-[#0e1c38] mb-6">صالة الألعاب الرياضية</h2>
+                  <h2 className="text-5xl md:text-6xl font-extrabold text-[#0e1c38] mb-6">{t("clubs.gym.title", "صالة الألعاب الرياضية")}</h2>
                   <div className="w-20 h-1 bg-[#FDBF00] rounded-full"></div>
                 </div>
 
                 <p className="text-gray-700 text-lg leading-relaxed">
-                  صالة الألعاب الرياضية لدينا مزودة بأحدث المعدات والمدربين الشخصيين المحترفين، جاهزة لمساعدتك على تحقيق أحلامك الصحية والبدنية والعيش بنمط حياة صحي.
+                  {t("clubs.gym.desc", "صالة الألعاب الرياضية لدينا مزودة بأحدث المعدات والمدربين الشخصيين المحترفين، جاهزة لمساعدتك على تحقيق أحلامك الصحية والبدنية والعيش بنمط حياة صحي.")}
                 </p>
 
                 <button className="bg-[#FDBF00] hover:bg-[#e6ac00] text-[#0e1c38] px-8 py-3 rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl inline-block">
-                  اشترك الآن
+                  {t("clubs.subscribe_now", "اشترك الآن")}
                 </button>
               </div>
 
@@ -455,7 +457,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
             <div className="mb-16">
-              <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6">خدمات أخرى</h1>
+              <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6">{t("clubs.other_services", "خدمات أخرى")}</h1>
               <div className="w-20 h-1 bg-[#FDBF00] rounded-full"></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -468,7 +470,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                   {/* Service Image */}
                   <img
                     src={currentService.image}
-                    alt={currentService.nameAr}
+                    alt={t(`clubs.services.${selectedService}.name`, currentService.nameAr)}
                     className="w-full h-full object-cover relative z-0 transition-all duration-500"
                   />
                 </div>
@@ -477,12 +479,12 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
               {/* Right: Content */}
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-6">{currentService.nameAr}</h2>
+                  <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-6">{t(`clubs.services.${selectedService}.name`, currentService.nameAr)}</h2>
                   <div className="w-20 h-1 bg-[#FDBF00] rounded-full"></div>
                 </div>
 
                 <p className="text-gray-300 text-lg leading-relaxed">
-                  {currentService.descriptionAr}
+                  {t(`clubs.services.${selectedService}.desc`, currentService.descriptionAr)}
                 </p>
 
                 {/* Service Buttons */}
@@ -494,7 +496,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       : 'border-white/30 text-white hover:border-[#FDBF00]'
                       }`}
                   >
-                    منطقة اجتماعية
+                    {t("clubs.services.social.name", "منطقة اجتماعية")}
                   </button>
 
                   <button
@@ -504,7 +506,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       : 'border-white/30 text-white hover:border-[#FDBF00]'
                       }`}
                   >
-                    منطقة الأطفال
+                    {t("clubs.services.kids.name", "منطقة الأطفال")}
                   </button>
 
                   <button
@@ -514,7 +516,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       : 'border-white/30 text-white hover:border-[#FDBF00]'
                       }`}
                   >
-                    وادي الفنون
+                    {t("clubs.services.wadi.name", "وادي الفنون")}
                   </button>
 
                   <button
@@ -524,7 +526,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       : 'border-white/30 text-white hover:border-[#FDBF00]'
                       }`}
                   >
-                    المطاعم
+                    {t("clubs.services.restaurants.name", "المطاعم")}
                   </button>
 
                   <button
@@ -534,7 +536,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                       : 'border-white/30 text-white hover:border-[#FDBF00]'
                       }`}
                   >
-                    المكتبة
+                    {t("clubs.services.library.name", "المكتبة")}
                   </button>
                 </div>
               </div>

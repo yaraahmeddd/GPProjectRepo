@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
@@ -62,6 +63,7 @@ const mapMediaCategory = (category: string): NewsCategory => {
 };
 
 const LastNews: React.FC = () => {
+  const { t } = useTranslation("landing");
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -71,14 +73,14 @@ const LastNews: React.FC = () => {
   const newsCardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const categories: Category[] = [
-    { id: 'all', name: 'all', label: 'الكل' },
-    { id: 'photos', name: 'photos', label: 'الصور' },
-    { id: 'videos', name: 'videos', label: 'الفيديوهات' },
-    { id: 'events', name: 'events', label: 'الفعاليات' },
-    { id: 'promotions', name: 'promotions', label: 'العروض الترويجية' },
-    { id: 'news', name: 'news', label: 'الأخبار' },
-    { id: 'announcements', name: 'announcements', label: 'الإعلانات' },
-    { id: 'maintenance', name: 'maintenance', label: 'الصيانة' },
+    { id: 'all', name: 'all', label: t('news.cats.all', 'الكل') },
+    { id: 'photos', name: 'photos', label: t('news.cats.photos', 'الصور') },
+    { id: 'videos', name: 'videos', label: t('news.cats.videos', 'الفيديوهات') },
+    { id: 'events', name: 'events', label: t('news.cats.events', 'الفعاليات') },
+    { id: 'promotions', name: 'promotions', label: t('news.cats.promotions', 'العروض الترويجية') },
+    { id: 'news', name: 'news', label: t('news.cats.news', 'الأخبار') },
+    { id: 'announcements', name: 'announcements', label: t('news.cats.announcements', 'الإعلانات') },
+    { id: 'maintenance', name: 'maintenance', label: t('news.cats.maintenance', 'الصيانة') },
   ];
 
   useEffect(() => {
@@ -162,21 +164,21 @@ const LastNews: React.FC = () => {
   const getCategoryBadge = (category: NewsCategory) => {
     switch (category) {
       case 'photos':
-        return { label: 'صور', class: 'bg-slate-600/90 text-white' };
+        return { label: t('news.badge.photos', 'صور'), class: 'bg-slate-600/90 text-white' };
       case 'videos':
-        return { label: 'فيديو', class: 'bg-[#FDBF00]/90 text-[#0A1A44]' };
+        return { label: t('news.badge.video', 'فيديو'), class: 'bg-[#FDBF00]/90 text-[#0A1A44]' };
       case 'events':
-        return { label: 'فعالية', class: 'bg-blue-500/90 text-white' };
+        return { label: t('news.badge.event', 'فعالية'), class: 'bg-blue-500/90 text-white' };
       case 'promotions':
-        return { label: 'عرض', class: 'bg-purple-500/90 text-white' };
+        return { label: t('news.badge.offer', 'عرض'), class: 'bg-purple-500/90 text-white' };
       case 'news':
-        return { label: 'خبر', class: 'bg-emerald-500/90 text-white' };
+        return { label: t('news.badge.news', 'خبر'), class: 'bg-emerald-500/90 text-white' };
       case 'announcements':
-        return { label: 'إعلان', class: 'bg-red-500/90 text-white' };
+        return { label: t('news.badge.announcement', 'إعلان'), class: 'bg-red-500/90 text-white' };
       case 'maintenance':
-        return { label: 'صيانة', class: 'bg-amber-500/90 text-white' };
+        return { label: t('news.badge.maintenance', 'صيانة'), class: 'bg-amber-500/90 text-white' };
       default:
-        return { label: 'منشور', class: 'bg-gray-500/90 text-white' };
+        return { label: t('news.badge.post', 'منشور'), class: 'bg-gray-500/90 text-white' };
     }
   };
 
@@ -226,14 +228,14 @@ const LastNews: React.FC = () => {
   }, [activeFilter, posts, searchTerm]);
 
   return (
-    <div className="font-cairo bg-gray-50" dir="rtl">
+    <div className="font-cairo bg-gray-50" >
       <section className="relative overflow-hidden bg-[#0e1c38] hero-pattern">
         <div className="gradient-overlay">
           <div className="container mx-auto px-4 py-20 md:py-32">
             <div className="max-w-4xl mx-auto text-center text-white animate-fade-in">
-              <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">آخر الأخبار</h1>
+              <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">{t("news.title", "آخر الأخبار")}</h1>
               <p className="text-xl md:text-2xl text-white/90 leading-relaxed">
-                تابع أحدث أخبار نادي حلوان والإنجازات والفعاليات
+                {t("news.subtitle", "تابع أحدث أخبار نادي حلوان والإنجازات والفعاليات")}
               </p>
             </div>
           </div>
@@ -250,7 +252,7 @@ const LastNews: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-gray-700 font-bold">تصفية حسب:</span>
+              <span className="text-gray-700 font-bold">{t("news.filter_by", "تصفية حسب:")}</span>
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -272,7 +274,7 @@ const LastNews: React.FC = () => {
               </svg>
               <input
                 type="text"
-                placeholder="ابحث في الأخبار..."
+                placeholder={t("news.search_placeholder", "ابحث في الأخبار...")}
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="bg-transparent border-none outline-none text-gray-700 w-48"
@@ -285,12 +287,12 @@ const LastNews: React.FC = () => {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">الأخبار المميزة</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t("news.featured", "الأخبار المميزة")}</h2>
             <div className="h-1 w-20 bg-[#FDBF00] rounded-full"></div>
           </div>
 
           {loading ? (
-            <div className="py-12 text-center text-gray-500">جاري تحميل الأخبار...</div>
+            <div className="py-12 text-center text-gray-500">{t("news.loading", "جاري تحميل الأخبار...")}</div>
           ) : featuredMain ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
               <div
@@ -323,7 +325,7 @@ const LastNews: React.FC = () => {
                     }}
                     className="mt-4 text-[#0A1A44] font-bold hover:text-[#FDBF00] transition-colors flex items-center gap-2"
                   >
-                    <span>اقرأ المزيد</span>
+                    <span>{t("news.read_more", "اقرأ المزيد")}</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                     </svg>
@@ -357,7 +359,7 @@ const LastNews: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center text-gray-500">لا توجد أخبار متاحة حالياً.</div>
+            <div className="py-12 text-center text-gray-500">{t("news.no_news", "لا توجد أخبار متاحة حالياً.")}</div>
           )}
         </div>
       </section>
@@ -365,13 +367,13 @@ const LastNews: React.FC = () => {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">جميع الأخبار</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t("news.all_news", "جميع الأخبار")}</h2>
             <div className="h-1 w-20 bg-[#FDBF00] rounded-full"></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {!loading && filteredNews.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-gray-500">لا توجد نتائج مطابقة للبحث أو الفلتر.</div>
+              <div className="col-span-full py-12 text-center text-gray-500">{t("news.no_results", "لا توجد نتائج مطابقة للبحث أو الفلتر.")}</div>
             ) : (
               filteredNews.map((news, index) => {
                 const badge = getCategoryBadge(news.category);
@@ -407,7 +409,7 @@ const LastNews: React.FC = () => {
                         }}
                         className="text-[#0A1A44] font-bold hover:text-[#FDBF00] transition-colors text-sm flex items-center gap-2"
                       >
-                        <span>اقرأ المزيد</span>
+                        <span>{t("news.read_more", "اقرأ المزيد")}</span>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -421,7 +423,7 @@ const LastNews: React.FC = () => {
 
           <div className="text-center mt-12">
             <button className="bg-gradient-to-r from-[#0e1c38] to-[#0A1A44] hover:from-[#0A1A44] hover:to-[#0e1c38] text-white px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-              عرض المزيد من الأخبار
+              {t("news.load_more", "عرض المزيد من الأخبار")}
             </button>
           </div>
         </div>
@@ -435,12 +437,12 @@ const LastNews: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">اشترك في النشرة الإخبارية</h2>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">احصل على آخر الأخبار والإنجازات مباشرة في بريدك الإلكتروني</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">{t("news.subscribe.title", "اشترك في النشرة الإخبارية")}</h2>
+            <p className="text-xl text-white/90 mb-8 leading-relaxed">{t("news.subscribe.subtitle", "احصل على آخر الأخبار والإنجازات مباشرة في بريدك الإلكتروني")}</p>
             <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
               <input
                 type="email"
-                placeholder="أدخل بريدك الإلكتروني"
+                placeholder={t("news.subscribe.placeholder", "أدخل بريدك الإلكتروني")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 px-6 py-4 rounded-full text-gray-900 text-lg outline-none focus:ring-4 focus:ring-[#FDBF00]/30"
@@ -449,9 +451,7 @@ const LastNews: React.FC = () => {
               <button
                 type="submit"
                 className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                اشترك الآن
-              </button>
+              >{t("news.subscribe.button", "اشترك الآن")}</button>
             </form>
           </div>
         </div>
