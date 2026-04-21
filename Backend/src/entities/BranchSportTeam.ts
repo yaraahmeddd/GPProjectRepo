@@ -12,6 +12,8 @@ import {
 import { Branch } from './Branch';
 import { Sport } from './Sport';
 import { Staff } from './Staff';
+import { MemberTeamSubscription } from './MemberTeamSubscription';
+import { TeamMemberTeamSubscription } from './TeamMemberTeamSubscription';
 
 /**
  * BranchSportTeam Entity
@@ -142,9 +144,9 @@ export class BranchSportTeam {
   approved_by: Staff | null;
 
   // Subscription Relations
-  @OneToMany('MemberTeamSubscription', 'team')
-  member_subscriptions: unknown[];
+  @OneToMany(() => MemberTeamSubscription, (sub) => sub.team, { eager: false })
+  member_subscriptions: MemberTeamSubscription[];
 
-  @OneToMany('TeamMemberTeamSubscription', 'team')
-  team_member_subscriptions: unknown[];
+  @OneToMany(() => TeamMemberTeamSubscription, (sub) => sub.team, { eager: false })
+  team_member_subscriptions: TeamMemberTeamSubscription[];
 }
