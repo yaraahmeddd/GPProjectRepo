@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
 import {
   BadgeCheck,
+  Briefcase,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
@@ -199,10 +200,22 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     collapsible: true,
     items: [
       {
+        title: "إدارة الفروع",
+        icon: Building,
+        path: "/staff/dashboard/branches",
+        privilege: "VIEW_BRANCHES",
+      },
+      {
         title: "إدارة الكليات",
         icon: Building,
         path: "/staff/dashboard/faculties",
         privilege: "VIEW_FACULTIES",
+      },
+      {
+        title: "إدارة المهن",
+        icon: Briefcase,
+        path: "/staff/dashboard/professions",
+        privilege: "VIEW_PROFESSIONS",
       },
       {
         title: "باقات الصلاحيات",

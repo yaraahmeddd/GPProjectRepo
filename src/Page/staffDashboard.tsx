@@ -40,6 +40,8 @@ import { useAuth } from "../context/AuthContext";
 import CardPrintPage from "./CardPrintPage";
 import ManageInvitationsPage from "./ManageInvitationsPage";
 import FacultyManagementPage from "./FacultyManagementPage";
+import BranchManagementPage from "./BranchManagementPage";
+import ProfessionManagementPage from "./ProfessionManagementPage";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +61,8 @@ const FALLBACK_PAGES: Array<{ path: string; privilege?: string }> = [
   { path: "/staff/dashboard/media-gallery", privilege: "media.view" },
   { path: "/staff/dashboard/audit-log", privilege: "VIEW_AUDIT_LOGS" },
   { path: "/staff/dashboard/faculties", privilege: "VIEW_FACULTIES" },
+  { path: "/staff/dashboard/branches", privilege: "VIEW_BRANCHES" },
+  { path: "/staff/dashboard/professions", privilege: "VIEW_PROFESSIONS" },
   { path: "/staff/dashboard/admin/staff/manage", privilege: "VIEW_STAFF" },
   { path: "/staff/dashboard/profile"                 /* always accessible */ },
 ];
@@ -117,6 +121,8 @@ const StaffDashboard = () => {
             <Route path="media-gallery" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryDashboard /></ProtectedRoute>} />
             <Route path="media-gallery/:id" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryPostPage /></ProtectedRoute>} />
             <Route path="faculties" element={<ProtectedRoute requiredPrivilege="VIEW_FACULTIES"><FacultyManagementPage /></ProtectedRoute>} />
+            <Route path="branches" element={<ProtectedRoute requiredPrivilege="VIEW_BRANCHES"><BranchManagementPage /></ProtectedRoute>} />
+            <Route path="professions" element={<ProtectedRoute requiredPrivilege="VIEW_PROFESSIONS"><ProfessionManagementPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>
