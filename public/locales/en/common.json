@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "Helwan University Club"
+  },
+  "language": {
+    "arabic": "Arabic",
+    "english": "English",
+    "switchToArabic": "Switch to Arabic",
+    "switchToEnglish": "Switch to English"
+  },
+  "actions": {
+    "back": "Back",
+    "login": "Log in",
+    "logout": "Log out",
+    "register": "Register now",
+    "loading": "Loading…",
+    "or": "or"
+  },
+  "nav": {
+    "home": "Home",
+    "clubs": "Branches",
+    "sports": "Sports",
+    "memberships": "Memberships",
+    "lastNews": "Latest news",
+    "contactUs": "Contact us"
+  }
+}

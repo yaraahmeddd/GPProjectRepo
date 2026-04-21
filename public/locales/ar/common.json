@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "نادي جامعة حلوان"
+  },
+  "language": {
+    "arabic": "العربية",
+    "english": "English",
+    "switchToArabic": "التبديل إلى العربية",
+    "switchToEnglish": "Switch to English"
+  },
+  "actions": {
+    "back": "الرجوع",
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "register": "سجل الآن",
+    "loading": "جار التحميل…",
+    "or": "أو"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "clubs": "الفروع",
+    "sports": "الرياضات",
+    "memberships": "العضويات",
+    "lastNews": "آخر الأخبار",
+    "contactUs": "تواصل معنا"
+  }
+}
