@@ -162,3 +162,73 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+<<<<<<< Updated upstream
+=======
+
+/* ─── Phase 2: CSS Logical Properties for RTL/LTR ─────────────────────── */
+/* These utilities support proper bidirectional layout without physical left/right */
+
+/* Logical property utilities for positioning */
+.inset-inline-start-0 {
+  inset-inline-start: 0;
+}
+
+.inset-inline-end-0 {
+  inset-inline-end: 0;
+}
+
+/* Margin logical properties */
+.ms-auto {
+  margin-inline-start: auto;
+}
+
+.me-auto {
+  margin-inline-end: auto;
+}
+
+/* Padding logical properties */
+.ps-4 {
+  padding-inline-start: 1rem;
+}
+
+.pe-4 {
+  padding-inline-end: 1rem;
+}
+
+.ps-6 {
+  padding-inline-start: 1.5rem;
+}
+
+.pe-6 {
+  padding-inline-end: 1.5rem;
+}
+
+/* Text alignment logical properties */
+.text-start {
+  text-align: start;
+}
+
+.text-end {
+  text-align: end;
+}
+
+/* Border logical properties */
+.border-inline-start {
+  border-inline-start: 1px solid currentColor;
+}
+
+.border-inline-end {
+  border-inline-end: 1px solid currentColor;
+}
+
+/* Display: inline-block with logical spacing */
+.inline-block-start {
+  display: inline-block;
+  margin-inline-start: auto;
+}
+
+.inline-block-end {
+  display: inline-block;
+  margin-inline-end: auto;
+}
+>>>>>>> Stashed changes

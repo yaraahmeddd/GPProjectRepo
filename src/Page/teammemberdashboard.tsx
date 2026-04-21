@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
+import { useTranslation } from "react-i18next";
 const hucLogo = "/assets/HUC logo.jpeg";
 import { useAuth } from "../context/AuthContext";
 import { AuthService } from "../services/authService";
 import api from "../api/axios";
+import { LanguageSwitcher } from "../Component/LanguageSwitcher";
 
 // ─── Dashboard Features ──────────────────────────────────────
 // ─── Dashboard Features ──────────────────────────────────────
@@ -13,6 +15,7 @@ const CourtRentalPage = lazy(() => import("../features/dashboard/pages/CourtRent
 const NotificationPanelLazy = lazy(() => import("../features/dashboard/NotificationPanel").then(m => ({ default: m.NotificationPanel })));
 import { Toast } from "../features/dashboard/Toast";
 import SportCard from "../features/dashboard/SportCard";
+import { localizeDays } from "../features/dashboard/calendarUtils";
 
 // ─── Types ──────────────────────────────────────────────────
 interface Member {
@@ -52,18 +55,18 @@ const isAtLeast16YearsOld = (birthdate: string) => {
     return birth <= minBirth;
 };
 
-const mapTeamStatusLabel = (status?: string | null): string => {
+const mapTeamStatusLabel = (status?: string | null, t?: any): string => {
     const normalized = String(status ?? "").trim().toLowerCase();
     if (!normalized || normalized === "pending" || normalized === "pending_admin_approval" || normalized === "pending_payment") {
-        return "قيد الانتظار";
+        return t ? t("sports.status.pending") : "قيد الانتظار";
     }
     if (normalized === "approved" || normalized === "active") {
-        return "نشط";
+        return t ? t("sports.status.active") : "نشط";
     }
     if (normalized === "expired" || normalized === "inactive" || normalized === "cancelled" || normalized === "declined") {
-        return "منتهي";
+        return t ? t("sports.status.expired") : "منتهي";
     }
-    return status ?? "قيد الانتظار";
+    return status ?? (t ? t("sports.status.pending") : "قيد الانتظار");
 };
 
 const normalizeSportName = (value: string): string =>
@@ -100,14 +103,14 @@ interface LastPaidSportCache {
     paidAt: number;
 }
 
-const toEnrolledSportFromTeam = (team: TeamLike, idx: number): EnrolledSport => ({
+const toEnrolledSportFromTeam = (team: TeamLike, idx: number, t: any): EnrolledSport => ({
     id: Number(team.id) || 10000 + idx + 1,
-    name: team.name || "رياضة",
+    name: team.name || t("sports.unknown_sport"),
     icon: getSportIconFromName(team.name || ""),
-    status: mapTeamStatusLabel(team.status) as EnrolledSport["status"],
-    nextDay: "قريباً",
+    status: mapTeamStatusLabel(team.status, t) as EnrolledSport["status"],
+    nextDay: t("notifications.time.now"),
     nextTime: "-",
-    court: "ملعب النادي",
+    court: t("sports.court"),
     attended: 0,
     absent: 0,
     remaining: 0,
@@ -189,15 +192,17 @@ interface SidebarProps {
     onLogout: () => void;
     isOpen: boolean;
     onClose: () => void;
+    dir?: string;
 }
 
-const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen, onClose }: SidebarProps) => {
+const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen, onClose, dir = 'rtl' }: SidebarProps) => {
+    const { t } = useTranslation("team");
     const navItems = [
-        { key: "dashboard", label: "لوحة التحكم", icon: icons.home },
-        { key: "profile", label: "الملف الشخصي", icon: icons.profile },
-        { key: "sports", label: "رياضاتي", icon: icons.sports },
-        { key: "available-sports", label: "استكشاف الرياضات", icon: icons.explore },
-        { key: "courts", label: "حجز الملاعب", icon: icons.court },
+        { key: "dashboard", label: t("sidebar.dashboard"), icon: icons.home },
+        { key: "profile", label: t("sidebar.profile"), icon: icons.profile },
+        { key: "sports", label: t("sidebar.my_sports"), icon: icons.sports },
+        { key: "available-sports", label: t("sidebar.explore_sports"), icon: icons.explore },
+        { key: "courts", label: t("sidebar.court_booking"), icon: icons.court },
     ];
 
     const handleNav = (key: string) => {
@@ -206,12 +211,20 @@ const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen,
         onClose();
     };
 
+    const isRtl = dir === 'rtl';
+
     return (
         <aside
-            dir="rtl"
-            aria-label="القائمة الجانبية"
-            className={`flex flex-col fixed right-0 top-16 h-[calc(100vh-64px)] z-50 w-[260px] bg-ds-navy transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "translate-x-full"
-                }`}
+            dir={dir}
+            aria-label={t("sidebar.dashboard")}
+            className={`flex flex-col fixed top-16 h-[calc(100vh-64px)] z-50 w-[260px] bg-ds-navy transition-transform duration-300 lg:translate-x-0 ${
+                isOpen 
+                    ? "translate-x-0" 
+                    : (isRtl ? "translate-x-full" : "-translate-x-full")
+            }`}
+            style={{
+                [isRtl ? 'right' : 'left']: 0,
+            }}
         >
             {/* Nav items */}
             <nav className="flex-1 px-4 py-6 flex flex-col gap-1">
@@ -221,7 +234,8 @@ const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen,
                         <button
                             key={item.key}
                             onClick={() => handleNav(item.key)}
-                            className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-right transition-all duration-150 ${isActive ? 'bg-ds-primary text-white shadow-sm' : 'bg-transparent text-[#B8C7E0] hover:bg-white/5'}`}
+                            className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-all duration-150 ${isActive ? 'bg-ds-primary text-white shadow-sm' : 'bg-transparent text-[#B8C7E0] hover:bg-white/5'}`}
+                            style={{ textAlign: isRtl ? 'right' : 'left' }}
                         >
                             <Icon d={item.icon} size={18} />
                             <span className="text-sm font-bold tracking-tight">{item.label}</span>
@@ -234,11 +248,12 @@ const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen,
             <div className="px-4 pb-6">
                 <button
                     onClick={onLogout}
-                    aria-label="تسجيل الخروج"
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-right transition-all duration-150 text-[#B8C7E0] hover:bg-red-500/10 hover:text-red-400"
+                    aria-label={t("sidebar.logout")}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-all duration-150 text-[#B8C7E0] hover:bg-red-500/10 hover:text-red-400`}
+                    style={{ textAlign: isRtl ? 'right' : 'left' }}
                 >
                     <Icon d={icons.logout} size={18} />
-                    <span className="text-sm font-bold tracking-tight">تسجيل الخروج</span>
+                    <span className="text-sm font-bold tracking-tight">{t("sidebar.logout")}</span>
                 </button>
             </div>
         </aside>
@@ -255,108 +270,120 @@ interface NavbarProps {
     onOpenSidebar: () => void;
     onMarkAllRead: () => void;
     onMarkRead: (id: number) => void;
+    dir?: string;
 }
 
-const Navbar = memo(({ member, onLogout, notifications, onToggleNotifications, showNotifs, onOpenSidebar, onMarkAllRead, onMarkRead }: NavbarProps) => (
-    <header
-        dir="rtl"
-        role="banner"
-        className="fixed top-0 right-0 left-0 z-40 flex items-center justify-between px-3 sm:px-10 h-16 bg-white border-b border-[#E5E7EB] shadow-sm"
-    >
-        {/* Right: Club brand */}
-        <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-white ring-1 ring-ds-border/50">
-                <img src={hucLogo} alt="HUC Logo" loading="eager" fetchPriority="high" width={40} height={40} decoding="async" className="w-full h-full object-cover" />
-            </div>
-            <div>
-                <p className="font-extrabold text-[15px] sm:text-[17px] text-ds-text-primary tracking-tight">نادي جامعة حلوان</p>
-            </div>
-        </div>
-
-        {/* Left: Member info & Actions */}
-        <div className="flex items-center gap-2 sm:gap-6">
-            {/* Notification Bell */}
-            <div className="relative">
-                <button
-                    onClick={onToggleNotifications}
-                    aria-label="عرض الإشعارات"
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${showNotifs ? 'bg-ds-primary-light text-ds-primary shadow-inner' : 'bg-gray-100 text-[#6B7280] hover:bg-gray-200'}`}
-                >
-                    <Icon d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" size={20} />
-                    {notifications.some(n => !n.read) && (
-                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm"></span>
-                    )}
-                </button>
-                {showNotifs && (
-                    <Suspense fallback={null}>
-                        <NotificationPanelLazy
-                            onClose={onToggleNotifications}
-                            notifications={notifications}
-                            onMarkAllRead={onMarkAllRead}
-                            onMarkRead={onMarkRead}
-                        />
-                    </Suspense>
-                )}
-            </div>
-
+const Navbar = memo(({ member, onLogout, notifications, onToggleNotifications, showNotifs, onOpenSidebar, onMarkAllRead, onMarkRead, dir = 'rtl' }: NavbarProps) => {
+    const { t } = useTranslation("team");
+    return (
+        <header
+            dir={dir}
+            role="banner"
+            className="fixed top-0 z-40 flex items-center justify-between px-3 sm:px-10 h-16 bg-white border-b border-[#E5E7EB] shadow-sm"
+            style={{ insetInlineStart: 0, insetInlineEnd: 0 }}
+        >
+            {/* Start: Club brand */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-right hidden sm:block">
-                    <p className="font-bold text-[13px] text-ds-text-primary leading-tight">{member.firstName} {member.lastName}</p>
-                    <span className="text-[10px] px-3 py-0.5 rounded-full text-white font-black bg-ds-orange shadow-sm">
-                        عضو فريق
-                    </span>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-white ring-1 ring-ds-border/50">
+                    <img src={hucLogo} alt="HUC Logo" loading="eager" fetchPriority="high" width={40} height={40} decoding="async" className="w-full h-full object-cover" />
                 </div>
-                {/* Avatar (User Icon) */}
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 text-gray-400 border border-ds-border overflow-hidden ring-2 ring-ds-border/20">
-                    {member.avatar ? (
-                        <img
-                            src={getFullUrl(member.avatar) || ""}
-                            alt="Avatar"
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <Icon d={icons.profile} size={22} />
-                    )}
+                <div>
+                    <p className="font-extrabold text-[15px] sm:text-[17px] text-ds-text-primary tracking-tight">{t("navbar.brand")}</p>
                 </div>
             </div>
 
-            {/* Logout Action */}
-            <button
-                onClick={onLogout}
-                aria-label="تسجيل الخروج"
-                className="text-gray-400 hover:text-ds-error transition-all duration-200 p-1 hover:scale-110"
-                title="تسجيل الخروج"
-            >
-                <Icon d={icons.logout} size={18} />
-            </button>
-            <button
-                onClick={onOpenSidebar}
-                aria-label="فتح القائمة"
-                className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 text-[#6B7280] hover:bg-gray-200 transition-all duration-200"
-                title="القائمة"
-            >
-                <Icon d={icons.menu} size={18} />
-            </button>
-        </div>
-    </header>
-));
+            {/* End: Member info & Actions */}
+            <div className="flex items-center gap-2 sm:gap-6">
+                {/* Language Switcher */}
+                <div className="hidden md:block">
+                    <LanguageSwitcher />
+                </div>
+
+                {/* Notification Bell */}
+                <div className="relative">
+                    <button
+                        onClick={onToggleNotifications}
+                        aria-label={t("navbar.notifications")}
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${showNotifs ? 'bg-ds-primary-light text-ds-primary shadow-inner' : 'bg-gray-100 text-[#6B7280] hover:bg-gray-200'}`}
+                    >
+                        <Icon d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" size={20} />
+                        {notifications.some(n => !n.read) && (
+                            <span className="absolute top-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" style={{ insetInlineEnd: 6 }}></span>
+                        )}
+                    </button>
+                    {showNotifs && (
+                        <Suspense fallback={null}>
+                            <NotificationPanelLazy
+                                onClose={onToggleNotifications}
+                                notifications={notifications}
+                                onMarkAllRead={onMarkAllRead}
+                                onMarkRead={onMarkRead}
+                            />
+                        </Suspense>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={`${dir === 'rtl' ? 'text-right' : 'text-left'} hidden sm:block`}>
+                        <p className="font-bold text-[13px] text-ds-text-primary leading-tight">{member.firstName} {member.lastName}</p>
+                        <span className="text-[10px] px-3 py-0.5 rounded-full text-white font-black bg-ds-orange shadow-sm">
+                            {t("navbar.role")}
+                        </span>
+                    </div>
+                    {/* Avatar (User Icon) */}
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 text-gray-400 border border-ds-border overflow-hidden ring-2 ring-ds-border/20">
+                        {member.avatar ? (
+                            <img
+                                src={getFullUrl(member.avatar) || ""}
+                                alt="Avatar"
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <Icon d={icons.profile} size={22} />
+                        )}
+                    </div>
+                </div>
+
+                {/* Logout Action */}
+                <button
+                    onClick={onLogout}
+                    aria-label={t("sidebar.logout")}
+                    className="text-gray-400 hover:text-ds-error transition-all duration-200 p-1 hover:scale-110"
+                    title={t("sidebar.logout")}
+                >
+                    <Icon d={icons.logout} size={18} />
+                </button>
+                <button
+                    onClick={onOpenSidebar}
+                    aria-label={t("navbar.menu")}
+                    className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 text-[#6B7280] hover:bg-gray-200 transition-all duration-200"
+                    title={t("navbar.menu")}
+                >
+                    <Icon d={icons.menu} size={18} />
+                </button>
+            </div>
+        </header>
+    );
+});
 
 // ─── Logout Modal ─────────────────────────────────────────────
 interface LogoutModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
+    dir?: string;
 }
 
-const LogoutModal = memo(({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
+const LogoutModal = memo(({ isOpen, onClose, onConfirm, dir = 'rtl' }: LogoutModalProps) => {
+    const { t } = useTranslation("team");
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div
-                dir="rtl"
+                dir={dir}
                 className="bg-[#F9FAFB] rounded-[12px] shadow-xl w-full max-w-[440px] overflow-hidden"
                 style={{ fontFamily: "'Cairo', 'Segoe UI', Roboto, sans-serif" }}
             >
@@ -369,30 +396,30 @@ const LogoutModal = memo(({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
                     </div>
 
                     <h3 className="text-[22px] font-bold text-[#1F2937] text-center px-6">
-                        هل أنت متأكد من تسجيل الخروج؟
+                        {t("logout_modal.title")}
                     </h3>
                 </div>
 
                 {/* Body */}
                 <div className="px-8 pb-8 text-center">
                     <p className="text-[14px] leading-relaxed text-[#6B7280]">
-                        سيتم إنهاء جلستك الحالية ويمكنك تسجيل الدخول مرة أخرى لاحقًا.
+                        {t("logout_modal.description")}
                     </p>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row-reverse gap-3 px-6 pb-6">
+                <div className="flex flex-col sm:flex-row gap-3 px-6 pb-6">
                     <button
                         onClick={onConfirm}
-                        className="flex-1 h-[44px] bg-[#DC2626] text-white text-[14px] font-semibold rounded-[8px] transition-all hover:bg-red-700 active:scale-95"
+                        className="flex-1 h-[44px] bg-[#DC2626] text-white text-[14px] font-semibold rounded-[8px] transition-all hover:bg-red-700 active:scale-95 sm:order-last"
                     >
-                        تسجيل الخروج
+                        {t("logout_modal.confirm")}
                     </button>
                     <button
                         onClick={onClose}
                         className="flex-1 h-[44px] bg-[#E5E7EB] text-[#111827] text-[14px] font-medium rounded-[8px] transition-all hover:bg-gray-300 active:scale-95"
                     >
-                        إلغاء
+                        {t("logout_modal.cancel")}
                     </button>
                 </div>
             </div>
@@ -404,9 +431,11 @@ const LogoutModal = memo(({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
 interface ProfileTabProps {
     member: Member;
     setMember: (updated: Member, files?: { [key: string]: File }) => void;
+    dir?: string;
 }
 
-const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
+const ProfileTab = memo(({ member, setMember, dir = 'rtl' }: ProfileTabProps) => {
+    const { t } = useTranslation("team");
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState<Member>({ ...member });
     const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File }>({});
@@ -421,28 +450,28 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
 
         switch (key) {
             case "firstName":
-                if (!trimmed) return "الاسم الأول مطلوب";
-                if (!isArabic(trimmed)) return "الاسم الأول يجب أن يحتوي على حروف عربية فقط";
+                if (!trimmed) return t("profile.validation.first_name_required");
+                if (!isArabic(trimmed)) return t("profile.validation.first_name_arabic");
                 return "";
             case "lastName":
-                if (!trimmed) return "الاسم الأخير مطلوب";
-                if (!isArabic(trimmed)) return "الاسم الأخير يجب أن يحتوي على حروف عربية فقط";
+                if (!trimmed) return t("profile.validation.last_name_required");
+                if (!isArabic(trimmed)) return t("profile.validation.last_name_arabic");
                 return "";
             case "email":
-                if (!trimmed) return "البريد الإلكتروني مطلوب";
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "صيغة البريد الإلكتروني غير صحيحة";
+                if (!trimmed) return t("profile.validation.email_required");
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return t("profile.validation.email_invalid");
                 return "";
             case "phone":
-                if (!trimmed) return "رقم الموبايل مطلوب";
-                if (!/^(010|011|012|015)\d{8}$/.test(trimmed)) return "الموبايل يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015";
+                if (!trimmed) return t("profile.validation.phone_required");
+                if (!/^(010|011|012|015)\d{8}$/.test(trimmed)) return t("profile.validation.phone_invalid");
                 return "";
             case "nationalId":
-                if (!trimmed) return "الرقم القومي مطلوب";
-                if (!/^[1-9]\d{13}$/.test(trimmed)) return "الرقم القومي يجب أن يكون 14 رقم ولا يبدأ بصفر";
+                if (!trimmed) return t("profile.validation.national_id_required");
+                if (!/^[1-9]\d{13}$/.test(trimmed)) return t("profile.validation.national_id_invalid");
                 return "";
             case "birthDate":
-                if (!trimmed) return "تاريخ الميلاد مطلوب";
-                if (!isAtLeast16YearsOld(trimmed)) return "العمر يجب أن يكون 16 سنة أو أكثر";
+                if (!trimmed) return t("profile.validation.birth_date_required");
+                if (!isAtLeast16YearsOld(trimmed)) return t("profile.validation.age_min");
                 return "";
             default:
                 return "";
@@ -463,11 +492,11 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
         if (!file) return;
         const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "application/pdf"];
         if (!allowedTypes.includes(file.type)) {
-            setFileErrors((prev) => ({ ...prev, [key]: "نوع الملف غير مدعوم. المسموح: JPG, PNG, PDF" }));
+            setFileErrors((prev) => ({ ...prev, [key]: t("profile.validation.file_unsupported") }));
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            setFileErrors((prev) => ({ ...prev, [key]: "حجم الملف يجب ألا يتجاوز 5MB" }));
+            setFileErrors((prev) => ({ ...prev, [key]: t("profile.validation.file_too_large") }));
             return;
         }
         setFileErrors((prev) => ({ ...prev, [key]: "" }));
@@ -498,26 +527,26 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
     };
 
     const fields: { key: keyof Member; label: string; type: string }[] = [
-        { key: "firstName", label: "الاسم الأول", type: "text" },
-        { key: "lastName", label: "الاسم الأخير", type: "text" },
-        { key: "email", label: "البريد الإلكتروني", type: "email" },
-        { key: "phone", label: "رقم الهاتف", type: "tel" },
-        { key: "birthDate", label: "تاريخ الميلاد", type: "date" },
-        { key: "nationalId", label: "رقم الهوية", type: "text" },
+        { key: "firstName", label: t("profile.first_name"), type: "text" },
+        { key: "lastName", label: t("profile.last_name"), type: "text" },
+        { key: "email", label: t("profile.email"), type: "email" },
+        { key: "phone", label: t("profile.phone"), type: "tel" },
+        { key: "birthDate", label: t("profile.birth_date"), type: "date" },
+        { key: "nationalId", label: t("profile.national_id"), type: "text" },
     ];
 
     const documents = [
-        { key: "avatar", label: "الصورة الشخصية", field: "personal_photo" },
-        { key: "nationalIdFront", label: "صورة البطاقة (أمام)", field: "national_id_front" },
-        { key: "nationalIdBack", label: "صورة البطاقة (خلف)", field: "national_id_back" },
-        { key: "medicalReport", label: "تقرير طبي", field: "medical_report" },
-        { key: "proof", label: "مستند إثبات", field: "proof" },
+        { key: "avatar", label: t("profile.avatar"), field: "personal_photo" },
+        { key: "nationalIdFront", label: t("profile.national_id_front"), field: "national_id_front" },
+        { key: "nationalIdBack", label: t("profile.national_id_back"), field: "national_id_back" },
+        { key: "medicalReport", label: t("profile.medical_report"), field: "medical_report" },
+        { key: "proof", label: t("profile.proof"), field: "proof" },
     ];
 
     return (
         <div className="space-y-6 pb-12">
             {/* Profile Header Card */}
-            <div className="bg-white rounded-2xl shadow-sm p-6" dir="rtl">
+            <div className="bg-white rounded-2xl shadow-sm p-6" dir={dir}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold overflow-hidden border-2 border-white shadow-soft"
@@ -536,9 +565,9 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                                 member.firstName.charAt(0)
                             )}
                         </div>
-                        <div>
+                        <div className={dir === 'rtl' ? 'text-right' : 'text-left'}>
                             <h2 className="font-bold text-lg" style={{ color: "#1F2937" }}>{member.firstName} {member.lastName}</h2>
-                            <p className="text-sm" style={{ color: "#6B7280" }}>رقم العضوية: {member.id}</p>
+                            <p className="text-sm" style={{ color: "#6B7280" }}>{t("profile.membership_id")}: {member.id}</p>
                         </div>
                     </div>
                     {!editing && (
@@ -548,15 +577,15 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                             style={{ backgroundColor: "#2EA7C9" }}
                         >
                             <Icon d={icons.edit} size={15} />
-                            تعديل البيانات
+                            {t("profile.edit_data")}
                         </button>
                     )}
                 </div>
             </div>
 
             {/* Editable Fields */}
-            <div className="bg-white rounded-2xl shadow-sm p-6" dir="rtl">
-                <h3 className="font-bold mb-5 text-base" style={{ color: "#1F2937" }}>البيانات الشخصية</h3>
+            <div className="bg-white rounded-2xl shadow-sm p-6" dir={dir}>
+                <h3 className="font-bold mb-5 text-base" style={{ color: "#1F2937" }}>{t("profile.personal_info")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {fields.map(({ key, label, type }) => (
                         <div key={key}>
@@ -581,7 +610,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                                     backgroundColor: editing ? "#fff" : "#F9FAFB",
                                     color: "#1F2937",
                                     outline: "none",
-                                    direction: "rtl",
+                                    textAlign: dir === 'rtl' ? 'right' : 'left',
                                 }}
                             />
                             {errors[key] && (
@@ -595,7 +624,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                     {/* Read-only join date */}
                     <div>
                         <label className="block text-xs font-medium mb-1.5" style={{ color: "#6B7280" }}>
-                            تاريخ الانضمام
+                            {t("profile.join_date")}
                         </label>
                         <input
                             type="text"
@@ -606,7 +635,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                                 borderColor: "#E5E7EB",
                                 backgroundColor: "#F3F4F6",
                                 color: "#4B5563",
-                                direction: "rtl",
+                                textAlign: dir === 'rtl' ? 'right' : 'left',
                             }}
                         />
                     </div>
@@ -614,8 +643,8 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
             </div>
 
             {/* Documents Section */}
-            <div className="bg-white rounded-2xl shadow-sm p-6" dir="rtl">
-                <h3 className="font-bold mb-5 text-base" style={{ color: "#1F2937" }}>الوثائق والمستندات</h3>
+            <div className="bg-white rounded-2xl shadow-sm p-6" dir={dir}>
+                <h3 className="font-bold mb-5 text-base" style={{ color: "#1F2937" }}>{t("profile.documents_title")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {documents.map((doc) => {
                         const currentUrl = member[doc.key as keyof Member] as string | null;
@@ -657,7 +686,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-gray-400">
                                             <Icon d={icons.plus} size={24} />
-                                            <span className="text-[10px] mt-1">لا يوجد ملف</span>
+                                            <span className="text-[10px] mt-1">{t("profile.no_file")}</span>
                                         </div>
                                     )}
 
@@ -666,7 +695,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <label className="cursor-pointer bg-white text-gray-800 px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5">
                                                 <Icon d={icons.edit} size={12} />
-                                                تغيير
+                                                {t("profile.change_file")}
                                                 <input
                                                     type="file"
                                                     className="hidden"
@@ -688,13 +717,13 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                 </div>
 
                 {editing && (
-                    <div className="flex gap-3 mt-8 justify-end border-t pt-6" style={{ borderColor: "#F3F4F6" }}>
+                    <div className={`flex gap-3 mt-8 ${dir === 'rtl' ? 'flex-row-reverse' : 'flex-row'} border-t pt-6`} style={{ borderColor: "#F3F4F6" }} dir={dir}>
                         <button
                             onClick={handleCancel}
                             className="px-5 py-2 rounded-lg text-sm font-medium border transition-all hover:bg-gray-50"
                             style={{ borderColor: "#E5E7EB", color: "#6B7280" }}
                         >
-                            إلغاء
+                            {t("logout_modal.cancel")}
                         </button>
                         <button
                             onClick={handleSave}
@@ -702,7 +731,7 @@ const ProfileTab = memo(({ member, setMember }: ProfileTabProps) => {
                             style={{ backgroundColor: "#2EA7C9" }}
                         >
                             <Icon d={icons.save} size={15} />
-                            حفظ كافة التغييرات
+                            {t("profile.save_changes")}
                         </button>
                     </div>
                 )}
@@ -717,9 +746,11 @@ interface SportsTabProps {
     availableSports: AvailableSport[];
     onJoin: (sportCode: string, startDate: string, endDate: string) => void;
     onNavigateTo?: (tab: string) => void;
+    dir?: string;
 }
 
-const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: SportsTabProps) => {
+const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo, dir = 'rtl' }: SportsTabProps) => {
+    const { t, i18n } = useTranslation("team");
     const [showModal, setShowModal] = useState(false);
     const [newSportCode, setNewSportCode] = useState("");
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -748,11 +779,11 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
 
     const handleJoin = () => {
         if (!newSportCode || !startDate || !endDate) {
-            setJoinError("من فضلك أكمل كل الحقول");
+            setJoinError(t("sports.validation.complete_fields"));
             return;
         }
         if (new Date(endDate) <= new Date(startDate)) {
-            setJoinError("تاريخ النهاية لازم يكون بعد تاريخ البداية");
+            setJoinError(t("sports.validation.date_invalid"));
             return;
         }
         setJoinError("");
@@ -761,32 +792,34 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
         setNewSportCode("");
     };
 
+    const currentLang = i18n.resolvedLanguage || i18n.language;
+
     return (
-        <div dir="rtl" className="space-y-6">
+        <div dir={dir} className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="font-bold text-base" style={{ color: "#1F2937" }}>
-                    الألعاب الرياضية المشترك فيها
+                    {t("sports.title")}
                 </h2>
             </div>
 
             {/* Sports Grid */}
             {sports.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
-                    <p style={{ color: "#6B7280" }} className="text-sm">لم تنضم إلى أي لعبة بعد</p>
+                    <p style={{ color: "#6B7280" }} className="text-sm">{t("sports.no_sports")}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sports.map((sport) => (
                         <SportCard
                             key={sport.id}
-                            title={sport.name}
+                            title={currentLang.startsWith('ar') ? sport.name : (availableSports.find(s => s.name_ar === sport.name || s.name_en === sport.name)?.name_en || sport.name)}
                             image={sport.img || ""}
-                            days={sport.nextDay || "-"}
+                            days={localizeDays(sport.nextDay || "-", currentLang.startsWith('ar'))}
                             time={sport.nextTime || "-"}
-                            location={sport.court || "ملعب النادي"}
+                            location={sport.court || t("sports.court")}
                             price={sport.price || 0}
-                            joined={sport.status === "نشط"}
+                            joined={sport.status === "نشط" || sport.status === t("sports.status.active")}
                             status={sport.status}
                             endDate={sport.endDate || "-"}
                             onRejoin={() => onNavigateTo?.("available-sports")}
@@ -799,11 +832,11 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center"
                     style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4" dir="rtl">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4" dir={dir}>
                         {/* Modal Header */}
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="font-bold text-base" style={{ color: "#1F2937" }}>
-                                الانضمام إلى لعبة جديدة
+                                {t("sports.join_new")}
                             </h3>
                             <button
                                 onClick={() => setShowModal(false)}
@@ -818,7 +851,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                             {/* Select sport */}
                             <div>
                                 <label className="block text-xs font-medium mb-1.5" style={{ color: "#6B7280" }}>
-                                    اختر الرياضة
+                                    {t("sports.select_sport")}
                                 </label>
                                 <select
                                     value={newSportCode}
@@ -830,13 +863,13 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                                     style={{
                                         borderColor: joinError && !newSportCode ? "#DC2626" : "#E5E7EB",
                                         color: "#1F2937",
-                                        direction: "rtl",
+                                        textAlign: dir === 'rtl' ? 'right' : 'left',
                                         outline: "none",
                                     }}
                                 >
-                                    <option value="">-- اختر --</option>
+                                    <option value="">-- {t("sports.select_sport")} --</option>
                                     {availableSports.map((s) => (
-                                        <option key={s.code} value={s.code}>{s.name_ar}</option>
+                                        <option key={s.code} value={s.code}>{currentLang.startsWith('ar') ? s.name_ar : s.name_en}</option>
                                     ))}
                                 </select>
                             </div>
@@ -844,7 +877,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                             {/* Start Date */}
                             <div>
                                 <label className="block text-xs font-medium mb-1.5" style={{ color: "#6B7280" }}>
-                                    تاريخ البداية
+                                    {t("sports.start_date")}
                                 </label>
                                 <input
                                     type="date"
@@ -854,14 +887,14 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                                         if (joinError) setJoinError("");
                                     }}
                                     className="w-full px-4 py-2.5 rounded-lg text-sm border"
-                                    style={{ borderColor: joinError ? "#DC2626" : "#E5E7EB", color: "#1F2937", direction: "rtl", outline: "none" }}
+                                    style={{ borderColor: joinError ? "#DC2626" : "#E5E7EB", color: "#1F2937", textAlign: dir === 'rtl' ? 'right' : 'left', outline: "none" }}
                                 />
                             </div>
 
                             {/* End Date */}
                             <div>
                                 <label className="block text-xs font-medium mb-1.5" style={{ color: "#6B7280" }}>
-                                    تاريخ النهاية
+                                    {t("sports.end_date")}
                                 </label>
                                 <input
                                     type="date"
@@ -871,7 +904,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                                         if (joinError) setJoinError("");
                                     }}
                                     className="w-full px-4 py-2.5 rounded-lg text-sm border"
-                                    style={{ borderColor: joinError ? "#DC2626" : "#E5E7EB", color: "#1F2937", direction: "rtl", outline: "none" }}
+                                    style={{ borderColor: joinError ? "#DC2626" : "#E5E7EB", color: "#1F2937", textAlign: dir === 'rtl' ? 'right' : 'left', outline: "none" }}
                                 />
                             </div>
                             {joinError && (
@@ -883,12 +916,12 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                             {/* Dynamic Price Preview in Modal */}
                             {newSportCode && (
                                 <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-between">
-                                    <span className="text-xs font-medium text-emerald-800">إجمالي رسوم الاشتراك:</span>
+                                    <span className="text-xs font-medium text-emerald-800">{t("sports.total_price")}:</span>
                                     <span className="text-sm font-bold text-emerald-700">
                                         {(() => {
                                             const s = availableSports.find(x => x.code === newSportCode);
                                             return calculateTotalPrice(startDate, endDate, s?.price || 0);
-                                        })()} جنيه
+                                        })()} {t("sports.currency")}
                                     </span>
                                 </div>
                             )}
@@ -896,7 +929,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                             {/* Info message */}
                             <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
                                 <p className="text-xs text-blue-700 leading-relaxed">
-                                    سيتم مراجعة طلب الانضمام من قبل إدارة النشاط الرياضي. يمكنك الانضمام إلى 4 ألعاب بحد أقصى.
+                                    {t("sports.info_message")}
                                 </p>
                             </div>
                         </div>
@@ -908,7 +941,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                                 className="flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all hover:bg-gray-50"
                                 style={{ borderColor: "#E5E7EB", color: "#6B7280" }}
                             >
-                                إلغاء
+                                {t("logout_modal.cancel")}
                             </button>
                             <button
                                 onClick={handleJoin}
@@ -916,7 +949,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
                                 className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-40"
                                 style={{ backgroundColor: "#1E6FB9" }}
                             >
-                                تأكيد الانضمام
+                                {t("sports.confirm_join")}
                             </button>
                         </div>
                     </div>
@@ -931,6 +964,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo }: Sport
 // ─── Root App ─────────────────────────────────────────────────
 export default function TeamMemberDashboard() {
     const { user } = useAuth();
+    const { t, i18n } = useTranslation("team");
     const [member, setMember] = useState<Member | null>(null);
     const [sports, setSports] = useState<EnrolledSport[]>([]);
     const [availableSports, setAvailableSports] = useState<AvailableSport[]>([]);
@@ -949,6 +983,7 @@ export default function TeamMemberDashboard() {
     } | null>(null);
     const [teamMemberBookings, setTeamMemberBookings] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [currentLang, setCurrentLang] = useState<'ar' | 'en'>((i18n.resolvedLanguage ?? i18n.language).startsWith('en') ? 'en' : 'ar');
 
     useEffect(() => {
         const tab = new URLSearchParams(window.location.search).get("tab");
@@ -966,19 +1001,44 @@ export default function TeamMemberDashboard() {
         setTimeout(() => setToast(null), 3800);
     }, []);
 
+    // ─── Sync with i18n language changes ────────────────────────────────────
     useEffect(() => {
-        document.title = "لوحة عضو الفريق | نادي جامعة حلوان";
+        const handleLanguageChange = (lang: string) => {
+            const isArabic = lang.startsWith('ar');
+            setCurrentLang(isArabic ? 'ar' : 'en');
+            const html = document.documentElement;
+            html.setAttribute('lang', isArabic ? 'ar' : 'en');
+            html.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
+            document.body.style.direction = isArabic ? 'rtl' : 'ltr';
+        };
+        
+        // Set initial language
+        const isArabic = (i18n.resolvedLanguage ?? i18n.language).startsWith('ar');
+        setCurrentLang(isArabic ? 'ar' : 'en');
         const html = document.documentElement;
-        html.setAttribute("lang", "ar");
-        html.setAttribute("dir", "rtl");
+        html.setAttribute('lang', isArabic ? 'ar' : 'en');
+        html.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
+        document.body.style.direction = isArabic ? 'rtl' : 'ltr';
+        
+        // Listen to i18n language changes
+        i18n.on('languageChanged', handleLanguageChange);
+        
+        return () => {
+            i18n.off('languageChanged', handleLanguageChange);
+        };
+    }, [i18n]);
+
+    // ─── Set metadata ──────────────────────────────────────────────────────
+    useEffect(() => {
+        document.title = t("dashboard.meta_title");
         let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
         if (!meta) {
             meta = document.createElement("meta");
             meta.name = "description";
             document.head.appendChild(meta);
         }
-        meta.content = "لوحة تحكم عضو الفريق: الملف الشخصي، الرياضات، حجز الملاعب والإشعارات.";
-    }, []);
+        meta.content = t("dashboard.meta_description");
+    }, [t]);
 
     const handleMarkAllRead = useCallback(() => {
         const userId = user?.team_member_id || user?.member_id;
@@ -1022,14 +1082,14 @@ export default function TeamMemberDashboard() {
             const jd = new Date(member.joinDate).getTime();
             const diff = (nowTime - jd) / (1000 * 3600 * 24);
             if (diff <= 7) {
-                const title = "مرحباً بك!";
-                const msg = "تم تفعيل حسابك كعضو فريق بنجاح.";
+                const title = t("notifications.welcome_title");
+                const msg = t("notifications.welcome_msg");
                 newNotifs.push({
                     id: nId++,
                     icon: "⭐",
                     title,
                     msg,
-                    time: diff < 1 ? "اليوم" : `منذ ${Math.floor(diff)} أيام`,
+                    time: diff < 1 ? t("notifications.time.today") : t("notifications.time.days_ago", { count: Math.floor(diff) }),
                     read: isRead(title, msg)
                 });
             }
@@ -1040,14 +1100,14 @@ export default function TeamMemberDashboard() {
             const todayIdx = now.getDay();
             dashboardStats.enrolledSports.forEach(s => {
                 if (s.status === "نشط" && s.weekdays?.includes(todayIdx)) {
-                    const title = "تدريب اليوم";
-                    const msg = `لديك موعد تدريب ${s.name} اليوم في ${s.nextTime}.`;
+                    const title = t("notifications.training_today_title");
+                    const msg = t("notifications.training_today_msg", { sport: s.name, time: s.nextTime });
                     newNotifs.push({
                         id: nId++,
                         icon: s.icon || "🏋️",
                         title,
                         msg,
-                        time: "الآن",
+                        time: t("notifications.time.now"),
                         read: isRead(title, msg)
                     });
                 }
@@ -1057,14 +1117,14 @@ export default function TeamMemberDashboard() {
                     const cDate = new Date(s.createdAt).getTime();
                     const ageDays = (nowTime - cDate) / (1000 * 3600 * 24);
                     if (ageDays <= 2) {
-                        const title = "اشتراك جديد";
-                        const msg = `تم تأكيد اشتراكك في ${s.name} بنجاح.`;
+                        const title = t("notifications.new_subscription_title");
+                        const msg = t("notifications.new_subscription_msg", { sport: s.name });
                         newNotifs.push({
                             id: nId++,
                             icon: "🏆",
                             title,
                             msg,
-                            time: ageDays < 1 ? "اليوم" : "أمس",
+                            time: ageDays < 1 ? t("notifications.time.today") : t("notifications.time.yesterday"),
                             read: isRead(title, msg)
                         });
                     }
@@ -1080,14 +1140,17 @@ export default function TeamMemberDashboard() {
                     const cDate = new Date(bCreatedAt).getTime();
                     const ageDays = (nowTime - cDate) / (1000 * 3600 * 24);
                     if (ageDays <= 2) {
-                        const title = "حجز ملعب";
-                        const msg = `تم حجز ${b.field?.name_ar || b.facility_name || "الملعب"} في ${b.date || b.start_time?.split('T')[0]}.`;
+                        const title = t("notifications.court_booking_title");
+                        const msg = t("notifications.court_booking_msg", { 
+                            court: b.field?.name_ar || b.facility_name || (t("sports.court") || "الملعب"), 
+                            date: b.date || b.start_time?.split('T')[0] 
+                        });
                         newNotifs.push({
                             id: nId++,
                             icon: "🏟️",
                             title,
                             msg,
-                            time: ageDays < 1 ? "اليوم" : "أمس",
+                            time: ageDays < 1 ? t("notifications.time.today") : t("notifications.time.yesterday"),
                             read: isRead(title, msg)
                         });
                     }
@@ -1104,16 +1167,20 @@ export default function TeamMemberDashboard() {
                 if (isNaN(end.getTime())) return;
                 const daysLeft = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                 if (daysLeft >= 0 && daysLeft <= 3) {
-                    const title = `تنبيه: اشتراك ${sport.name}`;
+                    const title = t("notifications.expiry_title", { sport: sport.name });
                     const msg = daysLeft === 0
-                        ? `اشتراكك في ${sport.name} ينتهي اليوم. أعد الانضمام لمواصلة التدريب.`
-                        : `اشتراكك في ${sport.name} سينتهي خلال ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"}.`;
+                        ? t("notifications.expiry_msg_today", { sport: sport.name })
+                        : t("notifications.expiry_msg_days", { 
+                            sport: sport.name, 
+                            days: daysLeft, 
+                            day_unit: daysLeft === 1 ? t("notifications.time.day") : t("notifications.time.days") 
+                          });
                     newNotifs.push({
                         id: nId++,
                         icon: "⚠️",
                         title,
                         msg,
-                        time: "اليوم",
+                        time: t("notifications.time.today"),
                         read: isRead(title, msg)
                     });
                 }
@@ -1122,14 +1189,14 @@ export default function TeamMemberDashboard() {
 
         // 4. Default Notification fallback
         if (newNotifs.length === 0) {
-            const title = "تنبيه هام";
-            const msg = "يرجى متابعة جدول التدريبات والالتزام بالمواعيد.";
+            const title = t("notifications.important_notice_title");
+            const msg = t("notifications.important_notice_msg");
             newNotifs.push({
                 id: nId++,
                 icon: "📢",
                 title,
                 msg,
-                time: "اليوم",
+                time: t("notifications.time.today"),
                 read: isRead(title, msg)
             });
         }
@@ -1137,7 +1204,7 @@ export default function TeamMemberDashboard() {
         // Deduplicate by title/msg to avoid cluttering if multiple triggers overlap
         const uniqueNotifs = Array.from(new Map(newNotifs.map(item => [item.title + item.msg, item])).values());
         setNotifications(uniqueNotifs);
-    }, [member, dashboardStats, teamMemberBookings, user?.team_member_id]);
+    }, [member, dashboardStats, teamMemberBookings, user?.team_member_id, t]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -1275,7 +1342,7 @@ export default function TeamMemberDashboard() {
                 }
 
                 if (profileTeams.length > 0) {
-                    setSports(profileTeams.map((team, idx) => toEnrolledSportFromTeam(team, idx)));
+                    setSports(profileTeams.map((team, idx) => toEnrolledSportFromTeam(team, idx, t)));
                 }
 
                 const cachedPaidSport = readLastPaidSportCache();
@@ -1335,13 +1402,13 @@ export default function TeamMemberDashboard() {
                             icon: getSportIconFromName(s.sport_name_ar || s.sport_name || s.name || ""),
                             img: s.sport_image || null,
                             status: s.status === "approved" || s.status === "active"
-                                ? "نشط"
+                                ? t("sports.status.active")
                                 : (s.status === "pending" || !s.status)
-                                    ? "قيد الانتظار"
-                                    : "قادم",
-                            nextDay: firstSched?.days_ar || "قريباً",
-                            nextTime: firstSched ? `${firstSched.start_time} - ${firstSched.end_time}` : "-",
-                            court: firstSched?.field?.name_ar || "ملعب النادي",
+                                    ? t("sports.status.pending")
+                                    : t("sports.status.upcoming"),
+                            nextDay: localizeDays(firstSched?.days_ar || firstSched?.days_en || t("notifications.time.now"), currentLang === 'ar'),
+                            nextTime: firstSched ? `${firstSched.start_time?.slice(0, 5)} - ${firstSched.end_time?.slice(0, 5)}` : "-",
+                            court: firstSched?.field?.name_ar || t("sports.court"),
                             attended: s.stats.attended,
                             absent: s.stats.absent,
                             remaining: remainingThisMonth,
@@ -1363,7 +1430,7 @@ export default function TeamMemberDashboard() {
                                 (sport) => normalizeSportName(sport.name) === normalizeSportName(team.name)
                             );
                         })
-                        .map((team, idx) => toEnrolledSportFromTeam(team, mappedSports.length + idx));
+                        .map((team, idx) => toEnrolledSportFromTeam(team, mappedSports.length + idx, t));
 
                     const mergedSports = [...mappedSports, ...profileOnlySports];
 
@@ -1376,7 +1443,7 @@ export default function TeamMemberDashboard() {
                     // Keep "Sports" tab list in sync with dashboard cards
                     setSports(mergedSports);
                 } else if (profileTeams.length > 0) {
-                    const fallbackSports = profileTeams.map((team, idx) => toEnrolledSportFromTeam(team, idx));
+                    const fallbackSports = profileTeams.map((team, idx) => toEnrolledSportFromTeam(team, idx, t));
 
                     setDashboardStats({
                         enrolledSports: fallbackSports,
@@ -1434,7 +1501,7 @@ export default function TeamMemberDashboard() {
         };
 
         fetchData();
-    }, [user, refreshKey]);
+    }, [user, refreshKey, t]);
 
     const handleLogoutConfirm = () => {
         AuthService.logout();
@@ -1447,27 +1514,27 @@ export default function TeamMemberDashboard() {
     const handleUpdateMember = async (updated: Member, files?: { [key: string]: File }) => {
         if (!user?.team_member_id) return;
         if (!isArabicName(updated.firstName)) {
-            alert("الاسم الأول يجب أن يكون بالعربي فقط");
+            alert(t("profile.validation.first_name_arabic"));
             return;
         }
         if (!isArabicName(updated.lastName)) {
-            alert("الاسم الأخير يجب أن يكون بالعربي فقط");
+            alert(t("profile.validation.last_name_arabic"));
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updated.email.trim())) {
-            alert("البريد الإلكتروني غير صحيح");
+            alert(t("profile.validation.email_invalid"));
             return;
         }
         if (!/^(010|011|012|015)\d{8}$/.test(updated.phone.trim())) {
-            alert("رقم الموبايل يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015");
+            alert(t("profile.validation.phone_invalid"));
             return;
         }
         if (!/^[1-9]\d{13}$/.test(updated.nationalId.trim())) {
-            alert("الرقم القومي يجب أن يكون 14 رقم ولا يبدأ بصفر");
+            alert(t("profile.validation.national_id_invalid"));
             return;
         }
         if (!isAtLeast16YearsOld(updated.birthDate.trim())) {
-            alert("العمر يجب أن يكون 16 سنة أو أكثر");
+            alert(t("profile.validation.age_min"));
             return;
         }
         try {
@@ -1511,10 +1578,10 @@ export default function TeamMemberDashboard() {
                     });
 
                 }
-                alert("تم تحديث البيانات بنجاح");
+                alert(t("profile.validation.update_success"));
             }
         } catch (err) {
-            alert("فشل تحديث البيانات");
+            alert(t("profile.validation.update_failed"));
         } finally {
             setLoading(false);
         }
@@ -1523,15 +1590,15 @@ export default function TeamMemberDashboard() {
     const handleJoinSport = async (sportId: string, startDate: string, endDate: string) => {
         if (!user?.team_member_id) return;
         if (!sportId || !startDate || !endDate) {
-            alert("يرجى إكمال بيانات الانضمام");
+            alert(t("sports.validation.complete_fields"));
             return;
         }
         if (new Date(endDate) <= new Date(startDate)) {
-            alert("تاريخ النهاية لازم يكون بعد تاريخ البداية");
+            alert(t("sports.validation.date_invalid"));
             return;
         }
         if (sports.length >= 4) {
-            alert("لا يمكنك الاشتراك في أكثر من 4 ألعاب رياضية");
+            alert(t("sports.validation.max_sports"));
             return;
         }
 
@@ -1557,7 +1624,7 @@ export default function TeamMemberDashboard() {
                         startDate: t.startDate || "-",
                         endDate: t.endDate || "-",
                         price: t.price || 0,
-                        status: t.status === "active" ? "نشط" : t.status === "expired" ? "منتهي" : t.status || "نشط",
+                        status: t.status === "active" ? t("sports.status.active") : t.status === "expired" ? t("sports.status.expired") : t.status || t("sports.status.active"),
                     }));
                     setSports(
                         joined.map((team: Sport) => ({
@@ -1569,7 +1636,7 @@ export default function TeamMemberDashboard() {
                 setRefreshKey(prev => prev + 1);
             }
         } catch (err) {
-            alert("فشل الانضمام للعبة");
+            alert(t("sports.validation.join_failed"));
         }
     };
 
@@ -1577,6 +1644,7 @@ export default function TeamMemberDashboard() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F4F6F9]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+                <p className="ml-3 font-bold">{t("dashboard.loading")}</p>
             </div>
         );
     }
@@ -1584,8 +1652,12 @@ export default function TeamMemberDashboard() {
     // ─── Restricted Access (Pending Status) ─────────────────
     if (member.status === "pending") {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F6F9] p-6 text-center" dir="rtl">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F6F9] p-6 text-center" dir={currentLang === 'ar' ? 'rtl' : 'ltr'}>
                 <div className="bg-white p-10 rounded-3xl shadow-soft max-w-lg w-full transform transition-all hover:scale-[1.01]">
+                    {/* Language Switcher in Pending view */}
+                    <div className="flex justify-end mb-6">
+                        <LanguageSwitcher />
+                    </div>
                     {member.avatar ? (
                         <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-yellow-100 overflow-hidden">
                             <img src={getFullUrl(member.avatar) || ""} alt="Avatar" className="w-full h-full object-cover" />
@@ -1598,40 +1670,42 @@ export default function TeamMemberDashboard() {
                         </div>
                     )}
                     <h2 className="text-2xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Cairo', sans-serif" }}>
-                        أهلاً، {member.firstName}!
+                        {t("pending_access.welcome", { name: member.firstName })}
                     </h2>
                     <h3 className="text-xl font-bold text-gray-700 mb-4" style={{ fontFamily: "'Cairo', sans-serif" }}>
-                        الحساب قيد المراجعة
+                        {t("pending_access.under_review")}
                     </h3>
                     <p className="text-gray-600 leading-relaxed mb-8 text-lg" style={{ fontFamily: "'Cairo', sans-serif" }}>
-                        شكراً لانضمامك إلينا! يتم حالياً مراجعة بياناتك من قبل إدارة النادي.
-                        سنقوم بتفعيل حسابك فور الانتهاء من عملية التدقيق.
+                        {t("pending_access.description")}
                     </p>
                     <div className="space-y-4">
                         <div className="flex items-center justify-center gap-2 text-yellow-700 bg-yellow-50 py-3 px-4 rounded-xl text-sm font-medium">
                             <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-                            حالة الطلب: قيد الانتظار
+                            {t("pending_access.status_label")}
                         </div>
                         <button
                             onClick={handleLogoutConfirm}
                             className="w-full py-3.5 bg-gray-800 text-white rounded-xl font-bold shadow-lg hover:bg-gray-700 transition-all active:scale-95 mt-4"
                             style={{ fontFamily: "'Cairo', sans-serif" }}
                         >
-                            تسجيل الخروج
+                            {t("pending_access.logout")}
                         </button>
                     </div>
                 </div>
                 <div className="mt-8 text-gray-400 text-sm">
-                    © {new Date().getFullYear()} نادي جامعة حلوان - جميع الحقوق محفوظة
+                    {t("pending_access.footer", { year: new Date().getFullYear() })}
                 </div>
             </div>
         );
     }
 
+    // ─── Determine dir attribute based on current language ─────────────────
+    const dirAttr = currentLang === 'ar' ? 'rtl' : 'ltr';
+
     const renderContent = () => {
         return (
             <div className="dashboard-scoped">
-                <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">... جاري التحميل</div>}>
+                <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">... {t("dashboard.loading")}</div>}>
                     {activeTab === "dashboard" && (
                         <DashboardPage
                             enrolledSports={dashboardStats?.enrolledSports}
@@ -1641,12 +1715,13 @@ export default function TeamMemberDashboard() {
                             bookings={teamMemberBookings}
                         />
                     )}
-                    {activeTab === "profile" && <ProfileTab member={member} setMember={handleUpdateMember} />}
+                    {activeTab === "profile" && <ProfileTab member={member} setMember={handleUpdateMember} dir={dirAttr} />}
                     {activeTab === "sports" && (
                         <SportsTab
                             sports={sports}
                             availableSports={availableSports}
                             onJoin={handleJoinSport}
+                            dir={dirAttr}
                         />
                     )}
                     {activeTab === "available-sports" && <SportsExplorePage showToast={showToast} onJoined={() => setRefreshKey(prev => prev + 1)} />}
@@ -1657,7 +1732,7 @@ export default function TeamMemberDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F4F6F9] font-[Cairo]">
+        <div className="min-h-screen bg-[#F4F6F9] font-[Cairo]" dir={dirAttr}>
             <Sidebar
                 activeNav={activeNav}
                 setActiveNav={setActiveNav}
@@ -1668,6 +1743,7 @@ export default function TeamMemberDashboard() {
                 }}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
+                dir={dirAttr}
             />
             <Navbar
                 member={member}
@@ -1678,12 +1754,13 @@ export default function TeamMemberDashboard() {
                 onOpenSidebar={() => setIsSidebarOpen(true)}
                 onMarkAllRead={handleMarkAllRead}
                 onMarkRead={handleMarkRead}
+                dir={dirAttr}
             />
 
             {isSidebarOpen && (
                 <button
                     type="button"
-                    aria-label="إغلاق القائمة"
+                    aria-label={t("navbar.menu")}
                     className="fixed inset-0 top-16 bg-black/35 z-40 lg:hidden"
                     onClick={() => setIsSidebarOpen(false)}
                 />
@@ -1692,7 +1769,7 @@ export default function TeamMemberDashboard() {
             {/* Main content offset for fixed sidebar and navbar */}
             <main
                 role="main"
-                className="px-6 sm:px-10 py-6 pt-[80px] lg:pr-[300px] lg:pl-10"
+                className={`px-6 sm:px-10 py-6 pt-[80px] ${dirAttr === 'rtl' ? 'lg:pr-[300px] lg:pl-10' : 'lg:pl-[300px] lg:pr-10'}`}
             >
                 {renderContent()}
             </main>
@@ -1701,9 +1778,11 @@ export default function TeamMemberDashboard() {
                 isOpen={showLogoutModal}
                 onClose={() => setShowLogoutModal(false)}
                 onConfirm={handleLogoutConfirm}
+                dir={dirAttr}
             />
 
             {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         </div>
     );
 }
+

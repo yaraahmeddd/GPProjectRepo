@@ -672,11 +672,10 @@ export default function BranchManagementPage() {
                             <Input 
                                 id="name_en" 
                                 dir="ltr" 
-                                className="text-left" 
                                 value={form.name_en} 
                                 onChange={(e) => { setForm({ ...form, name_en: e.target.value }); setFormErrors({...formErrors, name_en: []}); }} 
                                 placeholder="Mohandiseen Branch" 
-                                className={formErrors.name_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}
+                                className={`text-left ${formErrors.name_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
                             />
                             {formErrors.name_en?.length > 0 && <span className="text-xs text-destructive">{formErrors.name_en[0]}</span>}
                         </div>
@@ -696,11 +695,10 @@ export default function BranchManagementPage() {
                             <Input 
                                 id="location_en" 
                                 dir="ltr" 
-                                className="text-left" 
                                 value={form.location_en} 
                                 onChange={(e) => { setForm({ ...form, location_en: e.target.value }); setFormErrors({...formErrors, location_en: []}); }} 
                                 placeholder="Arab League St." 
-                                className={formErrors.location_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}
+                                className={`text-left ${formErrors.location_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
                             />
                             {formErrors.location_en?.length > 0 && <span className="text-xs text-destructive">{formErrors.location_en[0]}</span>}
                         </div>
