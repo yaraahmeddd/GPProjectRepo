@@ -6,6 +6,9 @@ import Backend from 'i18next-http-backend';
 const RTL_LANGUAGES = new Set(['ar']);
 const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
 const NAMESPACES = ['common', 'auth', 'admin', 'member', 'team', 'landing'] as const;
+const LOCALES_BASE_PATH = import.meta.env.DEV
+  ? `${import.meta.env.BASE_URL}public/locales`
+  : `${import.meta.env.BASE_URL}locales`;
 
 const normalizeLanguage = (language?: string): 'ar' | 'en' => {
   const baseLanguage = language?.split('-')[0];
@@ -35,7 +38,7 @@ void i18n
     defaultNS: 'common',
     ns: [...NAMESPACES],
     backend: {
-      loadPath: `${import.meta.env.BASE_URL}locales/{{lng}}/{{ns}}.json`,
+      loadPath: `${LOCALES_BASE_PATH}/{{lng}}/{{ns}}.json`,
     },
     interpolation: { escapeValue: false },
     detection: {
