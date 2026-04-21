@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --color-background: #F4F6F9;
@@ -162,8 +162,6 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-<<<<<<< Updated upstream
-=======
 
 /* ─── Phase 2: CSS Logical Properties for RTL/LTR ─────────────────────── */
 /* These utilities support proper bidirectional layout without physical left/right */
@@ -231,4 +229,3 @@ body {
   display: inline-block;
   margin-inline-end: auto;
 }
->>>>>>> Stashed changes

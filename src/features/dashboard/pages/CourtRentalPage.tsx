@@ -55,6 +55,17 @@ type Booking = {
     status: string;
 };
 
+const getLocalizedFieldName = (
+    field: ApiField | undefined,
+    isRtl: boolean,
+    fallback = "-"
+) => {
+    if (!field) return fallback;
+    return isRtl
+        ? field.name_ar || field.name_en || field.name || fallback
+        : field.name_en || field.name_ar || field.name || fallback;
+};
+
 // --- Helpers ---
 function formatHour(slot: string, isRtl: boolean, t: any): string {
     const h = parseInt(slot.split(":")[0], 10);
@@ -423,7 +434,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                 bookingId: booking.id,
                 amount: String(booking.price || computedPrice),
                 sportName: (isRtl ? activeSport?.name_ar : activeSport?.name_en) || t("sports.court_booking"),
-                courtName: activeField?.name_ar || t("sports.court"),
+                courtName: getLocalizedFieldName(activeField, isRtl, t("sports.court")),
                 date: dateStr,
                 time: `${toTranslatedTime(bookingForm.from, isRtl, t)} - ${toTranslatedTime(bookingForm.to, isRtl, t)}`,
             });
@@ -510,7 +521,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                             <SelectContent dir={isRtl ? 'rtl' : 'ltr'}>
                                 {fields.map(f => (
                                     <SelectItem key={f.id} value={String(f.id)} className="font-bold">
-                                        {f.name_ar || f.name_en || f.name}
+                                        {getLocalizedFieldName(f, isRtl)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -643,7 +654,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                             </div>
                             <div className="flex items-center justify-between px-3 py-2 gap-4">
                                 <span className="text-ds-text-muted shrink-0">{t("court_rental.dialog.field")}</span>
-                                <span className={`text-ds-teal font-black flex-1 ${isRtl ? 'text-left' : 'text-right'}`}>{activeField?.name_ar || activeField?.name_en}</span>
+                                <span className={`text-ds-teal font-black flex-1 ${isRtl ? 'text-left' : 'text-right'}`}>{getLocalizedFieldName(activeField, isRtl)}</span>
                             </div>
                             <div className="flex items-center justify-between px-3 py-3 bg-ds-border/10 rounded-[12px] mt-1 gap-4">
                                 <span className="text-ds-text-muted shrink-0">{t("court_rental.dialog.date")}</span>

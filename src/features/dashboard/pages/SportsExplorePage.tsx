@@ -60,6 +60,17 @@ const pickPositiveAmount = (...values: Array<number | string | null | undefined>
     return 0;
 };
 
+const getLocalizedFieldName = (
+    field: SportScheduleApi["field"] | undefined,
+    isRtl: boolean,
+    fallback: string
+): string => {
+    if (!field) return fallback;
+    return isRtl
+        ? field.name_ar || field.name_en || fallback
+        : field.name_en || field.name_ar || fallback;
+};
+
 interface SubscriptionLookup {
     subscriptionId: number;
     teamId: string;
@@ -90,6 +101,7 @@ interface SportScheduleApi {
     days_en?: string;
     training_fee?: number | string;
     field?: {
+        name_en?: string;
         name_ar?: string;
     };
 }
@@ -574,7 +586,7 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
                         teamId: schedule.team_id,
                         time: `${(schedule.start_time || "").slice(0, 5)} - ${(schedule.end_time || "").slice(0, 5)}`,
                         days: schedule.days_ar || schedule.days_en || "-",
-                        court: schedule.field?.name_ar || t("explore_sports.slots.outdoor_court"),
+                        court: getLocalizedFieldName(schedule.field, isRtl, t("explore_sports.slots.outdoor_court")),
                         price: pickPositiveAmount(schedule.training_fee, (schedule as any).price, sportPrice),
                         spots: 10,
                     }))

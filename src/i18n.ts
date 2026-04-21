@@ -7,7 +7,7 @@ const RTL_LANGUAGES = new Set(['ar']);
 const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
 const NAMESPACES = ['common', 'auth', 'admin', 'member', 'team', 'landing'] as const;
 const LOCALES_BASE_PATH = import.meta.env.DEV
-  ? `${import.meta.env.BASE_URL}public/locales`
+  ? `${import.meta.env.BASE_URL}locales`
   : `${import.meta.env.BASE_URL}locales`;
 
 const normalizeLanguage = (language?: string): 'ar' | 'en' => {
@@ -23,6 +23,7 @@ const syncDocumentLanguage = (language?: string) => {
   const normalizedLanguage = normalizeLanguage(language);
   document.documentElement.lang = normalizedLanguage;
   document.documentElement.dir = RTL_LANGUAGES.has(normalizedLanguage) ? 'rtl' : 'ltr';
+  localStorage.setItem('dashboard-lang', normalizedLanguage);
 };
 
 i18n.on('languageChanged', syncDocumentLanguage);
@@ -43,6 +44,7 @@ void i18n
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
+      lookupLocalStorage: 'dashboard-lang',
       caches: ['localStorage'],
     },
   })
