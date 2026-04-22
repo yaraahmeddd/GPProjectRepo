@@ -1,19 +1,74 @@
 import { DS } from "./DesignSystem";
 import type { SessionEvent } from "./types";
 
-export const DAY_NAMES_SHORT = ["أح", "إث", "ثل", "أر", "خم", "جم", "سب"];
-export const MONTH_NAMES_AR = [
-    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
+export const getMonthName = (month: number, t: any) => {
+    const months = t("calendar_utils.months", { returnObjects: true });
+    return months[month];
+};
+
+export const getDayNameShort = (day: number, t: any) => {
+    const days = t("calendar_utils.days.short", { returnObjects: true });
+    return days[day];
+};
+
+export const getDayNameLong = (day: number, t: any) => {
+    const days = t("calendar_utils.days.long", { returnObjects: true });
+    return days[day];
+};
+
+export const localizeDays = (daysStr: string, isRtl: boolean): string => {
+    if (!daysStr || daysStr === "-") return "-";
+    
+    const dayMap: Record<string, string> = {
+        "السبت": "Saturday",
+        "الأحد": "Sunday",
+        "الاثنين": "Monday",
+        "الثلاثاء": "Tuesday",
+        "الأربعاء": "Wednesday",
+        "الخميس": "Thursday",
+        "الجمعة": "Friday",
+        "Saturday": "السبت",
+        "Sunday": "الأحد",
+        "Monday": "الاثنين",
+        "Tuesday": "الثلاثاء",
+        "Wednesday": "الأربعاء",
+        "Thursday": "الخميس",
+        "Friday": "الجمعة"
+    };
+
+    const days = daysStr.split(/[\s،,]+/).filter(Boolean);
+    const localized = days.map(d => {
+        const trimmed = d.trim();
+        if (isRtl) {
+            if (/^[a-zA-Z]+$/.test(trimmed)) return dayMap[trimmed] || trimmed;
+            return trimmed;
+        } else {
+            if (/^[\u0600-\u06FF]+$/.test(trimmed)) return dayMap[trimmed] || trimmed;
+            return trimmed;
+        }
+    });
+
+    return localized.join(isRtl ? "، " : ", ");
+};
 
 // All sports now coming from backend. Mock config removed.
 
-export const STATUS_COLORS: Record<SessionEvent["status"], { bg: string; text: string; border: string }> = {
+export const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
     "حضور": { bg: DS.colors.successLight, text: DS.colors.success, border: DS.colors.success + "40" },
     "غياب": { bg: DS.colors.errorLight, text: DS.colors.error, border: DS.colors.error + "40" },
     "قادم": { bg: DS.colors.primaryLight, text: DS.colors.primary, border: DS.colors.primary + "40" },
+    // English counterparts for direct mapping
+    "attended": { bg: DS.colors.successLight, text: DS.colors.success, border: DS.colors.success + "40" },
+    "absent": { bg: DS.colors.errorLight, text: DS.colors.error, border: DS.colors.error + "40" },
+    "upcoming": { bg: DS.colors.primaryLight, text: DS.colors.primary, border: DS.colors.primary + "40" },
 };
+
+export const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+
+export const isSameDay = (d1: Date, d2: Date) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
 
 /**
  * Calculates the effective end date for a subscription.
@@ -90,22 +145,17 @@ export function buildMonthEvents(year: number, month: number, sports?: any[], bo
             const weekdays = cfg.weekdays || [];
             if (weekdays.length > 0 && !weekdays.includes(dow)) return;
 
-            let status: SessionEvent["status"] = "قادم";
+            let status: SessionEvent["status"] = "upcoming";
 
-            // If the date is in the past, default to "Absent" if no record exists
+            // If the date is in the past, default to "absent" if no record exists
             if (checkDate < today) {
-                status = "غياب";
+                status = "absent";
             }
 
             if (cfg.records && Array.isArray(cfg.records)) {
-                const record = cfg.records.find((r: any) => {
-                    const rDate = new Date(r.date);
-                    return rDate.getFullYear() === year &&
-                        rDate.getMonth() === month &&
-                        rDate.getDate() === d;
-                });
+                const record = cfg.records.find((r: any) => isSameDay(new Date(r.date), checkDate));
                 if (record) {
-                    status = record.attended ? "حضور" : "غياب";
+                    status = record.attended ? "attended" : "absent";
                 }
             }
 
@@ -127,12 +177,12 @@ export function buildMonthEvents(year: number, month: number, sports?: any[], bo
                     const checkDate = new Date(year, month, d);
                     checkDate.setHours(0, 0, 0, 0);
 
-                    // If it's in the past and no attendance data exists, don't call it "قادم"
-                    const bookingStatus: SessionEvent["status"] = checkDate < today ? "غياب" : "قادم";
+                    // If it's in the past and no attendance data exists, don't call it "upcoming"
+                    const bookingStatus: SessionEvent["status"] = checkDate < today ? "absent" : "upcoming";
 
                     evts.push({
                         sportId: `booking-${b.id}`,
-                        name: `حجز: ${b.court}`,
+                        name: `${b.court}`, // Prefix added in UI layer via translation
                         icon: "🏟️",
                         color: "#F59E0B", // Orange for bookings
                         time: b.time || "-",

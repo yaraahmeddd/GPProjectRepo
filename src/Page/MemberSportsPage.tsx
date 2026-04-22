@@ -20,12 +20,14 @@ import { useAuth } from "../context/AuthContext";
 import { AuthService } from "../services/authService";
 import type { EnrolledSport } from "../features/dashboard/types";
 import { Card, Badge, StatChip, ProgressBar } from "../features/dashboard/DashboardComponents";
+import { useTranslation } from "react-i18next";
 import {
     buildMonthEvents,
     getEffectiveEndDate,
-    MONTH_NAMES_AR,
-    DAY_NAMES_SHORT,
-    STATUS_COLORS
+    STATUS_COLORS,
+    getMonthName,
+    getDayNameShort,
+    localizeDays
 } from "../features/dashboard/calendarUtils";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
@@ -129,13 +131,13 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
                     <div>
                         <div className="font-extrabold text-[16px] mb-0.5 leading-tight">{sport.nameAr}</div>
                         <div className="flex items-center gap-2">
-                            <Badge label={sport.status} color={statusColor(sport.status)} />
-                            {(sport.startDate || (sport as any).start_date) && (
-                                <span className="text-[10px] text-ds-text-muted font-bold">
-                                    📅 {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
-                                </span>
-                            )}
-                        </div>
+                        <Badge label={t(`sports.status.${sport.status === "نشط" ? "active" : sport.status === "قيد الانتظار" ? "pending" : "upcoming"}`)} color={statusColor(sport.status)} />
+                        {(sport.startDate || (sport as any).start_date) && (
+                            <span className="text-[10px] text-ds-text-muted font-bold">
+                                📅 {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
+                            </span>
+                        )}
+                    </div>
                     </div>
                 </div>
 
@@ -147,8 +149,8 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
                         borderColor: (sport.color || "#1E6FB9") + "55"
                     }}
                 >
-                    <span className="text-[10px] text-ds-text-muted ml-1.5 shrink-0">الجلسة القادمة:</span>
-                    <span className="font-bold text-[12px] shrink-0" style={{ color: sport.color || "#1E6FB9" }}>📅 {sport.nextDay || "-"}</span>
+                    <span className="text-[10px] text-ds-text-muted ml-1.5 shrink-0">{t("my_sports.next_session")}</span>
+                    <span className="font-bold text-[12px] shrink-0" style={{ color: sport.color || "#1E6FB9" }}>📅 {localizeDays(sport.nextDay || "-", isRtl)}</span>
                     <span className="text-ds-border">·</span>
                     <span className="font-semibold text-[12px] shrink-0">⏰ {sport.nextTime || "-"}</span>
                     <span className="text-ds-border">·</span>
@@ -158,20 +160,20 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
 
             {/* Stats */}
             <div className="flex gap-1.5 mb-2.5">
-                <StatChip icon="✅" label="حضور" val={sport.attended} color="#16A34A" />
-                <StatChip icon="❌" label="غياب" val={sport.absent} color="#DC2626" />
-                <StatChip icon="⏳" label="متبقي" val={remainingDynamic} color="#1F6FD5" />
+                <StatChip icon="✅" label={t("training_card.attended")} val={sport.attended} color="#16A34A" />
+                <StatChip icon="❌" label={t("training_card.absent")} val={sport.absent} color="#DC2626" />
+                <StatChip icon="⏳" label={t("training_card.remaining")} val={remainingDynamic} color="#1F6FD5" />
             </div>
 
             {/* Progress */}
             <div>
                 <div className="flex justify-between mb-2 text-[13px]">
-                    <span className="text-ds-text-secondary">نسبة الحضور</span>
+                    <span className="text-ds-text-secondary">{t("training_card.attendance_rate")}</span>
                     <span className="font-extrabold" style={{ color: sport.color || "#1E6FB9" }}>{pct}%</span>
                 </div>
                 <ProgressBar value={sport.attended} max={sport.total || 1} color={sport.color || "#1E6FB9"} />
                 <div className="text-[11px] text-ds-text-muted mt-1.5">
-                    {sport.attended} من أصل {sport.total} جلسة مكتملة
+                    {t("training_card.sessions_completed", { attended: sport.attended, total: sport.total })}
                 </div>
             </div>
         </Card>
@@ -181,6 +183,8 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
 /* ─── Page ───────────────────────────────────────────────────────── */
 export default function MemberSportsPage() {
     /* Separate state slices as required */
+    const { t, i18n } = useTranslation("team");
+    const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
     const [approvedSports, setApprovedSports] = useState<SportSubscription[]>([]);
     const [pendingSports, setPendingSports] = useState<SportSubscription[]>([]);
     const [serverBookings, setServerBookings] = useState<any[]>([]);
@@ -266,9 +270,9 @@ export default function MemberSportsPage() {
         : [];
 
     const monthlySummary = {
-        حضور: Array.from(events.values()).flat().filter(e => e.status === "حضور").length,
-        غياب: Array.from(events.values()).flat().filter(e => e.status === "غياب").length,
-        قادم: Array.from(events.values()).flat().filter(e => e.status === "قادم").length,
+        attended: Array.from(events.values()).flat().filter(e => e.status === "attended" || e.status === "حضور").length,
+        absent: Array.from(events.values()).flat().filter(e => e.status === "absent" || e.status === "غياب").length,
+        upcoming: Array.from(events.values()).flat().filter(e => e.status === "upcoming" || e.status === "قادم").length,
     };
 
     // ديناميكي: مجموع المتبقي لكل رياضة حتى نهاية الشهر الحالي
@@ -408,20 +412,20 @@ export default function MemberSportsPage() {
 
     /* ─── 5. UI Render ─── */
     return (
-        <div className="flex flex-col gap-6 animate-fade-up" dir="rtl">
+        <div className="flex flex-col gap-6 animate-fade-up" dir={isRtl ? "rtl" : "ltr"}>
             {/* Header section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
+            <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 ${isRtl ? '' : 'md:flex-row-reverse'}`}>
+                <div className={`flex flex-col gap-2 ${isRtl ? 'text-right' : 'text-left'}`}>
+                    <div className={`flex items-center gap-3 ${isRtl ? '' : 'flex-row-reverse'}`}>
                         <Trophy className="h-8 w-8 text-[#2EA7C9]" />
-                        <h1 className="text-[32px] font-black text-[#214474] tracking-tight">الرياضات المشترك بها</h1>
+                        <h1 className="text-[32px] font-black text-[#214474] tracking-tight">{t("my_sports.title")}</h1>
                     </div>
                     <p className="text-muted-foreground font-medium opacity-80 flex items-center gap-2">
-                        {totalSlotsFilled} / {MAX_SPORTS} رياضات
+                        {t("my_sports.limit", { count: totalSlotsFilled, max: MAX_SPORTS })}
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className={`flex items-center gap-3 ${isRtl ? '' : 'flex-row-reverse'}`}>
                     {/* Status filter popover */}
                     <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                         <PopoverTrigger asChild>
@@ -430,7 +434,7 @@ export default function MemberSportsPage() {
                                     ? "border-[#2EA7C9] bg-[#2EA7C9]/10 text-[#2EA7C9]"
                                     : "border-border bg-white text-muted-foreground hover:bg-muted"}`}>
                                 <Filter className="w-4 h-4" />
-                                الحالة
+                                {t("my_sports.status_filter")}
                                 {filterStatuses.length > 0 && (
                                     <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#2EA7C9] text-white text-[9px] font-bold">
                                         {filterStatuses.length}
@@ -438,13 +442,13 @@ export default function MemberSportsPage() {
                                 )}
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-52 p-0" dir="rtl">
+                        <PopoverContent align={isRtl ? "end" : "start"} className="w-52 p-0" dir={isRtl ? "rtl" : "ltr"}>
                             <div className="py-1">
                                 {([
-                                    { key: "نشط", color: "text-emerald-700" },
-                                    { key: "قيد الانتظار", color: "text-blue-700" },
-                                    { key: "قادم", color: "text-amber-700" },
-                                ]).map(({ key, color }) => {
+                                    { key: "نشط", label: t("sports.status.active"), color: "text-emerald-700" },
+                                    { key: "قيد الانتظار", label: t("sports.status.pending"), color: "text-blue-700" },
+                                    { key: "قادم", label: t("sports.status.upcoming"), color: "text-amber-700" },
+                                ]).map(({ key, label, color }) => {
                                     const checked = filterStatuses.includes(key);
                                     const count = allSubscriptions.filter(s => s.status === key).length;
                                     return (
@@ -461,19 +465,19 @@ export default function MemberSportsPage() {
                                                 }}
                                                 className="w-3.5 h-3.5 rounded accent-[#2EA7C9] cursor-pointer"
                                             />
-                                            <span className={`text-xs font-medium ${color}`}>{key}</span>
-                                            <span className="mr-auto text-[10px] text-muted-foreground">{count}</span>
+                                            <span className={`text-xs font-medium ${color}`}>{label}</span>
+                                            <span className={`${isRtl ? 'mr-auto' : 'ml-auto'} text-[10px] text-muted-foreground`}>{count}</span>
                                         </label>
                                     );
                                 })}
                             </div>
                             {filterStatuses.length > 0 && (
-                                <div className="flex justify-end px-3 py-2 border-t border-border">
+                                <div className={`flex justify-end px-3 py-2 border-t border-border ${isRtl ? '' : 'justify-start'}`}>
                                     <button
                                         onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }}
                                         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                     >
-                                        مسح
+                                        {t("my_sports.clear")}
                                     </button>
                                 </div>
                             )}
@@ -485,7 +489,7 @@ export default function MemberSportsPage() {
                         className="bg-[#2EA7C9] hover:bg-[#2589a5] text-white rounded-xl px-6 h-12 font-bold flex items-center gap-2 shadow-lg shadow-[#2EA7C9]/20 transition-all hover:scale-[1.02]"
                     >
                         <Plus className="h-5 w-5" />
-                        اشتراك في رياضة
+                        {t("my_sports.subscribe")}
                     </Button>
                 </div>
             </div>
@@ -493,15 +497,15 @@ export default function MemberSportsPage() {
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <div className="w-12 h-12 border-4 border-[#2EA7C9] border-t-transparent rounded-full animate-spin" />
-                    <p className="text-muted-foreground font-bold">جارٍ تحميل بياناتك الرياضية...</p>
+                    <p className="text-muted-foreground font-bold">{t("my_sports.loading")}</p>
                 </div>
             ) : error ? (
                 <div className="bg-white rounded-3xl p-16 text-center shadow-sm border border-border flex flex-col items-center gap-4">
                     <AlertCircle className="w-12 h-12 text-red-500 opacity-80" />
-                    <h3 className="text-xl font-bold text-[#214474]">حدث خطأ أثناء التحميل</h3>
+                    <h3 className="text-xl font-bold text-[#214474]">{isRtl ? "حدث خطأ أثناء التحميل" : "Error loading data"}</h3>
                     <p className="text-muted-foreground">{error}</p>
                     <Button onClick={loadData} variant="outline" className="mt-2 rounded-xl border-[#2EA7C9] text-[#2EA7C9] hover:bg-[#2EA7C9]/5">
-                        إعادة المحاولة
+                        {isRtl ? "إعادة المحاولة" : "Retry"}
                     </Button>
                 </div>
             ) : allSubscriptions.length === 0 ? (
@@ -509,23 +513,23 @@ export default function MemberSportsPage() {
                     <div className="w-20 h-20 bg-[#2EA7C9]/10 rounded-full flex items-center justify-center">
                         <Dumbbell className="w-10 h-10 text-[#2EA7C9]" />
                     </div>
-                    <h3 className="text-xl font-bold text-[#214474]">لا توجد اشتراكات نشطة</h3>
+                    <h3 className="text-xl font-bold text-[#214474]">{t("my_sports.empty")}</h3>
                     <p className="text-muted-foreground max-w-md">
-                        لم تقم بالاشتراك في أي رياضة بعد. ابدأ الآن واستكشف الرياضات المتاحة في النادي!
+                        {isRtl ? "لم تقم بالاشتراك في أي رياضة بعد. ابدأ الآن واستكشف الرياضات المتاحة في النادي!" : "You haven't joined any sports yet. Start now and explore the available sports in the club!"}
                     </p>
                     <Button
                         onClick={() => (window.location.href = "/member/dashboard/subscribe")}
                         className="bg-[#2EA7C9] hover:bg-[#2589a5] text-white rounded-xl px-8 h-12 font-bold mt-2"
                     >
-                        استكشاف الرياضات
+                        {isRtl ? "استكشاف الرياضات" : "Explore Sports"}
                     </Button>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_550px] gap-6 items-start">
                     {/* Training Cards Column */}
                     <div>
-                        <div className="font-bold text-[15px] text-ds-text-secondary mb-3 flex items-center gap-2">
-                            <span>🏋️</span> رياضاتي وسجل الحضور
+                        <div className={`font-bold text-[15px] text-ds-text-secondary mb-3 flex items-center gap-2 ${isRtl ? '' : 'flex-row-reverse'}`}>
+                            <span>🏋️</span> {isRtl ? "رياضاتي وسجل الحضور" : "My Sports & Attendance"}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {filteredSubscriptions.map((s, i) => (
@@ -539,9 +543,9 @@ export default function MemberSportsPage() {
                         {/* Monthly Summary Chips */}
                         <div className="flex gap-2">
                             {[
-                                { label: "حضور", val: monthlySummary.حضور, color: "#16A34A", bg: "#F0FDF4" },
-                                { label: "غياب", val: monthlySummary.غياب, color: "#DC2626", bg: "#FEF2F2" },
-                                { label: "قادمة", val: totalRemainingDynamic, color: "#1F6FD5", bg: "#EBF3FF" },
+                                { label: t("training_card.attended"), val: monthlySummary.attended, color: "#16A34A", bg: "#F0FDF4" },
+                                { label: t("training_card.absent"), val: monthlySummary.absent, color: "#DC2626", bg: "#FEF2F2" },
+                                { label: t("training_card.remaining"), val: totalRemainingDynamic, color: "#1F6FD5", bg: "#EBF3FF" },
                             ].map(({ label, val, color, bg }) => (
                                 <div key={label} className="flex-1 text-center rounded-xl p-3 border border-ds-border" style={{ background: bg, borderColor: color + "25" }}>
                                     <div className="text-xl font-black" style={{ color }}>{val}</div>
@@ -555,7 +559,7 @@ export default function MemberSportsPage() {
                             <div className="flex items-center justify-between mb-4">
                                 <button onClick={prevMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">‹</button>
                                 <div className="text-center">
-                                    <span className="font-black text-lg text-ds-text-primary">{MONTH_NAMES_AR[viewMonth]} {viewYear}</span>
+                                    <span className="font-black text-lg text-ds-text-primary">{getMonthName(viewMonth, t)} {viewYear}</span>
                                 </div>
                                 <button onClick={nextMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">›</button>
                             </div>
@@ -585,8 +589,10 @@ export default function MemberSportsPage() {
                             </div>
 
                             <div className="grid grid-cols-7 gap-px mb-1">
-                                {DAY_NAMES_SHORT.map(d => (
-                                    <div key={d} className="text-center text-[11px] font-black text-ds-text-muted py-2">{d}</div>
+                                {[0, 1, 2, 3, 4, 5, 6].map(d => (
+                                    <div key={d} className="text-center text-[11px] font-black text-ds-text-muted py-2">
+                                        {getDayNameShort(d, t)}
+                                    </div>
                                 ))}
                             </div>
 

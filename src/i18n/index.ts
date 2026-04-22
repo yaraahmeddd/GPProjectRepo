@@ -6,10 +6,12 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import arCommon from './locales/ar/common.json';
 import arNav from './locales/ar/nav.json';
 import arDashboard from './locales/ar/dashboard.json';
+import arDashboardPage from './locales/ar/DashboardPage.json';
 import arMembers from './locales/ar/members.json';
 import arSports from './locales/ar/sports.json';
 import arFinance from './locales/ar/finance.json';
 import arRegistrations from './locales/ar/registrations.json';
+import arRegistrationManagementPage from './locales/ar/RegistrationManagementPage.json';
 import arFaculties from './locales/ar/faculties.json';
 import arBranches from './locales/ar/branches.json';
 import arProfessions from './locales/ar/professions.json';
@@ -20,10 +22,12 @@ import arAdmin from './locales/ar/admin.json';
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
 import enDashboard from './locales/en/dashboard.json';
+import enDashboardPage from './locales/en/DashboardPage.json';
 import enMembers from './locales/en/members.json';
 import enSports from './locales/en/sports.json';
 import enFinance from './locales/en/finance.json';
 import enRegistrations from './locales/en/registrations.json';
+import enRegistrationManagementPage from './locales/en/RegistrationManagementPage.json';
 import enFaculties from './locales/en/faculties.json';
 import enBranches from './locales/en/branches.json';
 import enProfessions from './locales/en/professions.json';
@@ -35,10 +39,12 @@ export const NS = [
   'common',
   'nav',
   'dashboard',
+  'DashboardPage',
   'members',
   'sports',
   'finance',
   'registrations',
+  'RegistrationManagementPage',
   'faculties',
   'branches',
   'professions',
@@ -58,10 +64,12 @@ i18n
         common: arCommon,
         nav: arNav,
         dashboard: arDashboard,
+        DashboardPage: arDashboardPage,
         members: arMembers,
         sports: arSports,
         finance: arFinance,
         registrations: arRegistrations,
+        RegistrationManagementPage: arRegistrationManagementPage,
         faculties: arFaculties,
         branches: arBranches,
         professions: arProfessions,
@@ -72,10 +80,12 @@ i18n
         common: enCommon,
         nav: enNav,
         dashboard: enDashboard,
+        DashboardPage: enDashboardPage,
         members: enMembers,
         sports: enSports,
         finance: enFinance,
         registrations: enRegistrations,
+        RegistrationManagementPage: enRegistrationManagementPage,
         faculties: enFaculties,
         branches: enBranches,
         professions: enProfessions,

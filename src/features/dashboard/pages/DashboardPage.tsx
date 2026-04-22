@@ -6,15 +6,27 @@ import bookingService from "../../../services/bookingService";
 import {
     buildMonthEvents,
     getEffectiveEndDate,
-    MONTH_NAMES_AR,
-    DAY_NAMES_SHORT,
-    STATUS_COLORS
+    STATUS_COLORS,
+    getDaysInMonth,
+    isSameDay,
+    getMonthName,
+    getDayNameShort,
+    localizeDays
 } from "../calendarUtils";
+import { useTranslation } from "react-i18next";
 
-const statusColor = (s: EnrolledSport["status"]) =>
-    s === "نشط" ? "#16A34A" : s === "قيد الانتظار" ? "#3B82F6" : s === "قادم" ? "#F59E0B" : "#8FA3BB";
+const statusColor = (s: EnrolledSport["status"], t: any) => {
+    const status = String(s || "").toLowerCase();
+    if (status === "نشط" || status === "active" || status === t("sports.status.active").toLowerCase()) return "#16A34A";
+    if (status === "قيد الانتظار" || status === "pending" || status === t("sports.status.pending").toLowerCase()) return "#3B82F6";
+    if (status === "قادم" || status === "upcoming" || status === t("sports.status.upcoming").toLowerCase()) return "#F59E0B";
+    return "#8FA3BB";
+};
 
 const TrainingCard: React.FC<{ sport: EnrolledSport; delay: number }> = ({ sport, delay }) => {
+    const { t, i18n } = useTranslation("team");
+    const currentLang = i18n.resolvedLanguage || i18n.language;
+    const isRtl = currentLang.startsWith('ar');
     const pct = sport.total > 0 ? Math.round((sport.attended / sport.total) * 100) : 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -65,11 +77,11 @@ const TrainingCard: React.FC<{ sport: EnrolledSport; delay: number }> = ({ sport
                         <h3 className="font-black text-xl text-gray-800 tracking-tight truncate">
                             {sport.name}
                         </h3>
-                        <Badge label={sport.status} color={statusColor(sport.status)} />
+                        <Badge label={t(`sports.status.${String(sport.status).toLowerCase() === "نشط" || String(sport.status).toLowerCase() === "active" ? "active" : String(sport.status).toLowerCase() === "قيد الانتظار" || String(sport.status).toLowerCase() === "pending" ? "pending" : "upcoming"}`)} color={statusColor(sport.status, t)} />
                     </div>
                     {(sport.startDate || (sport as any).start_date) && (
                         <p className="text-[11px] text-gray-400 font-bold flex items-center gap-1.5">
-                            <span>🕒 التسجيل:</span>
+                            <span>🕒 {t("training_card.registration")}</span>
                             <span className="text-gray-600">
                                 {(sport.startDate || (sport as any).start_date).split('T')[0]}
                                 <span className="mx-1 text-gray-300">←</span>
@@ -90,28 +102,28 @@ const TrainingCard: React.FC<{ sport: EnrolledSport; delay: number }> = ({ sport
             >
                 <div className="flex items-center gap-2 mb-2">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sport.color || "#1E6FB9" }} />
-                    <span className="text-[12px] font-black text-gray-500 uppercase tracking-widest">الجلسة القادمة</span>
+                    <span className="text-[12px] font-black text-gray-500 uppercase tracking-widest">{t("training_card.next_session")}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex items-center gap-3 bg-white/60 p-2.5 rounded-xl border border-black/5">
                         <span className="text-lg opacity-80">📅</span>
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-400 font-bold">اليوم</span>
-                            <span className="text-[13px] font-extrabold text-gray-700">{sport.nextDay || "-"}</span>
+                            <span className="text-[10px] text-gray-400 font-bold">{t("training_card.day")}</span>
+                            <span className="text-[13px] font-extrabold text-gray-700">{localizeDays(sport.nextDay || "-", isRtl)}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 bg-white/60 p-2.5 rounded-xl border border-black/5">
                         <span className="text-lg opacity-80">⏰</span>
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-400 font-bold">الوقت</span>
+                            <span className="text-[10px] text-gray-400 font-bold">{t("training_card.time")}</span>
                             <span className="text-[13px] font-extrabold text-gray-700">{sport.nextTime || "-"}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 bg-white/60 p-2.5 rounded-xl border border-black/5 sm:col-span-2">
                         <span className="text-lg opacity-80">📍</span>
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-gray-400 font-bold">الموقع</span>
+                            <span className="text-[10px] text-gray-400 font-bold">{t("training_card.location")}</span>
                             <span className="text-[13px] font-extrabold text-gray-700 truncate">{sport.court || "-"}</span>
                         </div>
                     </div>
@@ -120,18 +132,18 @@ const TrainingCard: React.FC<{ sport: EnrolledSport; delay: number }> = ({ sport
 
             {/* 3. Stats Grid */}
             <div className="grid grid-cols-3 gap-3 mb-5">
-                <StatChip icon="🎯" label="حضور" val={sport.attended} color="#16A34A" />
-                <StatChip icon="🚫" label="غياب" val={sport.absent} color="#DC2626" />
-                <StatChip icon="⏳" label="متبقي" val={remainingDynamic} color="#1F6FD5" />
+                <StatChip icon="🎯" label={t("training_card.attended")} val={sport.attended} color="#16A34A" />
+                <StatChip icon="🚫" label={t("training_card.absent")} val={sport.absent} color="#DC2626" />
+                <StatChip icon="⏳" label={t("training_card.remaining")} val={remainingDynamic} color="#1F6FD5" />
             </div>
 
             {/* 4. Progress Section */}
             <div className="pt-2">
                 <div className="flex justify-between mb-2 items-end">
                     <div className="flex flex-col">
-                        <span className="text-[12px] text-gray-500 font-bold">نسبة الحضور التراكمية</span>
+                        <span className="text-[12px] text-gray-500 font-bold">{t("training_card.attendance_rate")}</span>
                         <span className="text-[11px] text-gray-400 mt-0.5 font-medium">
-                            {sport.attended} من أصل {sport.total} جلسات مكتملة
+                            {t("training_card.sessions_completed", { attended: sport.attended, total: sport.total })}
                         </span>
                     </div>
                     <span className="text-2xl font-black italic" style={{ color: sport.color || "#1E6FB9" }}>{pct}%</span>
@@ -191,6 +203,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     bookings: serverBookings = []
 }) => {
     const { user } = useAuth();
+    const { t, i18n } = useTranslation("team");
+
+    const currentLang = i18n.resolvedLanguage || i18n.language;
+    const isRtl = currentLang.startsWith('ar');
     const today = new Date();
     const displaySports = enrolledSports.length > 0 ? enrolledSports : [];
     const totalAttended = propTotalAttended !== undefined ? propTotalAttended : displaySports.reduce((a, s) => a + s.attended, 0);
@@ -207,7 +223,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 id: b.id,
                 date: (b.start_time || b.date || "").split('T')[0],
                 time: (b.start_time || "").split('T')[1]?.slice(0, 5) || b.time_from || "",
-                court: b.field?.name_ar || b.facility_name || "ملعب",
+                court: b.field?.name_ar || b.facility_name || t("sports.court"),
                 isServer: true
             }));
 
@@ -252,12 +268,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         : [];
 
     const monthlySummary = {
-        حضور: Array.from(events.values()).flat().filter(e => e.status === "حضور").length,
-        غياب: Array.from(events.values()).flat().filter(e => e.status === "غياب").length,
-        قادم: Array.from(events.values()).flat().filter(e => e.status === "قادم").length,
+        attended: Array.from(events.values()).flat().filter(e => e.status === "حضور" || e.status === "attended" || e.status === t("calendar_utils.status.attended")).length,
+        absent: Array.from(events.values()).flat().filter(e => e.status === "غياب" || e.status === "absent" || e.status === t("calendar_utils.status.absent")).length,
+        upcoming: Array.from(events.values()).flat().filter(e => e.status === "قادم" || e.status === "upcoming" || e.status === t("calendar_utils.status.upcoming")).length,
     };
 
-    // ديناميكي: مجموع المتبقي لكل رياضة حتى نهاية الشهر الحالي
+    // مجموع المتبقي لكل رياضة حتى نهاية الشهر الحالي
     const totalRemainingDynamic = useMemo(() => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -287,15 +303,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             const token = details.share_token;
             if (!token) {
                 // No token available for this booking
-                alert("لا يوجد رابط دعوة متاح لهذا الحجز.");
+                alert(t("dashboard.calendar.no_invite_token"));
                 return;
             }
             const url = `${window.location.origin}/bookings/share/${token}`;
             await navigator.clipboard.writeText(url);
-            alert("تم نسخ رابط الدعوة إلى الحافظة.");
+            alert(t("dashboard.calendar.copy_success"));
         } catch (err) {
             console.error("Failed to copy invite link:", err);
-            alert("تعذر نسخ رابط الدعوة. حاول مرة أخرى.");
+            alert(t("dashboard.calendar.copy_failed"));
         } finally {
             setCopyingBookingId(null);
         }
@@ -307,17 +323,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
             {/* ── PAGE TITLE ── */}
             <div className="mb-3.5 flex flex-col gap-2 sm:gap-0 sm:flex-row sm:justify-between sm:items-end">
-                <div>
-                    <h1 className="text-[28px] font-black text-ds-text-primary">لوحة التحكم</h1>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                    <h1 className="text-[28px] font-black text-ds-text-primary">{t("dashboard.page_title")}</h1>
                     <p className="text-ds-text-secondary mt-1 text-[15px]">
-                        نظرة شاملة على تدريباتك وجدول جلساتك الشهري
+                        {t("dashboard.page_subtitle")}
                     </p>
                 </div>
                 {joinDate && (
                     <div className="bg-white px-3.5 py-1.5 rounded-full border border-ds-border shadow-sm flex items-center gap-2 self-start sm:self-auto">
-                        <span className="text-[10px] text-ds-text-muted font-bold">تاريخ الانضمام:</span>
+                        <span className="text-[10px] text-ds-text-muted font-bold">{t("dashboard.join_date_label")}</span>
                         <span className="text-[13px] font-black text-ds-primary">
-                            {new Date(joinDate).toLocaleDateString("ar-EG", { year: 'numeric', month: 'long', day: 'numeric' })}
+                            {new Date(joinDate).toLocaleDateString(isRtl ? "ar-EG" : "en-US", { year: 'numeric', month: 'long', day: 'numeric' })}
                         </span>
                     </div>
                 )}
@@ -326,10 +342,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             {/* ── TOP STATS ROW ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 mb-3.5">
                 {[
-                    { label: "جلسات محضورة", val: totalAttended, color: "#16A34A", icon: "🎯", bg: "#F0FDF4" },
-                    { label: "إجمالي الجلسات", val: totalSessions, color: "#1F6FD5", icon: "📊", bg: "#EBF3FF" },
-                    { label: "رياضات مسجّلة", val: displaySports.length, color: "#17A2B8", icon: "🏆", bg: "#E8F8FB" },
-                    { label: "معدل الحضور", val: `${totalSessions > 0 ? Math.round(totalAttended / totalSessions * 100) : 0}%`, color: "#111827", icon: "📉", bg: "#F3F4F6" },
+                    { label: t("dashboard.stats.attended_sessions"), val: totalAttended, color: "#16A34A", icon: "🎯", bg: "#F0FDF4" },
+                    { label: t("dashboard.stats.total_sessions"), val: totalSessions, color: "#1F6FD5", icon: "📊", bg: "#EBF3FF" },
+                    { label: t("dashboard.stats.enrolled_sports"), val: displaySports.length, color: "#17A2B8", icon: "🏆", bg: "#E8F8FB" },
+                    { label: t("dashboard.stats.attendance_rate"), val: `${totalSessions > 0 ? Math.round(totalAttended / totalSessions * 100) : 0}%`, color: "#111827", icon: "📉", bg: "#F3F4F6" },
                 ].map(({ label, val, color, icon, bg }) => (
                     <Card key={label} className="flex items-center gap-2.5 p-2.5 w-full">
                         <div
@@ -338,7 +354,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         >
                             {icon}
                         </div>
-                        <div>
+                        <div className={isRtl ? 'text-right' : 'text-left'}>
                             <div className="text-[22px] font-black leading-tight" style={{ color }}>{val}</div>
                             <div className="text-[10px] text-ds-text-muted mt-0.5">{label}</div>
                         </div>
@@ -351,8 +367,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
                 {/* ────── RIGHT: Training Cards (Grid Layout) ────── */}
                 <div style={{ contentVisibility: 'auto', containIntrinsicSize: '1200px 1200px' }}>
-                    <div className="font-bold text-[15px] text-ds-text-secondary mb-3 flex items-center gap-2">
-                        <span>🏋️</span> رياضاتي وسجل الحضور
+                    <div className={`font-bold text-[15px] text-ds-text-secondary mb-3 flex items-center gap-2 ${isRtl ? 'flex-row' : 'flex-row-reverse justify-end'}`}>
+                        <span>🏋️</span> {t("dashboard.my_sports_section")}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {displaySports.map((s, i) => (
@@ -367,9 +383,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <div className="flex flex-col gap-3.5 xl:sticky xl:top-20" style={{ contentVisibility: 'auto', containIntrinsicSize: '800px 1200px' }}>
                     <div className="flex gap-1">
                         {([
-                            { label: "حضور", val: monthlySummary.حضور, color: "#16A34A", bg: "#F0FDF4" },
-                            { label: "غياب", val: monthlySummary.غياب, color: "#DC2626", bg: "#FEF2F2" },
-                            { label: "قادمة", val: totalRemainingDynamic, color: "#1F6FD5", bg: "#EBF3FF" },
+                            { label: t("dashboard.calendar.summary.attended"), val: monthlySummary.attended, color: "#16A34A", bg: "#F0FDF4" },
+                            { label: t("dashboard.calendar.summary.absent"), val: monthlySummary.absent, color: "#DC2626", bg: "#FEF2F2" },
+                            { label: t("dashboard.calendar.summary.upcoming"), val: totalRemainingDynamic, color: "#1F6FD5", bg: "#EBF3FF" },
                         ] as const).map(({ label, val, color, bg }) => (
                             <div key={label} className="flex-1 text-center rounded-lg p-[8px_4px] border border-ds-border" style={{ background: bg, borderColor: color + "25" }}>
                                 <div className="text-[17px] font-black" style={{ color }}>{val}</div>
@@ -380,19 +396,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
                     <Card className="p-2.5">
                         <div className="flex items-center justify-between mb-2">
-                            <button onClick={prevMonth} className="w-8 h-8 rounded-lg border border-ds-border bg-ds-border/10 cursor-pointer text-[15px] flex items-center justify-center hover:bg-ds-border/20 transition-colors">‹</button>
+                            <button onClick={isRtl ? nextMonth : prevMonth} className="w-8 h-8 rounded-lg border border-ds-border bg-ds-border/10 cursor-pointer text-[15px] flex items-center justify-center hover:bg-ds-border/20 transition-colors">{isRtl ? '›' : '‹'}</button>
                             <div className="text-center">
-                                <span className="font-black text-[15px] text-ds-text-primary">{MONTH_NAMES_AR[viewMonth]} {viewYear}</span>
+                                <span className="font-black text-[15px] text-ds-text-primary">{getMonthName(viewMonth, t)} {viewYear}</span>
                             </div>
-                            <button onClick={nextMonth} className="w-8 h-8 rounded-lg border border-ds-border bg-ds-border/10 cursor-pointer text-[15px] flex items-center justify-center hover:bg-ds-border/20 transition-colors">›</button>
+                            <button onClick={isRtl ? prevMonth : nextMonth} className="w-8 h-8 rounded-lg border border-ds-border bg-ds-border/10 cursor-pointer text-[15px] flex items-center justify-center hover:bg-ds-border/20 transition-colors">{isRtl ? '‹' : '›'}</button>
                         </div>
 
-                        <div className="flex gap-1 mb-2 flex-wrap">
+                        <div className={`flex gap-1 mb-2 flex-wrap ${isRtl ? 'flex-row' : 'flex-row-reverse justify-end'}`}>
                             <button
                                 onClick={() => setFilterSport(null)}
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all border ${filterSport === null ? 'bg-ds-primary text-white border-ds-primary' : 'bg-white text-ds-text-secondary border-ds-border hover:bg-ds-border/10'}`}
                             >
-                                الكل
+                                {t("dashboard.calendar.filter_all")}
                             </button>
                             {displaySports.map(s => (
                                 <button
@@ -411,8 +427,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
 
                         <div className="grid grid-cols-7 gap-px mb-0.5">
-                            {DAY_NAMES_SHORT.map(d => (
-                                <div key={d} className="text-center text-[10px] font-extrabold text-ds-text-muted py-1">{d}</div>
+                            {([0, 1, 2, 3, 4, 5, 6] as number[]).map(d => (
+                                <div key={d} className="text-center text-[10px] font-extrabold text-ds-text-muted py-1">{getDayNameShort(d, t)}</div>
                             ))}
                         </div>
 
@@ -436,10 +452,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                                             {dayEvts.slice(0, 2).map((ev, ei) => (
                                                 <div
                                                     key={ei}
-                                                    className="rounded-[3px] p-[1px_3px] text-[8px] font-bold border-r-2 truncate"
+                                                    className={`rounded-[3px] p-[1px_3px] text-[8px] font-bold border-r-2 truncate ${isRtl ? 'text-right' : 'text-left'}`}
                                                     style={{ background: ev.color + "18", borderRightColor: ev.color, color: ev.color }}
                                                 >
-                                                    {ev.icon} {ev.name}
+                                                    {ev.icon} {String(ev.sportId).startsWith("booking-") ? `${t("dashboard.calendar.booking_prefix")} ${ev.name}` : ev.name}
                                                 </div>
                                             ))}
                                         </div>
@@ -452,40 +468,44 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     <Card className="p-2.5">
                         {selectedKey ? (
                             <>
-                                <div className="flex justify-between items-center mb-2">
+                                <div className={`flex justify-between items-center mb-2 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                     <span className="font-extrabold text-[13px] text-ds-text-primary">
-                                        📅 {new Date(selectedKey + "T12:00:00").toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })}
+                                        📅 {new Date(selectedKey + "T12:00:00").toLocaleDateString(isRtl ? "ar-EG" : "en-US", { weekday: "long", day: "numeric", month: "long" })}
                                     </span>
                                 </div>
                                 {selectedEvents.length === 0 ? (
-                                    <div className="text-center text-ds-text-muted py-3.5 text-[11px]">لا توجد جلسات لهذا اليوم</div>
+                                    <div className="text-center text-ds-text-muted py-3.5 text-[11px]">{t("dashboard.calendar.no_sessions")}</div>
                                 ) : (
                                     <div className="flex flex-col gap-2">
                                         {selectedEvents.map((ev, i) => {
                                             const sc = STATUS_COLORS[ev.status];
                                             return (
-                                                <div key={i} className="rounded-lg p-[10px_12px] border-r-4 transition-all" style={{ background: ev.color + "0C", borderColor: ev.color + "20", borderRightColor: ev.color }}>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <div className="flex items-center gap-1.5">
+                                                <div key={i} className={`rounded-lg p-[10px_12px] border-r-4 transition-all ${isRtl ? 'text-right' : 'text-left'}`} style={{ background: ev.color + "0C", borderColor: ev.color + "20", borderRightColor: ev.color }}>
+                                                    <div className={`flex items-center justify-between mb-1 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                                                        <div className={`flex items-center gap-1.5 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                                             <span className="text-[16px]">{ev.icon}</span>
-                                                            <span className="font-extrabold text-[13px]" style={{ color: ev.color }}>{ev.name}</span>
+                                                            <span className="font-extrabold text-[13px]" style={{ color: ev.color }}>
+                                                                {String(ev.sportId).startsWith("booking-") ? `${t("dashboard.calendar.booking_prefix")} ${ev.name}` : ev.name}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: sc.bg, color: sc.text }}>{ev.status}</span>
+                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: sc.bg, color: sc.text }}>
+                                                            {t(`calendar_utils.status.${ev.status}`)}
+                                                        </span>
                                                     </div>
-                                                    <div className="flex flex-wrap gap-3 items-center">
+                                                    <div className={`flex flex-wrap gap-3 items-center ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                                         <span className="text-[11px] text-ds-text-secondary">⏰ {ev.time}</span>
                                                         <span className="text-[11px] text-ds-text-secondary">📍 {ev.court}</span>
                                                         {ev.price ? (
-                                                            <span className="text-[11px] font-bold text-ds-orange">💰 {ev.price.toLocaleString("ar-EG")} ج.م</span>
+                                                            <span className="text-[11px] font-bold text-ds-orange">💰 {ev.price.toLocaleString(isRtl ? "ar-EG" : "en-US")} {t("sports.currency")}</span>
                                                         ) : null}
                                                         {String(ev.sportId).startsWith("booking-") && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopyBookingInvite(String(ev.sportId).replace("booking-", ""))}
-                                                                className="ml-auto px-2.5 py-1 rounded-full bg-ds-primary text-white text-[10px] font-bold hover:bg-ds-primary-dark transition-colors"
+                                                                className={`px-2.5 py-1 rounded-full bg-ds-primary text-white text-[10px] font-bold hover:bg-ds-primary-dark transition-colors ${isRtl ? 'mr-auto' : 'ml-auto'}`}
                                                                 disabled={copyingBookingId === String(ev.sportId).replace("booking-", "")}
                                                             >
-                                                                {copyingBookingId === String(ev.sportId).replace("booking-", "") ? "جارٍ النسخ..." : "نسخ رابط الدعوة"}
+                                                                {copyingBookingId === String(ev.sportId).replace("booking-", "") ? t("dashboard.calendar.copying") : t("dashboard.calendar.copy_invite")}
                                                             </button>
                                                         )}
                                                     </div>
@@ -498,7 +518,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         ) : (
                             <div className="text-center py-5">
                                 <div className="text-[28px] mb-2">📅</div>
-                                <div className="font-bold text-[13px] text-ds-text-secondary">اختر يوماً من التقويم</div>
+                                <div className="font-bold text-[13px] text-ds-text-secondary">{t("dashboard.calendar.select_day")}</div>
                             </div>
                         )}
                     </Card>

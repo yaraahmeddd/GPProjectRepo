@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { ExploreSport, TimeSlotOption, ToastType } from "../types";
 import { Btn } from "../DashboardComponents";
 import api from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+
+import { localizeDays } from "../calendarUtils";
 
 const FALLBACK_IMAGES: Record<string, string> = {
     "كرة القدم": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80",
@@ -57,6 +60,17 @@ const pickPositiveAmount = (...values: Array<number | string | null | undefined>
     return 0;
 };
 
+const getLocalizedFieldName = (
+    field: SportScheduleApi["field"] | undefined,
+    isRtl: boolean,
+    fallback: string
+): string => {
+    if (!field) return fallback;
+    return isRtl
+        ? field.name_ar || field.name_en || fallback
+        : field.name_en || field.name_ar || fallback;
+};
+
 interface SubscriptionLookup {
     subscriptionId: number;
     teamId: string;
@@ -87,6 +101,7 @@ interface SportScheduleApi {
     days_en?: string;
     training_fee?: number | string;
     field?: {
+        name_en?: string;
         name_ar?: string;
     };
 }
@@ -113,6 +128,8 @@ interface SportCardProps {
 }
 
 const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment }) => {
+    const { t, i18n } = useTranslation("team");
+    const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
     const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
         sport.joinedSlotId ?? sport.pendingPayment?.slotId ?? null
     );
@@ -136,7 +153,7 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
 
     const handleJoin = async () => {
         if (joined && !canRejoin) {
-            alert("لديك اشتراك نشط بالفعل في هذه الرياضة. يمكنك إعادة الانضمام فقط بعد انتهاء اشتراكك الحالي.");
+            alert(t("explore_sports.alerts.already_active"));
             return;
         }
 
@@ -255,7 +272,7 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
             return;
         } catch (error) {
             console.error("Failed to join sport:", error);
-            alert(getErrorMessage(error, "Failed to join sport"));
+            alert(getErrorMessage(error, t("sports.validation.join_failed")));
         } finally {
             setJoining(false);
         }
@@ -279,21 +296,21 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                     }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0E1B2C]/72 to-transparent to-55%" />
-                <div className="absolute bottom-3.5 right-4 text-white flex items-center gap-2">
+                <div className={`absolute bottom-3.5 ${isRtl ? 'right-4' : 'left-4'} text-white flex items-center gap-2`}>
                     <span className="text-[26px]">{sport.icon || "🏆"}</span>
                     <span className="text-[17px] font-extrabold">{sport.name}</span>
                 </div>
 
                 {(joined || hasPendingPayment) && (
                     <div
-                        className={`absolute top-3 left-3 rounded-full px-3.5 py-1 text-[11px] font-bold text-white ${hasPendingPayment
+                        className={`absolute top-3 ${isRtl ? 'left-3' : 'right-3'} rounded-full px-3.5 py-1 text-[11px] font-bold text-white ${hasPendingPayment
                             ? "bg-ds-orange"
                             : isPendingReview
                                 ? "bg-ds-primary animate-pulse"
                                 : "bg-ds-success"
                             }`}
                     >
-                        {hasPendingPayment ? "💳 PAYMENT REQUIRED" : isPendingReview ? "⏳ PENDING REVIEW" : "✓ JOINED"}
+                        {hasPendingPayment ? t("explore_sports.status.payment_required") : isPendingReview ? t("explore_sports.status.pending_review") : t("explore_sports.status.joined")}
                     </div>
                 )}
             </div>
@@ -315,7 +332,7 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                             return (
                                     <div
                                         key={slot.id}
-                                        dir="rtl"
+                                        dir={isRtl ? 'rtl' : 'ltr'}
                                         onClick={() => isClickable && setSelectedSlotId(slot.id)}
                                         className={[
                                             "relative rounded-xl border-2 transition-all duration-200 flex flex-col",
@@ -331,15 +348,15 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                                         ].join(" ")}
                                     >
                                         {/* Row 1: Days + Location */}
-                                        <div className={`flex flex-col gap-y-0.5 ${isGrid ? 'text-[10px] mb-1' : 'text-[11px] mb-2'} text-gray-500 font-medium`}>
-                                            <span className="flex items-center gap-1 shrink-0">📅 <span className="truncate">{slot.days}</span></span>
+                                        <div className={`flex flex-col gap-y-0.5 ${isGrid ? 'text-[10px] mb-1' : 'text-[11px] mb-2'} text-gray-500 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>
+                                            <span className="flex items-center gap-1 shrink-0">📅 <span className="truncate">{localizeDays(slot.days, isRtl, t)}</span></span>
                                             <span className="flex items-center gap-1 shrink-0">📍 <span className="truncate">{slot.court}</span></span>
                                         </div>
 
                                         {/* Row 2: Radio + Time + Price */}
                                         <div className={`flex flex-col gap-y-1.5 ${isGrid ? 'mt-auto pt-1' : 'mt-auto pt-1'}`}>
-                                            <div className="flex items-center justify-between w-full gap-x-1">
-                                                <div className="flex items-center gap-1.5 min-w-0">
+                                            <div className={`flex items-center justify-between w-full gap-x-1 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                                                <div className={`flex items-center gap-1.5 min-w-0 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                                                     {/* Radio button */}
                                                     {!joined && !hasPendingPayment ? (
                                                         <div
@@ -369,7 +386,7 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                                                         isSel ? "bg-ds-primary text-white" : isJoinedSlot ? "bg-green-500 text-white" : "bg-amber-100 text-amber-600",
                                                     ].join(" ")}
                                                 >
-                                                    {slot.price.toLocaleString("ar-EG")} ج.م
+                                                    {slot.price.toLocaleString(isRtl ? "ar-EG" : "en-US")} {t("sports.currency")}
                                                 </span>
                                             </div>
                                         </div>
@@ -378,24 +395,24 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                         })
                     ) : (
                         <div className="text-center text-ds-text-muted text-xs italic py-4 bg-gray-50 rounded-xl border border-gray-100">
-                            لا يوجد مواعيد متاحة حاليا
+                            {t("explore_sports.slots.no_slots")}
                         </div>
                     )}
                 </div>
 
                 <div
-                    className="flex justify-between items-center bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2 mb-2.5 min-h-[52px]"
+                    className={`flex justify-between items-center bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2 mb-2.5 min-h-[52px] ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                 >
-                    <span className="text-[13px] text-gray-500 flex items-center gap-1.5"><span>💰</span><span>التكلفة الشهرية</span></span>
+                    <span className={`text-[13px] text-gray-500 flex items-center gap-1.5 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}><span>💰</span><span>{t("explore_sports.slots.monthly_cost")}</span></span>
                     {actionSlot ? (
-                        <div className="flex items-baseline gap-1">
+                        <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                             <span className="text-[28px] font-black text-amber-500">
-                                {actionSlot.price.toLocaleString("ar-EG")}
+                                {actionSlot.price.toLocaleString(isRtl ? "ar-EG" : "en-US")}
                             </span>
-                            <span className="text-[11px] text-gray-400 font-medium">ج.م / شهر</span>
+                            <span className="text-[11px] text-gray-400 font-medium">{t("sports.currency")} / {t("calendar_utils.time.month") || "شهر"}</span>
                         </div>
                     ) : (
-                        <span className="text-[13px] text-ds-text-muted">اختر موعدا</span>
+                        <span className="text-[13px] text-ds-text-muted">{t("explore_sports.slots.select_time")}</span>
                     )}
                 </div>
 
@@ -404,16 +421,16 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                         <button
                             onClick={handleJoin}
                             disabled={joining || !selectedSlot || selectedSlot.spots === 0}
-                            className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                         >
-                            {joining ? "⏳ جاري الارسال..." : <><span>إعادة الانضمام</span><span>🏅</span></>}
+                            {joining ? t("explore_sports.actions.sending") : <><span>{t("explore_sports.actions.rejoin")}</span><span>🏅</span></>}
                         </button>
                     ) : (
                         <button
                             disabled
-                            className="w-full py-3 rounded-xl text-sm font-bold bg-green-100 text-green-700 border border-green-200 flex items-center justify-center gap-2 cursor-default"
+                            className={`w-full py-3 rounded-xl text-sm font-bold bg-green-100 text-green-700 border border-green-200 flex items-center justify-center gap-2 cursor-default ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                         >
-                            {isPendingReview ? "⏳ قيد المراجعة" : <><span>✓</span><span>منضم بالفعل</span></>}
+                            {isPendingReview ? t("explore_sports.status.pending_review") : <><span>✓</span><span>{t("explore_sports.actions.already_joined")}</span></>}
                         </button>
                     )
                 ) : hasPendingPayment ? (
@@ -422,15 +439,15 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
                         disabled={joining}
                         className="w-full py-3 rounded-xl text-sm font-bold text-white bg-ds-primary hover:opacity-90 active:scale-95 transition-all duration-200 shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                        {joining ? "⏳ جاري الارسال..." : "💳 الذهاب للدفع"}
+                        {joining ? t("explore_sports.actions.sending") : t("explore_sports.actions.go_to_payment")}
                     </button>
                 ) : (
                     <button
                         onClick={handleJoin}
                         disabled={joining || !selectedSlot || selectedSlot.spots === 0}
-                        className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                     >
-                        {joining ? "⏳ جاري الارسال..." : <><span>الانضمام الآن</span><span>🏅</span></>}
+                        {joining ? t("explore_sports.actions.sending") : <><span>{t("explore_sports.actions.join_now")}</span><span>🏅</span></>}
                     </button>
                 )}
             </div>
@@ -441,9 +458,13 @@ const SportCard: React.FC<SportCardProps> = React.memo(({ sport, onStartPayment 
 const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => void; onJoined?: () => void | Promise<void> }> = (props) => {
     const { showToast } = props;
     const { user } = useAuth();
+    const { t, i18n } = useTranslation("team");
     const navigate = useNavigate();
     const [sports, setSports] = useState<ExploreSport[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const currentLang = i18n.resolvedLanguage || i18n.language;
+    const isRtl = currentLang.startsWith('ar');
 
     const isPendingPaymentSubscription = useCallback((subscription?: SubscriptionLookup) => {
         if (!subscription) return false;
@@ -565,7 +586,7 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
                         teamId: schedule.team_id,
                         time: `${(schedule.start_time || "").slice(0, 5)} - ${(schedule.end_time || "").slice(0, 5)}`,
                         days: schedule.days_ar || schedule.days_en || "-",
-                        court: schedule.field?.name_ar || "ملعب خارجي",
+                        court: getLocalizedFieldName(schedule.field, isRtl, t("explore_sports.slots.outdoor_court")),
                         price: pickPositiveAmount(schedule.training_fee, (schedule as any).price, sportPrice),
                         spots: 10,
                     }))
@@ -573,7 +594,7 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
                         {
                             id: `default-${sportFromApi.id}`,
                             teamId: null,
-                            time: "غير محدد",
+                            time: t("explore_sports.slots.unknown_time"),
                             days: "-",
                             court: "-",
                             price: sportPrice,
@@ -602,23 +623,24 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
 
                 const nameAr = sportFromApi.name_ar || "";
                 const nameEn = sportFromApi.name_en || "";
-                const mainName = nameAr || nameEn || "رياضة غير مسمى";
+                const mainName = isRtl ? (nameAr || nameEn) : (nameEn || nameAr);
+                const finalName = mainName || t("sports.unknown_sport");
 
                 return {
                     id: sportFromApi.id,
                     memberId: user?.team_member_id,
-                    name: mainName,
-                    icon: getIconForSport(mainName),
+                    name: finalName,
+                    icon: getIconForSport(finalName),
                     img:
                         getFullUrl(sportFromApi.sport_image || (sportFromApi as any).sportImage) ||
                         FALLBACK_IMAGES[nameAr] ||
                         FALLBACK_IMAGES[nameEn] ||
-                        (getIconForSport(mainName) === "⚽" ? FALLBACK_IMAGES["كرة القدم"] :
-                            getIconForSport(mainName) === "🏀" ? FALLBACK_IMAGES["كرة السلة"] :
-                                getIconForSport(mainName) === "🎾" ? FALLBACK_IMAGES["التنس"] :
-                                    getIconForSport(mainName) === "🏊" ? FALLBACK_IMAGES["السباحة"] :
-                                        getIconForSport(mainName) === "🏐" ? FALLBACK_IMAGES["الكرة الطائرة"] :
-                                            getIconForSport(mainName) === "🤸" ? FALLBACK_IMAGES["جمباز"] :
+                        (getIconForSport(finalName) === "⚽" ? FALLBACK_IMAGES["كرة القدم"] :
+                            getIconForSport(finalName) === "🏀" ? FALLBACK_IMAGES["كرة السلة"] :
+                                getIconForSport(finalName) === "🎾" ? FALLBACK_IMAGES["التنس"] :
+                                    getIconForSport(finalName) === "🏊" ? FALLBACK_IMAGES["السباحة"] :
+                                        getIconForSport(finalName) === "🏐" ? FALLBACK_IMAGES["الكرة الطائرة"] :
+                                            getIconForSport(finalName) === "🤸" ? FALLBACK_IMAGES["جمباز"] :
                                                 DEFAULT_IMAGE),
                     slots,
                     joined: !!joinedSlot,
@@ -644,11 +666,11 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
             setSports(mapped);
         } catch (error) {
             console.error("Failed to load sports from backend:", error);
-            showToast("فشل في تحميل الرياضات من الخادم", "error");
+            showToast(t("explore_sports.alerts.load_failed"), "error");
         } finally {
             setLoading(false);
         }
-    }, [isPendingPaymentSubscription, showToast, user?.team_member_id]);
+    }, [isPendingPaymentSubscription, showToast, user?.team_member_id, t]);
 
     useEffect(() => {
         loadSports();
@@ -658,23 +680,23 @@ const SportsExplorePage: React.FC<{ showToast: (msg: string, t: ToastType) => vo
         return (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <div className="w-12 h-12 border-4 border-ds-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-ds-text-secondary font-bold">جارٍ تحميل الرياضات...</p>
+                <p className="text-ds-text-secondary font-bold">{t("explore_sports.loading")}</p>
             </div>
         );
     }
 
     return (
-        <div className="animate-fade-up">
-            <div className="mb-8">
-                <h1 className="text-[32px] font-black text-ds-text-primary tracking-tight">استكشاف الرياضات</h1>
-                <p className="text-ds-text-secondary mt-2 text-[16px] font-medium opacity-80">اكتشف الفرق الرياضية المتاحة والمحملة من النظام</p>
+        <div className="animate-fade-up" dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className={`mb-8 ${isRtl ? 'text-right' : 'text-left'}`}>
+                <h1 className="text-[32px] font-black text-ds-text-primary tracking-tight">{t("explore_sports.title")}</h1>
+                <p className="text-ds-text-secondary mt-2 text-[16px] font-medium opacity-80">{t("explore_sports.subtitle")}</p>
             </div>
 
             {sports.length === 0 ? (
                 <div className="bg-white rounded-3xl p-16 text-center shadow-ds-card border border-ds-border">
-                    <p className="text-ds-text-muted text-lg italic">لا توجد رياضات متاحة حالياً في النظام</p>
+                    <p className="text-ds-text-muted text-lg italic">{t("explore_sports.no_sports")}</p>
                     <Btn onClick={loadSports} variant="primary">
-                        تحديث القائمة
+                        {t("explore_sports.refresh")}
                     </Btn>
                 </div>
             ) : (
