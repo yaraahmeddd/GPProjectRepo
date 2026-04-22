@@ -1,29 +1,57 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import enTranslations from './locales/landingpage/en.json';
-import arTranslations from './locales/landingpage/ar.json';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import Backend from 'i18next-http-backend';
 
-const savedLang = localStorage.getItem('appLang') || 'ar';
+const RTL_LANGUAGES = new Set(['ar']);
+const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
+const NAMESPACES = ['common', 'auth', 'admin', 'member', 'team', 'landing'] as const;
+const LOCALES_BASE_PATH = import.meta.env.DEV
+  ? `${import.meta.env.BASE_URL}locales`
+  : `${import.meta.env.BASE_URL}locales`;
 
-i18n
+const normalizeLanguage = (language?: string): 'ar' | 'en' => {
+  const baseLanguage = language?.split('-')[0];
+  return baseLanguage === 'en' ? 'en' : 'ar';
+};
+
+const syncDocumentLanguage = (language?: string) => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const normalizedLanguage = normalizeLanguage(language);
+  document.documentElement.lang = normalizedLanguage;
+  document.documentElement.dir = RTL_LANGUAGES.has(normalizedLanguage) ? 'rtl' : 'ltr';
+  localStorage.setItem('dashboard-lang', normalizedLanguage);
+};
+
+i18n.on('languageChanged', syncDocumentLanguage);
+
+void i18n
+  .use(Backend)
+  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: {
-      en: { landing: enTranslations },
-      ar: { landing: arTranslations }
+    fallbackLng: 'ar',
+    supportedLngs: [...SUPPORTED_LANGUAGES],
+    load: 'languageOnly',
+    defaultNS: 'common',
+    ns: [...NAMESPACES],
+    backend: {
+      loadPath: `${LOCALES_BASE_PATH}/{{lng}}/{{ns}}.json`,
     },
-    lng: savedLang, // Use saved language
-    fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false // react already safes from xss
-    }
+    interpolation: { escapeValue: false },
+    detection: {
+      order: ['localStorage', 'navigator'],
+      lookupLocalStorage: 'dashboard-lang',
+      caches: ['localStorage'],
+    },
+  })
+  .then(() => {
+    syncDocumentLanguage(i18n.resolvedLanguage ?? i18n.language);
+  })
+  .catch((error) => {
+    console.error('Failed to initialize i18n', error);
   });
-
-// Setup document direction based on language
-i18n.on('languageChanged', (lng) => {
-  document.documentElement.dir = i18n.dir();
-  localStorage.setItem('appLang', lng);
-});
-document.documentElement.dir = i18n.dir();
-
 export default i18n;

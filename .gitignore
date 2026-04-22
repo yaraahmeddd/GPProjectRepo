@@ -23,4 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 Backend/src/database/data-source.ts
-Backend/.env
+Backend/.env 
+vite.config.ts
+Backend\package.json

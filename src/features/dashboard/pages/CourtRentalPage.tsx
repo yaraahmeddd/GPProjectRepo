@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { generateId } from "../../../utils/id";
 import { motion } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
@@ -54,25 +55,32 @@ type Booking = {
     status: string;
 };
 
+const getLocalizedFieldName = (
+    field: ApiField | undefined,
+    isRtl: boolean,
+    fallback = "-"
+) => {
+    if (!field) return fallback;
+    return isRtl
+        ? field.name_ar || field.name_en || field.name || fallback
+        : field.name_en || field.name_ar || field.name || fallback;
+};
+
 // --- Helpers ---
-function toArabicNumerals(n: number): string {
-    return String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
-}
-
-function formatHour(slot: string): string {
+function formatHour(slot: string, isRtl: boolean, t: any): string {
     const h = parseInt(slot.split(":")[0], 10);
-    const suffix = h < 12 ? "ص" : "م";
+    const suffix = h < 12 ? t("notifications.time.am") : t("notifications.time.pm");
     const h12 = h % 12 === 0 ? 12 : h % 12;
-    return `${toArabicNumerals(h12)}${suffix}`;
+    return `${h12}${suffix}`;
 }
 
-const toArabicTime = (time: string, isNumeric: boolean = false) => {
+const toTranslatedTime = (time: string, isRtl: boolean, t: any) => {
     if (!time) return "";
     const [hh, mm] = time.split(":");
     const h = Number(hh);
-    const suffix = h < 12 ? "ص" : "م";
+    const suffix = h < 12 ? t("notifications.time.am") : t("notifications.time.pm");
     const h12 = h % 12 === 0 ? 12 : h % 12;
-    return isNumeric ? `${h12}:${mm ?? "00"} ${suffix}` : `${toArabicNumerals(h12)}:${toArabicNumerals(Number(mm ?? "0"))} ${suffix}`;
+    return `${h12}:${mm ?? "00"} ${suffix}`;
 };
 
 function toISODate(date: Date): string {
@@ -93,15 +101,14 @@ function timeToMinutes(timeStr: string): number {
     return h * 60 + m;
 }
 
-const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const AR_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-
-function formatDisplayDate(date: Date): string {
-    return `${toArabicNumerals(date.getDate())} ${AR_MONTHS[date.getMonth()]}`;
+function formatDisplayDate(date: Date, isRtl: boolean, t: any): string {
+    const months = t("calendar_utils.months", { returnObjects: true });
+    return `${date.getDate()} ${months[date.getMonth()]}`;
 }
 
-function dayOfWeekLabel(date: Date): string {
-    return AR_DAYS[date.getDay()];
+function dayOfWeekLabel(date: Date, isRtl: boolean, t: any): string {
+    const days = t("calendar_utils.days.long", { returnObjects: true });
+    return days[date.getDay()];
 }
 
 const HOUR_SLOTS: string[] = Array.from({ length: 17 }, (_, i) => {
@@ -109,12 +116,12 @@ const HOUR_SLOTS: string[] = Array.from({ length: 17 }, (_, i) => {
     return `${String(h).padStart(2, "0")}:00`;
 });
 
-const TIME_OPTIONS: { value: string; label: string }[] = Array.from({ length: 36 }, (_, i) => {
+const getTIME_OPTIONS = (isRtl: boolean, t: any) => Array.from({ length: 36 }, (_, i) => {
     const totalMins = 360 + i * 30; // Starts at 06:00
     const h24 = Math.floor(totalMins / 60);
     const min = totalMins % 60;
     const value = `${String(h24).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-    const period = h24 < 12 ? "ص" : "م";
+    const period = h24 < 12 ? t("notifications.time.am") : t("notifications.time.pm");
     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
     const label = `${h12}:${String(min).padStart(2, "0")} ${period}`;
     return { value, label };
@@ -166,13 +173,18 @@ const TimeSlotPicker = React.memo(({
     onChange,
     placeholder,
     minMinutes = 0,
+    isRtl,
+    t
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder: string;
     minMinutes?: number;
+    isRtl: boolean;
+    t: any;
 }) => {
     const [open, setOpen] = useState(false);
+    const TIME_OPTIONS = getTIME_OPTIONS(isRtl, t);
     const validOptions = TIME_OPTIONS.filter((t) => timeToMinutes(t.value) >= minMinutes);
     const selected = validOptions.find((t) => t.value === value);
 
@@ -191,7 +203,7 @@ const TimeSlotPicker = React.memo(({
                     {selected ? selected.label : <span className="opacity-60">{placeholder}</span>}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[17rem] p-4 rounded-2xl" align="start" side="bottom" dir="ltr">
+            <PopoverContent className="w-[17rem] p-4 rounded-2xl" align="start" side="bottom" dir={isRtl ? 'rtl' : 'ltr'}>
                 <div className="grid grid-cols-3 gap-2 max-h-[16rem] overflow-y-auto custom-scrollbar">
                     {validOptions.map((slot) => (
                         <button
@@ -216,7 +228,11 @@ const TimeSlotPicker = React.memo(({
 // --- Main Page ---
 const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void }> = React.memo(({ showToast }) => {
     const { user } = useAuth();
+    const { t, i18n } = useTranslation("team");
     const navigate = useNavigate();
+
+    const currentLang = i18n.resolvedLanguage || i18n.language;
+    const isRtl = currentLang.startsWith('ar');
 
     // The calendar always shows 7 days starting from Today for members
     const [today] = useState(() => {
@@ -262,11 +278,11 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
             }
         } catch (error) {
             console.error("Failed to load sports", error);
-            showToast(getErrorMessage(error, "فشل تحميل الرياضات من الخادم"), "error");
+            showToast(getErrorMessage(error, t("court_rental.alerts.load_sports_fail")), "error");
         } finally {
             setSportsLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, t]);
 
     useEffect(() => { void loadSports(); }, [loadSports]);
 
@@ -288,13 +304,13 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
             }
         } catch (error) {
             console.error("Failed to load fields", error);
-            showToast(getErrorMessage(error, "فشل تحميل الملاعب من الخادم"), "error");
+            showToast(getErrorMessage(error, t("court_rental.alerts.load_fields_fail")), "error");
             setFields([]);
             setSelectedFieldId("");
         } finally {
             setFieldsLoading(false);
         }
-    }, [selectedSportId, showToast]);
+    }, [selectedSportId, showToast, t]);
 
     useEffect(() => { void loadFieldsForSport(); }, [loadFieldsForSport]);
 
@@ -366,11 +382,11 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
     // Form Submit
     const handleSaveReservation = async () => {
         if (!bookingForm.date || !bookingForm.from || !bookingForm.to) {
-            showToast("يرجى تحديد وقت البداية والنهاية للحجز.", "error");
+            showToast(t("court_rental.alerts.specify_times"), "error");
             return;
         }
         if (bookingForm.from >= bookingForm.to) {
-            showToast("وقت النهاية يجب أن يكون بعد وقت البداية.", "error");
+            showToast(t("court_rental.alerts.end_after_start"), "error");
             return;
         }
 
@@ -378,12 +394,12 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
         const fMins = timeToMinutes(bookingForm.from);
         const tMins = timeToMinutes(bookingForm.to);
         if (tMins - fMins < 30) {
-            showToast("الحد الأدنى لمدة الحجز هو 30 دقيقة.", "error");
+            showToast(t("court_rental.alerts.min_duration"), "error");
             return;
         }
 
         if (hasConflict(bookings, bookingForm.date, bookingForm.from, bookingForm.to)) {
-            showToast("هذا الوقت محجوز أو متعارض. الرجاء اختيار وقت آخر.", "error");
+            showToast(t("court_rental.alerts.conflict"), "error");
             return;
         }
 
@@ -391,7 +407,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
         const userType = user?.member_id ? "member" : "team_member";
 
         if (!userId) {
-            showToast("يجب تسجيل الدخول أولاً لإتمام الحجز", "error");
+            showToast(t("court_rental.alerts.login_required"), "error");
             return;
         }
 
@@ -408,19 +424,19 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                 field_id: selectedFieldId,
                 start_time,
                 end_time,
-                language: "ar",
+                language: isRtl ? "ar" : "en",
             });
 
-            showToast(`✅ تم طلب تسجيل الحجز بنجاح! يتم التوجيه للدفع...`, "success");
+            showToast(t("court_rental.alerts.success"), "success");
 
             // Redirect to payment
             const params = new URLSearchParams({
                 bookingId: booking.id,
                 amount: String(booking.price || computedPrice),
-                sportName: activeSport?.name_ar || "حجز ملعب",
-                courtName: activeField?.name_ar || "",
+                sportName: (isRtl ? activeSport?.name_ar : activeSport?.name_en) || t("sports.court_booking"),
+                courtName: getLocalizedFieldName(activeField, isRtl, t("sports.court")),
                 date: dateStr,
-                time: `${toArabicTime(bookingForm.from, true)} - ${toArabicTime(bookingForm.to, true)}`,
+                time: `${toTranslatedTime(bookingForm.from, isRtl, t)} - ${toTranslatedTime(bookingForm.to, isRtl, t)}`,
             });
 
             if (userType === "member") {
@@ -432,7 +448,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
             setDialogOpen(false);
         } catch (error) {
             console.error("Failed to create booking", error);
-            showToast(getErrorMessage(error, "فشل إتمام الحجز. يرجى المحاولة مرة أخرى"), "error");
+            showToast(getErrorMessage(error, t("court_rental.alerts.fail")), "error");
         } finally {
             setIsSaving(false);
         }
@@ -451,14 +467,14 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                 if (slotMins + 30 >= currentMins) {
                     finalSlotTime = addMinutesStr(slotTime, 30);
                 } else {
-                    showToast("الرجاء اختيار وقت قادم متاح.", "error");
+                    showToast(t("court_rental.calendar.select_future_time"), "error");
                     return;
                 }
             }
         }
 
         if (hasConflict(bookings, dateStr, finalSlotTime, addMinutesStr(finalSlotTime, 30))) {
-            showToast("هذا الوقت غير متاح من فضلك قم باختيار وقت آخر.", "error");
+            showToast(t("court_rental.calendar.time_conflict"), "error");
             return;
         }
         setBookingForm({
@@ -471,10 +487,10 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
     };
 
     return (
-        <div className="animate-fade-up max-w-7xl mx-auto pt-6 lg:pt-8" dir="rtl">
-            <div className="mb-8">
-                <h1 className="text-[28px] font-black">حجز الملاعب</h1>
-                <p className="text-ds-text-secondary text-[15px] mt-1">اختر الملاعب والأنشطة بكل سهولة بناءً على الأوقات المتاحة لهذا الأسبوع.</p>
+        <div className="animate-fade-up max-w-7xl mx-auto pt-6 lg:pt-8" dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className={`mb-8 ${isRtl ? 'text-right' : 'text-left'}`}>
+                <h1 className="text-[28px] font-black">{t("court_rental.title")}</h1>
+                <p className="text-ds-text-secondary text-[15px] mt-1">{t("court_rental.subtitle")}</p>
             </div>
 
             <div className="bg-white rounded-[24px] shadow-sm border border-ds-border p-6 md:p-8">
@@ -482,30 +498,30 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                 {/* Controls Area */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 bg-ds-border/10 p-5 rounded-[24px] border border-ds-border/50">
                     <div>
-                        <Label className="mb-2.5 block text-[13px] font-bold text-ds-text-secondary">النشاط الرياضي</Label>
+                        <Label className={`mb-2.5 block text-[13px] font-bold text-ds-text-secondary ${isRtl ? 'text-right' : 'text-left'}`}>{t("court_rental.controls.activity")}</Label>
                         <Select value={selectedSportId} onValueChange={(v) => { setSelectedSportId(v); }}>
-                            <SelectTrigger className="w-full h-[52px] rounded-[16px] border-ds-border bg-white text-[15px] shadow-sm font-bold">
-                                <SelectValue placeholder={sportsLoading ? "جارٍ التحميل..." : "اختر النشاط"} />
+                            <SelectTrigger className="w-full h-[52px] rounded-[16px] border-ds-border bg-white text-[15px] shadow-sm font-bold" dir={isRtl ? 'rtl' : 'ltr'}>
+                                <SelectValue placeholder={sportsLoading ? t("court_rental.controls.loading") : t("court_rental.controls.select_activity")} />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent dir={isRtl ? 'rtl' : 'ltr'}>
                                 {sports.map(s => (
                                     <SelectItem key={s.id} value={String(s.id)} className="font-bold">
-                                        {s.name_ar || s.name_en}
+                                        {isRtl ? s.name_ar : s.name_en}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
                     <div>
-                        <Label className="mb-2.5 block text-[13px] font-bold text-ds-text-secondary">الملعب أو الصالة</Label>
+                        <Label className={`mb-2.5 block text-[13px] font-bold text-ds-text-secondary ${isRtl ? 'text-right' : 'text-left'}`}>{t("court_rental.controls.field")}</Label>
                         <Select value={selectedFieldId} onValueChange={setSelectedFieldId} disabled={!fields.length || fieldsLoading}>
-                            <SelectTrigger className="w-full h-[52px] rounded-[16px] border-ds-border bg-white text-[15px] shadow-sm font-bold">
-                                <SelectValue placeholder={fieldsLoading ? "جارٍ التحميل..." : fields.length ? "اختر الملعب" : "لا توجد ملاعب نشطة"} />
+                            <SelectTrigger className="w-full h-[52px] rounded-[16px] border-ds-border bg-white text-[15px] shadow-sm font-bold" dir={isRtl ? 'rtl' : 'ltr'}>
+                                <SelectValue placeholder={fieldsLoading ? t("court_rental.controls.loading") : fields.length ? t("court_rental.controls.select_field") : t("court_rental.controls.no_active_fields")} />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent dir={isRtl ? 'rtl' : 'ltr'}>
                                 {fields.map(f => (
                                     <SelectItem key={f.id} value={String(f.id)} className="font-bold">
-                                        {f.name_ar || f.name_en || f.name}
+                                        {getLocalizedFieldName(f, isRtl)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -514,16 +530,16 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                 </div>
 
                 {/* Calendar Header */}
-                <div className="flex flex-col md:flex-row items-center justify-between mb-5">
+                <div className={`flex flex-col md:flex-row items-center justify-between mb-5 ${isRtl ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
                     <div className="flex items-center gap-2 mb-4 md:mb-0 bg-ds-teal/10 px-4 py-2 rounded-[14px] border border-ds-teal/20">
                         <CalendarCheck className="h-[18px] w-[18px] text-ds-teal" />
-                        <h3 className="text-[14px] font-bold text-ds-teal">الأوقات المتاحة من اليوم</h3>
-                        {calendarLoading && <Loader2 className="h-[14px] w-[14px] animate-spin text-ds-teal mr-2" />}
+                        <h3 className="text-[14px] font-bold text-ds-teal">{t("court_rental.calendar.available_times")}</h3>
+                        {calendarLoading && <Loader2 className={`h-[14px] w-[14px] animate-spin text-ds-teal ${isRtl ? 'mr-2' : 'ml-2'}`} />}
                     </div>
 
                     <div className="flex items-center gap-5 text-[12px] font-bold text-ds-text-muted">
-                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-white border border-ds-border shadow-inner"></span> متاح (اختر للبدء)</span>
-                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-ds-border/40 border border-ds-border/60"></span> غير متاح</span>
+                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-white border border-ds-border shadow-inner"></span> {t("court_rental.calendar.legend_available")}</span>
+                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-ds-border/40 border border-ds-border/60"></span> {t("court_rental.calendar.legend_unavailable")}</span>
                     </div>
                 </div>
 
@@ -537,9 +553,9 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                                 const isToday = toISODate(day) === toISODate(today);
                                 return (
                                     <div key={toISODate(day)} className={`py-3.5 px-1 text-center border-l border-ds-border/50 ${isToday ? "bg-ds-teal/5" : ""}`}>
-                                        <div className={`text-[14px] font-black ${isToday ? "text-ds-teal" : "text-ds-text-primary"}`}>{dayOfWeekLabel(day)}</div>
+                                        <div className={`text-[14px] font-black ${isToday ? "text-ds-teal" : "text-ds-text-primary"}`}>{dayOfWeekLabel(day, isRtl, t)}</div>
                                         <div className={`text-[11px] font-bold mt-1 ${isToday ? "text-ds-teal/70" : "text-ds-text-muted"}`}>
-                                            {formatDisplayDate(day)}
+                                            {formatDisplayDate(day, isRtl, t)}
                                         </div>
                                     </div>
                                 );
@@ -549,10 +565,10 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                         {/* Body */}
                         <div className="grid bg-white" style={{ gridTemplateColumns: "70px repeat(7, 1fr)" }}>
                             {/* Time sidebar */}
-                            <div className="border-l border-ds-border/50 bg-white sticky right-0 z-10 shadow-[1px_0_5px_rgba(0,0,0,0.02)]">
+                            <div className={`border-l border-ds-border/50 bg-white sticky ${isRtl ? 'right-0' : 'left-0'} z-10 shadow-[1px_0_5px_rgba(0,0,0,0.02)]`}>
                                 {HOUR_SLOTS.map((slot) => (
                                     <div key={slot} className="flex items-start justify-center pt-2.5 border-b border-ds-border/60 text-[10px] font-black text-ds-text-muted" style={{ height: 60 }}>
-                                        {formatHour(slot)}
+                                        {formatHour(slot, isRtl, t)}
                                     </div>
                                 ))}
                             </div>
@@ -578,7 +594,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                                                 >
                                                     {!isPast && (
                                                         <div className="absolute inset-0 items-center justify-center hidden group-hover:flex">
-                                                            <span className="text-[11px] font-black bg-ds-teal text-white px-3 py-1.5 rounded-lg shadow-sm opacity-90 scale-animation">+ احجز</span>
+                                                            <span className="text-[11px] font-black bg-ds-teal text-white px-3 py-1.5 rounded-lg shadow-sm opacity-90 scale-animation">{t("court_rental.calendar.book_now")}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -601,12 +617,12 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                                                     className="absolute left-1 right-1 rounded-[12px] bg-ds-border/40 border border-ds-border flex items-center justify-center opacity-100 overflow-hidden shadow-sm z-10 cursor-not-allowed"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        showToast("الوقت محجوز مسبقاً ولا يمكن اختياره.", "error");
+                                                        showToast(t("court_rental.calendar.time_reserved_alert"), "error");
                                                     }}
                                                 >
                                                     <span className="text-[10px] text-ds-text-secondary font-black whitespace-nowrap bg-white/70 px-2 py-0.5 rounded flex gap-1 items-center">
                                                         <Lock className="w-3 h-3" />
-                                                        غير متاح
+                                                        {t("court_rental.calendar.not_available")}
                                                     </span>
                                                 </div>
                                             );
@@ -621,28 +637,28 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
 
             {/* Booking Dialog Modal */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-md w-[95vw] rounded-[28px] p-0 overflow-hidden border-0 shadow-2xl" dir="rtl">
+                <DialogContent className="max-w-md w-[95vw] rounded-[28px] p-0 overflow-hidden border-0 shadow-2xl" dir={isRtl ? 'rtl' : 'ltr'}>
                     <DialogHeader className="p-6 pb-4 bg-ds-border/10 border-b border-ds-border/50">
-                        <DialogTitle className="text-[20px] font-black text-ds-text-primary">تأكيد الموعد للملعب</DialogTitle>
-                        <DialogDescription className="text-[13px] font-bold text-ds-text-muted mt-1.5">
-                            تأكد من اختيار توقيتك بدقة، يمكنك الحجز بفترات النصف ساعة!
+                        <DialogTitle className={`text-[20px] font-black text-ds-text-primary ${isRtl ? 'text-right' : 'text-left'}`}>{t("court_rental.dialog.title")}</DialogTitle>
+                        <DialogDescription className={`text-[13px] font-bold text-ds-text-muted mt-1.5 ${isRtl ? 'text-right' : 'text-left'}`}>
+                            {t("court_rental.dialog.description")}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="p-6 space-y-6">
                         {/* Display Information */}
                         <div className="bg-white border text-[14px] font-bold border-ds-border/50 shadow-sm rounded-[16px] p-3 flex flex-col gap-1">
-                            <div className="flex items-center px-3 py-2">
-                                <span className="text-ds-text-muted w-16 shrink-0">النشاط</span>
-                                <span className="text-ds-text-primary flex-1 text-left">{activeSport?.name_ar || activeSport?.name_en}</span>
+                            <div className="flex items-center justify-between px-3 py-2 gap-4">
+                                <span className="text-ds-text-muted shrink-0">{t("court_rental.dialog.activity")}</span>
+                                <span className={`text-ds-text-primary flex-1 ${isRtl ? 'text-left' : 'text-right'}`}>{isRtl ? activeSport?.name_ar : activeSport?.name_en}</span>
                             </div>
-                            <div className="flex items-center px-3 py-2">
-                                <span className="text-ds-text-muted w-16 shrink-0">الملعب</span>
-                                <span className="text-ds-teal font-black flex-1 text-left">{activeField?.name_ar || activeField?.name_en}</span>
+                            <div className="flex items-center justify-between px-3 py-2 gap-4">
+                                <span className="text-ds-text-muted shrink-0">{t("court_rental.dialog.field")}</span>
+                                <span className={`text-ds-teal font-black flex-1 ${isRtl ? 'text-left' : 'text-right'}`}>{getLocalizedFieldName(activeField, isRtl)}</span>
                             </div>
-                            <div className="flex items-center px-3 py-3 bg-ds-border/10 rounded-[12px] mt-1">
-                                <span className="text-ds-text-muted w-16 shrink-0">التاريخ</span>
-                                <span className="text-ds-text-primary uppercase flex-1 text-left" dir="ltr">{bookingForm.date}</span>
+                            <div className="flex items-center justify-between px-3 py-3 bg-ds-border/10 rounded-[12px] mt-1 gap-4">
+                                <span className="text-ds-text-muted shrink-0">{t("court_rental.dialog.date")}</span>
+                                <span className={`text-ds-text-primary uppercase flex-1 ${isRtl ? 'text-left' : 'text-right'}`} dir="ltr">{bookingForm.date}</span>
                             </div>
                         </div>
 
@@ -650,7 +666,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2.5">
-                                    <Label className="text-ds-text-secondary font-black text-[12px]">من الساعة</Label>
+                                    <Label className={`text-ds-text-secondary font-black text-[12px] block ${isRtl ? 'text-right' : 'text-left'}`}>{t("court_rental.dialog.from_time")}</Label>
                                     <TimeSlotPicker
                                         value={bookingForm.from}
                                         onChange={(v) => {
@@ -659,37 +675,41 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                                                 setBookingForm(prev => ({ ...prev, to: addMinutesStr(v, 60) }));
                                             }
                                         }}
-                                        placeholder="وقت البداية"
+                                        placeholder={t("court_rental.dialog.placeholder_start")}
                                         minMinutes={bookingForm.date === toISODate(new Date()) ? currentMins : 0}
+                                        isRtl={isRtl}
+                                        t={t}
                                     />
                                 </div>
                                 <div className="space-y-2.5">
-                                    <Label className="text-ds-text-secondary font-black text-[12px]">إلى الساعة</Label>
+                                    <Label className={`text-ds-text-secondary font-black text-[12px] block ${isRtl ? 'text-right' : 'text-left'}`}>{t("court_rental.dialog.to_time")}</Label>
                                     <TimeSlotPicker
                                         value={bookingForm.to}
                                         onChange={(v) => setBookingForm(prev => ({ ...prev, to: v }))}
-                                        placeholder="وقت النهاية"
+                                        placeholder={t("court_rental.dialog.placeholder_end")}
                                         minMinutes={Math.max(timeToMinutes(bookingForm.from || "00:00") + 30, bookingForm.date === toISODate(new Date()) ? currentMins : 0)}
+                                        isRtl={isRtl}
+                                        t={t}
                                     />
                                 </div>
                             </div>
 
                             {hourlyRate > 0 && computedPrice > 0 && (
-                                <div className="flex items-center justify-between pt-4 border-t border-ds-border/50 mt-4">
-                                    <span className="text-[13px] font-medium text-ds-text-muted">إجمالي التكلفة المتوقعة:</span>
-                                    <span className="text-[18px] font-black text-ds-primary underline decoration-ds-primary/30 underline-offset-4">{computedPrice.toLocaleString("ar-EG")} ج.م</span>
+                                <div className={`flex items-center justify-between pt-4 border-t border-ds-border/50 mt-4 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
+                                    <span className="text-[13px] font-medium text-ds-text-muted">{t("court_rental.dialog.total_cost")}</span>
+                                    <span className="text-[18px] font-black text-ds-primary underline decoration-ds-primary/30 underline-offset-4">{computedPrice.toLocaleString(isRtl ? "ar-EG" : "en-US")} {t("sports.currency")}</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <DialogFooter className="p-6 pt-0 border-none gap-2.5 flex-row-reverse sm:justify-start">
+                    <DialogFooter className={`p-6 pt-0 border-none gap-2.5 flex-row-reverse sm:justify-start ${isRtl ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Button
                             className="bg-ds-primary hover:bg-ds-primary-dark text-white w-full h-[52px] rounded-[16px] font-black text-[16px] shadow-sm transition-all"
                             onClick={handleSaveReservation}
                             disabled={isSaving}
                         >
-                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "حجز الملعب"}
+                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("court_rental.dialog.confirm_button")}
                         </Button>
                         <Button
                             variant="outline"
@@ -697,7 +717,7 @@ const CourtRentalPage: React.FC<{ showToast: (msg: string, t: ToastType) => void
                             onClick={() => setDialogOpen(false)}
                             disabled={isSaving}
                         >
-                            إلغاء
+                            {t("court_rental.dialog.cancel_button")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

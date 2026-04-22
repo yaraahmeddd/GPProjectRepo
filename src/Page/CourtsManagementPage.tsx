@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import {
     Table,
     TableHeader,
@@ -283,10 +284,12 @@ export default function CourtsManagementPage() {
                         <span className="font-semibold text-foreground">{totalCount}</span>
                     </p>
                 </div>
-                <Button onClick={openAdd} className="gap-2 shrink-0">
-                    <Plus className="h-4 w-4" />
-                    إضافة ملعب
-                </Button>
+                <RoleGuard privilege="CREATE_FIELD">
+                    <Button onClick={openAdd} className="gap-2 shrink-0">
+                        <Plus className="h-4 w-4" />
+                        إضافة ملعب
+                    </Button>
+                </RoleGuard>
             </div>
 
             {/* ─── Stats Row ────────────────────────────────────────────────────── */}
@@ -511,30 +514,34 @@ export default function CourtsManagementPage() {
                                             {/* Actions */}
                                             <TableCell className="text-center whitespace-nowrap">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => openEdit(field)}
-                                                        className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground"
-                                                    >
-                                                        <Pencil className="h-3 w-3" /> تعديل
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => toggleActive(field.id)}
-                                                        className={
-                                                            isActive
-                                                                ? "gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                                                : "gap-1 text-emerald-600 border-emerald-600 hover:bg-emerald-600 hover:text-white"
-                                                        }
-                                                    >
-                                                        {isActive ? (
-                                                            <><X className="h-3 w-3" /> تعطيل</>
-                                                        ) : (
-                                                            <><Check className="h-3 w-3" /> تفعيل</>
-                                                        )}
-                                                    </Button>
+                                                    <RoleGuard privilege="UPDATE_FIELD">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => openEdit(field)}
+                                                            className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground"
+                                                        >
+                                                            <Pencil className="h-3 w-3" /> تعديل
+                                                        </Button>
+                                                    </RoleGuard>
+                                                    <RoleGuard privilege="MANAGE_FIELD_STATUS">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => toggleActive(field.id)}
+                                                            className={
+                                                                isActive
+                                                                    ? "gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                                                    : "gap-1 text-emerald-600 border-emerald-600 hover:bg-emerald-600 hover:text-white"
+                                                            }
+                                                        >
+                                                            {isActive ? (
+                                                                <><X className="h-3 w-3" /> تعطيل</>
+                                                            ) : (
+                                                                <><Check className="h-3 w-3" /> تفعيل</>
+                                                            )}
+                                                        </Button>
+                                                    </RoleGuard>
                                                 </div>
                                             </TableCell>
                                         </motion.tr>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import bookingService from "../services/bookingService";
@@ -26,12 +27,15 @@ interface LastPaidSportCache {
 const TeamMemberSportPaymentPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { t, i18n } = useTranslation("team");
     const { user } = useAuth();
     const [processing, setProcessing] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [shareUrl, setShareUrl] = useState<string>("");
+
+    const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
 
     const paymentData = useMemo(() => {
         const type = searchParams.get("type") || "subscription";
@@ -210,7 +214,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
         const btn = document.getElementById("team-copy-btn");
         if (btn) {
             const originalText = btn.innerText;
-            btn.innerText = "✅ تم النسخ";
+            btn.innerText = t("payment.actions.copied");
             setTimeout(() => { btn.innerText = originalText; }, 2000);
         }
     };
@@ -227,7 +231,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
 
     const handlePayNow = async () => {
         if (!paymentData.isValid) {
-            setErrorMessage("بيانات الدفع غير مكتملة. برجاء إعادة المحاولة.");
+            setErrorMessage(t("payment.alerts.incomplete_data"));
             return;
         }
 
@@ -236,7 +240,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
 
         try {
             if (paymentData.isBooking) {
-                if (!paymentData.bookingId) throw new Error("رقم الحجز مفقود");
+                if (!paymentData.bookingId) throw new Error(t("payment.alerts.missing_booking_id"));
                 const booking = await bookingService.confirmPayment(paymentData.bookingId, paymentData.paymentReference);
                 // Save confirmed booking to localStorage so calendar shows it
                 try {
@@ -274,12 +278,12 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                     setShareUrl("");
                 }
 
-                setSuccessMessage("✅ تم تأكيد الحجز والدفع بنجاح.");
+                setSuccessMessage(t("payment.alerts.success_booking"));
                 setShowSuccessModal(true);
             } else {
                 const resolved = await resolvePaymentData();
                 if (!resolved.subscriptionId) {
-                    setErrorMessage("Could not resolve your subscription. Please re-join the sport first.");
+                    setErrorMessage(t("payment.alerts.missing_subscription"));
                     return;
                 }
 
@@ -297,7 +301,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                     amount: resolved.amount,
                     teamId: paymentData.teamId || undefined,
                 });
-                setSuccessMessage("Payment completed successfully. Your sport is now active.");
+                setSuccessMessage(t("payment.alerts.success_subscription"));
                 setTimeout(() => {
                     navigate("/team-member/dashboard", { replace: true });
                 }, 1500);
@@ -308,7 +312,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                 error?.response?.data?.message ||
                 error?.response?.data?.error ||
                 error?.message ||
-                "فشل إتمام الدفع"
+                t("payment.alerts.fail")
             );
         } finally {
             setProcessing(false);
@@ -317,47 +321,47 @@ const TeamMemberSportPaymentPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center p-4">
-            <div dir="rtl" className="w-full max-w-[520px] bg-white border border-ds-border rounded-2xl shadow-ds-card p-6">
-                <h1 className="text-2xl font-black text-ds-text-primary mb-2">صفحة الدفع</h1>
+            <div dir={isRtl ? "rtl" : "ltr"} className="w-full max-w-[520px] bg-white border border-ds-border rounded-2xl shadow-ds-card p-6">
+                <h1 className="text-2xl font-black text-ds-text-primary mb-2">{t("payment.title")}</h1>
                 <p className="text-sm text-ds-text-secondary mb-6">
                     {paymentData.isBooking
-                        ? "اكمل الدفع لتأكيد حجز الملعب."
-                        : "اكمل الدفع اولاً. بعد الدفع سيتم تفعيل الاشتراك مباشرة."}
+                        ? t("payment.description_booking")
+                        : t("payment.description_subscription")}
                 </p>
 
                 {!paymentData.isValid ? (
                     <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm mb-5">
-                        بيانات الدفع غير مكتملة. ارجع واختر الموعد مرة اخرى.
+                        {t("payment.invalid_data")}
                     </div>
                 ) : null}
 
                 <div className="space-y-3 mb-6">
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">الرياضة</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.sport")}</span>
                         <span className="font-bold text-ds-text-primary">{paymentData.sportName}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">الوقت</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.time")}</span>
                         <span className="font-bold text-ds-text-primary">{paymentData.slotTime}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">الايام</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.days")}</span>
                         <span className="font-bold text-ds-text-primary">{paymentData.slotDays}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">الملعب</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.court")}</span>
                         <span className="font-bold text-ds-text-primary">{paymentData.court}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">مرجع الدفع</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.reference")}</span>
                         <span dir="ltr" className="font-mono text-xs text-ds-text-primary">{paymentData.paymentReference || "-"}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-ds-text-secondary">المبلغ</span>
+                        <span className="text-ds-text-secondary">{t("payment.labels.amount")}</span>
                         <span className="font-black text-xl text-ds-orange">
                             {paymentData.amount > 0
-                                ? `${paymentData.amount.toLocaleString("ar-EG")} ${paymentData.currency === "EGP" ? "ج.م" : paymentData.currency}`
-                                : "بانتظار تحديد التكلفة"}
+                                ? `${paymentData.amount.toLocaleString(isRtl ? "ar-EG" : "en-US")} ${paymentData.currency === "EGP" ? t("sports.currency") : paymentData.currency}`
+                                : t("payment.labels.waiting_cost")}
                         </span>
                     </div>
                 </div>
@@ -381,7 +385,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                         disabled={!paymentData.isValid || processing}
                         className="flex-1 h-11 rounded-lg bg-ds-primary text-white font-bold hover:opacity-95 disabled:opacity-60"
                     >
-                        {processing ? "جاري الدفع..." : "ادفع الآن"}
+                        {processing ? t("payment.actions.processing") : t("payment.actions.pay_now")}
                     </button>
                     <button
                         type="button"
@@ -389,7 +393,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                         disabled={processing}
                         className="flex-1 h-11 rounded-lg border border-ds-border text-ds-text-primary font-bold hover:bg-gray-50 disabled:opacity-60"
                     >
-                        رجوع
+                        {t("payment.actions.back")}
                     </button>
                 </div>
             </div>
@@ -397,23 +401,23 @@ const TeamMemberSportPaymentPage: React.FC = () => {
             {/* Success Modal for booking with invite link */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div dir="rtl" className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+                    <div dir={isRtl ? "rtl" : "ltr"} className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
                         <div className="p-8 text-center">
                             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <CheckCircle className="w-12 h-12 text-green-600" />
                             </div>
 
                             <h2 className="text-2xl font-black text-ds-text-primary mb-2">
-                                تم تأكيد الحجز بنجاح!
+                                {t("payment.success_modal.title")}
                             </h2>
                             <p className="text-ds-text-secondary mb-8">
-                                تم تسجيل حجزك ودفع الرسوم بنجاح. يمكنك الآن دعوة أصدقائك للانضمام لهذا الحجز عبر الرابط التالي.
+                                {t("payment.success_modal.description")}
                             </p>
 
                             {shareUrl && (
-                                <div className="space-y-4 mb-8 text-right">
+                                <div className={`space-y-4 mb-8 ${isRtl ? 'text-right' : 'text-left'}`}>
                                     <label className="block text-xs font-bold text-ds-text-muted mb-1 px-1">
-                                        رابط دعوة المشاركين:
+                                        {t("payment.labels.invite_link")}
                                     </label>
                                     <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
                                         <div className="flex-1 overflow-hidden">
@@ -431,7 +435,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                                             className="flex items-center gap-2 px-4 py-2 bg-ds-primary text-white text-xs font-bold rounded-lg hover:bg-ds-primary-dark transition-colors shrink-0"
                                         >
                                             <Copy className="w-3 h-3" />
-                                            نسخ الرابط
+                                            {t("payment.actions.copy")}
                                         </button>
                                     </div>
                                 </div>
@@ -443,17 +447,8 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                                     onClick={() => navigate("/team-member/dashboard", { replace: true })}
                                     className="w-full h-12 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-colors"
                                 >
-                                    العودة للرئيسية
+                                    {t("payment.actions.return_home")}
                                 </button>
-                                {/* 
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSuccessModal(false)}
-                                    className="w-full h-12 bg-white border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors"
-                                >
-                                    إغلاق
-                                </button>
-                                */}
                             </div>
                         </div>
                     </div>

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { ROLE_LABELS } from "../../../types/auth";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Globe } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { resolveFileUrl } from "../../../utils/fileUrl";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { useTranslation } from "react-i18next";
 const hucLogo = "/assets/HUC_logo.jpeg";
 
 // ─── Logout Modal ─────────────────────────────────────────────
@@ -14,6 +16,8 @@ interface LogoutModalProps {
 }
 
 const LogoutModal = ({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
+  const { t } = useTranslation(["nav", "common"]);
+
   if (!isOpen) return null;
 
   return (
@@ -32,14 +36,14 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
           </div>
 
           <h3 className="text-[22px] font-bold text-[#1F2937] text-center px-6">
-            هل أنت متأكد من تسجيل الخروج؟
+            {t("nav:navbar.logoutConfirmTitle")}
           </h3>
         </div>
 
         {/* Body */}
         <div className="px-8 pb-8 text-center">
           <p className="text-[14px] leading-relaxed text-[#6B7280]">
-            سيتم إنهاء جلستك الحالية ويمكنك تسجيل الدخول مرة أخرى لاحقًا.
+            {t("nav:navbar.logoutConfirmDesc")}
           </p>
         </div>
 
@@ -49,13 +53,13 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
             onClick={onConfirm}
             className="flex-1 h-[44px] bg-[#DC2626] text-white text-[14px] font-semibold rounded-[8px] transition-all hover:bg-red-700 active:scale-95"
           >
-            تسجيل الخروج
+            {t("nav:navbar.logout")}
           </button>
           <button
             onClick={onClose}
             className="flex-1 h-[44px] bg-[#E5E7EB] text-[#111827] text-[14px] font-medium rounded-[8px] transition-all hover:bg-gray-300 active:scale-95"
           >
-            إلغاء
+            {t("common:cancel")}
           </button>
         </div>
       </div>
@@ -66,6 +70,8 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }: LogoutModalProps) => {
 export function Navbar() {
   const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { language, toggleLanguage } = useLanguage();
+  const { t } = useTranslation(["nav"]);
 
   if (!user) return null;
 
@@ -87,7 +93,7 @@ export function Navbar() {
             alt="HUC"
             className="h-10 w-10 rounded-full object-cover bg-card"
           />
-          <span className="font-bold text-lg text-foreground hidden sm:block">نادي جامعة حلوان</span>
+          <span className="font-bold text-lg text-foreground hidden sm:block">{t("navbar.clubName")}</span>
         </div>
 
         {/* Left side - User Info */}
@@ -109,10 +115,22 @@ export function Navbar() {
               </div>
             )}
           </div>
+
+          <button
+            onClick={toggleLanguage}
+            className="h-9 px-3 rounded-lg hover:bg-muted flex flex-row items-center justify-center transition-colors shadow-sm border border-border bg-card hover:border-primary/20"
+            title={t("navbar.language")}
+          >
+            <Globe className="h-4 w-4 text-primary mx-1" />
+            <span className="text-xs font-bold text-primary mt-[2px] leading-none">
+              {language === 'ar' ? 'English' : 'العربية'}
+            </span>
+          </button>
+
           <button
             onClick={() => setShowLogoutModal(true)}
             className="h-9 w-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
-            title="تسجيل الخروج"
+            title={t("navbar.logout")}
           >
             <LogOut className="h-4 w-4 text-muted-foreground" />
           </button>

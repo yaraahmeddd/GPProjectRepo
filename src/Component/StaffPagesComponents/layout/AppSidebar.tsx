@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
 import {
   BadgeCheck,
+  Briefcase,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +25,7 @@ import {
   Building,
 } from "lucide-react";
 import { PAYMENT_ALERTS } from "../../../data/paymentsData";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,189 +47,135 @@ type SidebarGroup = {
 const SIDEBAR_GROUPS: SidebarGroup[] = [
   // ── 1. الرئيسية ───────────────────────────────────────────────────────────
   {
-    label: "الرئيسية",
+    label: "groups.home",
     collapsible: false,
     items: [
       {
-        title: "لوحة التحكم",
+        title: "nav.dashboard",
         icon: LayoutDashboard,
         path: "/staff/dashboard",
         privilege: "dashboard.view",
       },
     ],
   },
-
   // ── 2. الأعضاء ────────────────────────────────────────────────────────────
   {
-    label: "الأعضاء",
+    label: "groups.members",
     collapsible: false,
     items: [
       {
-        title: "طلبات التسجيل",
+        title: "nav.registrations",
         icon: ClipboardList,
         path: "/staff/dashboard/registrations",
-        privilege: "VIEW_MEMBERS",
+        privilege: "MANAGE_MEMBERSHIP_REQUEST",
       },
       {
-        title: "إدارة الأعضاء",
+        title: "nav.membersManage",
         icon: Users,
         path: "/staff/dashboard/members/manage",
         privilege: "VIEW_MEMBERS",
       },
       {
-        title: "إضافة عضو نادي",
+        title: "nav.membersNew",
         icon: UserPlus,
         path: "/staff/dashboard/members/new",
-        privilege: "VIEW_MEMBERS",
+        privilege: "CREATE_MEMBER",
       },
       {
-        title: "إضافة لاعب فريق",
+        title: "nav.membersNewTeam",
         icon: UserPlus,
-        path: "/staff/dashboard/members/new-team",
-        privilege: "VIEW_MEMBERS",
+        path: "/staff/dashboard/members/new-team-member",
+        privilege: "ADD_TEAM_MEMBER",
       },
     ],
   },
-
   // ── 3. العمليات اليومية ───────────────────────────────────────────────────
   {
-    label: "العمليات اليومية",
+    label: "groups.dailyOps",
     collapsible: false,
     items: [
       {
-        title: "حجوزات الملاعب",
+        title: "nav.bookings",
         icon: CalendarCheck,
         path: "/staff/dashboard/sports/bookings",
         privilege: "VIEW_SPORTS",
       },
       {
-        title: "إدارة الدعوات",
+        title: "nav.invitations",
         icon: Link2,
         path: "/staff/dashboard/sports/invitations",
         privilege: "VIEW_SPORTS",
       },
     ],
   },
-
   // ── 4. إدارة الرياضات ─────────────────────────────────────────────────────
   {
-    label: "إدارة الرياضات",
+    label: "groups.sports",
     collapsible: true,
     items: [
       {
-        title: "الرياضات",
+        title: "nav.sports",
         icon: Trophy,
         path: "/staff/dashboard/sports",
         privilege: "VIEW_SPORTS",
       },
       {
-        title: "الفرق",
+        title: "nav.teams",
         icon: Users,
         path: "/staff/dashboard/sports/teams",
-        privilege: "VIEW_SPORTS",
+        privilege: "VIEW_TEAMS",
       },
       {
-        title: "الملاعب والفيلدات",
+        title: "nav.courts",
         icon: MapPin,
         path: "/staff/dashboard/sports/courts",
-        privilege: "VIEW_SPORTS",
+        privilege: "VIEW_FIELDS",
       },
       {
-        title: "تعيين الرياضات",
+        title: "nav.assignSports",
         icon: Shield,
         path: "/staff/dashboard/members/sports",
-        privilege: "VIEW_MEMBERS",
+        privilege: "ASSIGN_SPORT_TO_MEMBER",
       },
       {
-        title: "الأعضاء بالرياضة",
+        title: "nav.sportsView",
         icon: Users,
         path: "/staff/dashboard/members/sports-view",
-        privilege: "VIEW_MEMBERS",
+        privilege: "VIEW_TEAM_MEMBERS",
       },
     ],
   },
-
   // ── 5. المالية والخدمات ───────────────────────────────────────────────────
   {
-    label: "المالية والخدمات",
+    label: "groups.finance",
     collapsible: true,
     items: [
-      {
-        title: "الاشتراكات والدفع",
-        icon: CreditCard,
-        path: "/staff/dashboard/finance/subscriptions",
-        privilege: "VIEW_FINANCE",
-      },
-      {
-        title: "العضويات",
-        icon: BadgeCheck,
-        path: "/staff/dashboard/memberships",
-        privilege: "VIEW_MEMBERSHIP_PLANS",
-      },
-      {
-        title: "معرض الوسائط",
-        icon: Image,
-        path: "/staff/dashboard/media-gallery",
-        // no privilege required
-      },
+      { title: "nav.subscriptions", icon: CreditCard, path: "/staff/dashboard/finance/subscriptions", privilege: "VIEW_FINANCE" },
+      { title: "nav.memberships", icon: BadgeCheck, path: "/staff/dashboard/memberships", privilege: "VIEW_MEMBERSHIP_PLANS" },
+      { title: "nav.media", icon: Image, path: "/staff/dashboard/media-gallery" },
     ],
   },
-
   // ── 6. الموظفون ───────────────────────────────────────────────────────────
   {
-    label: "الموظفون",
+    label: "groups.staff",
     collapsible: true,
     items: [
-      {
-        title: "إضافة موظف جديد",
-        icon: UserPlus,
-        path: "/staff/dashboard/admin/staff/new",
-        privilege: "STAFF_CREATE",
-      },
-      {
-        title: "إدارة الموظفين",
-        icon: Users,
-        path: "/staff/dashboard/admin/staff/manage",
-        privilege: "STAFF_CREATE",
-      },
+      { title: "nav.staffNew", icon: UserPlus, path: "/staff/dashboard/admin/staff/new", privilege: "CREATE_STAFF" },
+      { title: "nav.staffManage", icon: Users, path: "/staff/dashboard/admin/staff/manage", privilege: "VIEW_STAFF" },
     ],
   },
-
   // ── 7. النظام ─────────────────────────────────────────────────────────────
   {
-    label: "النظام",
+    label: "groups.system",
     collapsible: true,
     items: [
-      {
-        title: "إدارة الكليات",
-        icon: Building,
-        path: "/staff/dashboard/faculties",
-        privilege: "VIEW_FACULTIES",
-      },
-      {
-        title: "باقات الصلاحيات",
-        icon: Shield,
-        path: "/staff/dashboard/admin/privilege-packages",
-        privilege: "VIEW_PRIVILEGES",
-      },
-      {
-        title: "تعيين الصلاحيات",
-        icon: Shield,
-        path: "/staff/dashboard/admin/staff/assign-privileges",
-        privilege: "VIEW_PRIVILEGES",
-      },
-      {
-        title: "سحب الصلاحيات",
-        icon: Shield,
-        path: "/staff/dashboard/admin/staff/revoke-privileges",
-        privilege: "VIEW_PRIVILEGES",
-      },
-      {
-        title: "سجل التدقيق",
-        icon: ScrollText,
-        path: "/staff/dashboard/audit-log",
-        privilege: "audit.view",
-      },
+      { title: "nav.branches", icon: Building, path: "/staff/dashboard/branches", privilege: "VIEW_BRANCHES" },
+      { title: "nav.faculties", icon: Building, path: "/staff/dashboard/faculties", privilege: "VIEW_FACULTIES" },
+      { title: "nav.professions", icon: Briefcase, path: "/staff/dashboard/professions", privilege: "VIEW_PROFESSIONS" },
+      { title: "nav.privilegePackages", icon: Shield, path: "/staff/dashboard/admin/privilege-packages", privilege: "VIEW_PRIVILEGES" },
+      { title: "nav.assignPrivileges", icon: Shield, path: "/staff/dashboard/admin/staff/assign-privileges", privilege: "VIEW_PRIVILEGES" },
+      { title: "nav.revokePrivileges", icon: Shield, path: "/staff/dashboard/admin/staff/revoke-privileges", privilege: "VIEW_PRIVILEGES" },
+      { title: "nav.auditLog", icon: ScrollText, path: "/staff/dashboard/audit-log", privilege: "VIEW_AUDIT_LOGS" },
     ],
   },
 ];
@@ -235,17 +183,18 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
 // ─── Member-only nav ───────────────────────────────────────────────────────────
 
 const MEMBER_SIDEBAR_ITEMS: SidebarItem[] = [
-  { title: "الرئيسية", icon: Home, path: "/member/dashboard/home" },
-  { title: "ملفي الشخصي", icon: User, path: "/member/dashboard/profile" },
-  { title: "عضويتي", icon: CreditCard, path: "/member/dashboard/memberships" },
-  { title: "اشتراكاتي الرياضية", icon: Trophy, path: "/member/dashboard/sports" },
-  { title: "استكشف الرياضات", icon: Dumbbell, path: "/member/dashboard/subscribe" },
-  { title: "حجز الملاعب", icon: MapPin, path: "/member/dashboard/courts" },
+  { title: "member.home", icon: Home, path: "/member/dashboard/home" },
+  { title: "member.profile", icon: User, path: "/member/dashboard/profile" },
+  { title: "member.memberships", icon: CreditCard, path: "/member/dashboard/memberships" },
+  { title: "member.sports", icon: Trophy, path: "/member/dashboard/sports" },
+  { title: "member.subscribe", icon: Dumbbell, path: "/member/dashboard/subscribe" },
+  { title: "member.courts", icon: MapPin, path: "/member/dashboard/courts" },
 ];
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export function AppSidebar() {
+  const { t } = useTranslation("nav");
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const { hasPrivilege, user } = useAuth();
@@ -320,7 +269,7 @@ export function AppSidebar() {
         <RouterNavLink
           key={item.path}
           to={item.path}
-          title={item.title}
+          title={t(item.title)}
           className={`relative mx-auto mb-0.5 flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-150 ${active
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-white/80 hover:bg-white/15 hover:text-white"
@@ -344,7 +293,7 @@ export function AppSidebar() {
           }`}
       >
         <item.icon className="h-[18px] w-[18px] shrink-0" />
-        <span className="flex-1 text-sm font-medium leading-none">{item.title}</span>
+        <span className="flex-1 text-sm font-medium leading-none">{t(item.title)}</span>
         {hasAlert && (
           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-bold shrink-0">
             {paymentCountLabel}
@@ -363,7 +312,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-2 px-3 py-1.5 mt-4">
           <div className="h-px flex-1 bg-white/15" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 whitespace-nowrap px-1">
-            {group.label}
+            {t(group.label)}
           </span>
           <div className="h-px flex-1 bg-white/15" />
         </div>
@@ -378,7 +327,7 @@ export function AppSidebar() {
       >
         <div className="h-px flex-1 bg-white/15" />
         <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 whitespace-nowrap px-1 flex items-center gap-1">
-          {group.label}
+          {t(group.label)}
           <ChevronLeft
             className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "-rotate-90" : ""
               }`}
@@ -391,7 +340,7 @@ export function AppSidebar() {
 
   return (
     <aside
-      className="fixed right-0 top-16 bottom-0 z-30 flex flex-col border-l border-[#2a5489] transition-[width] duration-200 ease-in-out"
+      className="fixed start-0 top-16 bottom-0 z-30 flex flex-col border-e border-[#2a5489] transition-[width] duration-200 ease-in-out"
       style={{ backgroundColor: "#214474", width: collapsed ? "60px" : "256px" }}
     >
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
@@ -446,7 +395,7 @@ export function AppSidebar() {
       {/* ── Profile link (staff only) ────────────────────────────────────────── */}
       {!isMember && (
         <div className={`border-t border-white/10 py-2 ${collapsed ? "flex justify-center" : ""}`}>
-          {renderItem({ title: "ملفي الشخصي", icon: User, path: "/staff/dashboard/profile" })}
+          {renderItem({ title: "nav.profile", icon: User, path: "/staff/dashboard/profile" })}
         </div>
       )}
 
@@ -455,7 +404,7 @@ export function AppSidebar() {
         <button
           onClick={() => setCollapsed(prev => !prev)}
           className="flex w-full items-center justify-center rounded-lg p-2 text-white transition-all duration-150 hover:bg-white/10"
-          aria-label={collapsed ? "توسيع القائمة" : "طي القائمة"}
+          aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           {collapsed
             ? <ChevronLeft className="h-4 w-4" />   // collapsed → expand (point left = away from right wall)

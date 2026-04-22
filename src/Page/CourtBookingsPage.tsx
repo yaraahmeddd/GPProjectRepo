@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { generateId } from "../utils/id";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import { Button } from "../Component/StaffPagesComponents/ui/button";
 import { Input } from "../Component/StaffPagesComponents/ui/input";
 import { Label } from "../Component/StaffPagesComponents/ui/label";
@@ -492,39 +493,45 @@ function BookingDetailPanel({
                 )}
 
                 {(booking.status === "confirmed" || booking.status === "blocked") && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-1.5"
-                        onClick={() => onEdit(booking)}
-                    >
-                        <Pencil className="h-3.5 w-3.5" />
-                        تعديل
-                    </Button>
+                    <RoleGuard privilege="SCHEDULE_MATCH">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-1.5"
+                            onClick={() => onEdit(booking)}
+                        >
+                            <Pencil className="h-3.5 w-3.5" />
+                            تعديل
+                        </Button>
+                    </RoleGuard>
                 )}
 
                 {booking.status === "confirmed" && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-1.5 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => onCancel(booking.id)}
-                    >
-                        <X className="h-3.5 w-3.5" />
-                        إلغاء الحجز
-                    </Button>
+                    <RoleGuard privilege="SCHEDULE_MATCH">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-1.5 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => onCancel(booking.id)}
+                        >
+                            <X className="h-3.5 w-3.5" />
+                            إلغاء الحجز
+                        </Button>
+                    </RoleGuard>
                 )}
 
                 {booking.status === "blocked" && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-1.5 text-emerald-600 border-emerald-600 hover:bg-emerald-600 hover:text-white"
-                        onClick={() => onUnblock(booking.id)}
-                    >
-                        <Lock className="h-3.5 w-3.5" />
-                        إلغاء الحجب
-                    </Button>
+                    <RoleGuard privilege="SCHEDULE_MATCH">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-1.5 text-emerald-600 border-emerald-600 hover:bg-emerald-600 hover:text-white"
+                            onClick={() => onUnblock(booking.id)}
+                        >
+                            <Lock className="h-3.5 w-3.5" />
+                            إلغاء الحجب
+                        </Button>
+                    </RoleGuard>
                 )}
             </div>
         </motion.div>
@@ -1513,15 +1520,17 @@ export default function CourtBookingsPage() {
                         {calendarLoading && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
                     </p>
                 </div>
-                <Button
-                    type="button"
-                    className="gap-2 shrink-0 shadow-sm px-4"
-                    onClick={() => { setEditBooking(null); setAddDialogOpen(true); }}
-                    aria-label="إضافة حجز يدوي جديد"
-                >
-                    <Plus className="h-4 w-4" />
-                    إضافة حجز يدوي
-                </Button>
+                <RoleGuard privilege="SCHEDULE_MATCH">
+                    <Button
+                        type="button"
+                        className="gap-2 shrink-0 shadow-sm px-4"
+                        onClick={() => { setEditBooking(null); setAddDialogOpen(true); }}
+                        aria-label="إضافة حجز يدوي جديد"
+                    >
+                        <Plus className="h-4 w-4" />
+                        إضافة حجز يدوي
+                    </Button>
+                </RoleGuard>
             </div>
 
             {/* Filter Bar */}
@@ -1707,31 +1716,35 @@ export default function CourtBookingsPage() {
                                             </PopoverTrigger>
                                             <PopoverContent className="w-44 p-2" dir="rtl" side="bottom" align="end">
                                                 <div className="flex flex-col gap-1">
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted text-right transition-colors w-full"
-                                                        onClick={() => {
-                                                            setCellPopover(null);
-                                                            setEditBooking(null);
-                                                            setBlockDefaults({ courtId: selectedCourtId, date: dateStr, from: slot });
-                                                            setAddDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        <Plus className="h-3.5 w-3.5" />
-                                                        إضافة حجز
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-rose-50 text-rose-700 text-right transition-colors w-full"
-                                                        onClick={() => {
-                                                            setCellPopover(null);
-                                                            setBlockDefaults({ courtId: selectedCourtId, date: dateStr, from: slot });
-                                                            setBlockDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        <Lock className="h-3.5 w-3.5" />
-                                                        حجب الوقت
-                                                    </button>
+                                                    <RoleGuard privilege="SCHEDULE_MATCH">
+                                                        <div className="flex flex-col gap-1">
+                                                            <button
+                                                                type="button"
+                                                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted text-right transition-colors w-full"
+                                                                onClick={() => {
+                                                                    setCellPopover(null);
+                                                                    setEditBooking(null);
+                                                                    setBlockDefaults({ courtId: selectedCourtId, date: dateStr, from: slot });
+                                                                    setAddDialogOpen(true);
+                                                                }}
+                                                            >
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                                إضافة حجز
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-rose-50 text-rose-700 text-right transition-colors w-full"
+                                                                onClick={() => {
+                                                                    setCellPopover(null);
+                                                                    setBlockDefaults({ courtId: selectedCourtId, date: dateStr, from: slot });
+                                                                    setBlockDialogOpen(true);
+                                                                }}
+                                                            >
+                                                                <Lock className="h-3.5 w-3.5" />
+                                                                حجب الوقت
+                                                            </button>
+                                                        </div>
+                                                    </RoleGuard>
                                                 </div>
                                             </PopoverContent>
                                         </Popover>

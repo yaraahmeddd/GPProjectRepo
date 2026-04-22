@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 // ─── Props Interface ────────────────────────────────────────────────────────
 export interface SportCardProps {
@@ -25,10 +26,6 @@ export interface SportCardProps {
     /** Callback when user clicks the Rejoin button */
     onRejoin?: () => void;
 }
-
-// ─── Helper: Format number as Arabic locale price ───────────────────────────
-const formatPrice = (n: number) =>
-    n.toLocaleString("ar-EG");
 
 // ─── Helper: Is today on or past the end date? ──────────────────────────────
 const isExpiredOrToday = (endDate?: string): boolean => {
@@ -67,13 +64,15 @@ const SportCard: React.FC<SportCardProps> = ({
     endDate,
     onRejoin,
 }) => {
+    const { t, i18n } = useTranslation("team");
+    const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
     const expiredOrToday = isExpiredOrToday(endDate);
     const daysLeft = daysUntilExpiry(endDate);
     const expiresVerySOon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
 
     return (
         <div
-            dir="rtl"
+            dir={isRtl ? "rtl" : "ltr"}
             className="
                 w-full bg-white rounded-2xl shadow-md overflow-hidden
                 transition-all duration-300 ease-out
@@ -102,7 +101,7 @@ const SportCard: React.FC<SportCardProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                 {/* Sport title + trophy — bottom-right */}
-                <div className="absolute bottom-3 right-4 flex items-center gap-2">
+                <div className={`absolute bottom-3 ${isRtl ? 'right-4' : 'left-4'} flex items-center gap-2`}>
                     <span className="text-2xl">🏆</span>
                     <span className="text-white text-lg font-extrabold drop-shadow-md leading-tight">
                         {title}
@@ -110,17 +109,21 @@ const SportCard: React.FC<SportCardProps> = ({
                 </div>
 
                 {/* JOINED / Expiry badge — top-left */}
-                {(joined || status === "نشط") && (
+                {(joined || status === "نشط" || status === "active") && (
                     <span
                         className={`
-                            absolute top-3 left-3
+                            absolute top-3 ${isRtl ? 'left-3' : 'right-3'}
                             text-white text-xs font-bold
                             px-3 py-1 rounded-full shadow-md
                             flex items-center gap-1
                             ${expiredOrToday ? "bg-orange-500" : expiresVerySOon ? "bg-yellow-500" : "bg-green-500"}
                         `}
                     >
-                        {expiredOrToday ? "⏰ إنتهى اليوم" : expiresVerySOon ? `⚠️ ينتهي خلال ${daysLeft} أيام` : "✓ JOINED"}
+                        {expiredOrToday 
+                            ? `⏰ ${t("sport_card.status.expired_today")}` 
+                            : expiresVerySOon 
+                                ? `⚠️ ${t("sport_card.status.expires_in", { days: daysLeft })}` 
+                                : `✓ ${t("explore_sports.status.joined")}`}
                     </span>
                 )}
             </div>
@@ -132,8 +135,8 @@ const SportCard: React.FC<SportCardProps> = ({
                 {expiresVerySOon && !expiredOrToday && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
                         <span className="text-lg">⚠️</span>
-                        <p className="text-xs font-semibold text-yellow-700">
-                            {daysLeft === 0 ? "ينتهي اشتراكك اليوم!" : `ينتهي اشتراكك خلال ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"}. جدد الاشتراك الآن.`}
+                        <p className={`text-xs font-semibold text-yellow-700 ${isRtl ? 'text-right' : 'text-left'}`}>
+                            {daysLeft === 0 ? t("sport_card.alerts.expires_today") : t("sport_card.alerts.expires_soon", { days: daysLeft, unit: daysLeft === 1 ? t("notifications.time.day") : t("notifications.time.days") })}
                         </p>
                     </div>
                 )}
@@ -141,33 +144,33 @@ const SportCard: React.FC<SportCardProps> = ({
                 {expiredOrToday && (
                     <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
                         <span className="text-lg">🔔</span>
-                        <p className="text-xs font-semibold text-orange-700">
-                            انتهى اشتراكك. أعد الانضمام للاستمرار في التدريب.
+                        <p className={`text-xs font-semibold text-orange-700 ${isRtl ? 'text-right' : 'text-left'}`}>
+                            {t("sport_card.alerts.expired")}
                         </p>
                     </div>
                 )}
 
                 {/* A) Training Schedule */}
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2.5">
-                    <p className="text-sm font-bold text-blue-700 flex items-center gap-1.5">
+                    <p className={`text-sm font-bold text-blue-700 flex items-center gap-1.5 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <span>🗓</span>
-                        <span>مواعيد التدريب</span>
+                        <span>{t("sport_card.schedule_title")}</span>
                     </p>
 
                     {/* Days */}
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <div className={`flex items-center gap-2 text-sm text-gray-700 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <span className="text-base">📅</span>
                         <span className="font-medium">{days}</span>
                     </div>
 
                     {/* Time */}
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <div className={`flex items-center gap-2 text-sm text-gray-700 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <span className="text-base">⏰</span>
                         <span className="font-medium">{time}</span>
                     </div>
 
                     {/* Location */}
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <div className={`flex items-center gap-2 text-sm text-gray-700 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                         <span className="text-base">📍</span>
                         <span className="font-medium">{location}</span>
                     </div>
@@ -176,24 +179,24 @@ const SportCard: React.FC<SportCardProps> = ({
                 {/* B) End Date + Monthly Price row */}
                 <div className="grid grid-cols-2 gap-2">
                     {/* End Date */}
-                    <div className="bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 flex flex-col gap-0.5">
-                        <span className="text-[11px] text-gray-400 font-medium">تاريخ الانتهاء</span>
+                    <div className={`bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 flex flex-col gap-0.5 ${isRtl ? 'text-right' : 'text-left'}`}>
+                        <span className="text-[11px] text-gray-400 font-medium">{t("sport_card.expiry_date")}</span>
                         <span className={`text-sm font-bold ${expiredOrToday ? "text-orange-600" : expiresVerySOon ? "text-yellow-600" : "text-gray-700"}`}>
-                            {endDate && endDate !== "-" ? new Date(endDate).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" }) : "غير محدد"}
+                            {endDate && endDate !== "-" ? new Date(endDate).toLocaleDateString(isRtl ? "ar-EG" : "en-US", { year: "numeric", month: "short", day: "numeric" }) : t("explore_sports.slots.unknown_time")}
                         </span>
                     </div>
 
                     {/* Monthly Price */}
-                    <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex flex-col gap-0.5">
-                        <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                    <div className={`bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex flex-col gap-0.5 ${isRtl ? 'text-right' : 'text-left'}`}>
+                        <span className={`text-[11px] text-gray-400 font-medium flex items-center gap-1 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                             <span>💰</span>
-                            <span>التكلفة الشهرية</span>
+                            <span>{t("explore_sports.slots.monthly_cost")}</span>
                         </span>
-                        <div className="flex items-baseline gap-1">
+                        <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}>
                             <span className="text-base font-black text-amber-500">
-                                {price > 0 ? formatPrice(price) : "—"}
+                                {price > 0 ? price.toLocaleString(isRtl ? "ar-EG" : "en-US") : "—"}
                             </span>
-                            {price > 0 && <span className="text-[10px] text-gray-400 font-medium">ج.م</span>}
+                            {price > 0 && <span className="text-[10px] text-gray-400 font-medium">{t("sports.currency")}</span>}
                         </div>
                     </div>
                 </div>
@@ -202,7 +205,7 @@ const SportCard: React.FC<SportCardProps> = ({
                 {expiredOrToday ? (
                     <button
                         onClick={onRejoin}
-                        className="
+                        className={`
                             w-full py-3 rounded-xl text-sm font-bold text-white
                             bg-gradient-to-l from-orange-400 to-red-400
                             hover:from-orange-500 hover:to-red-500
@@ -210,15 +213,16 @@ const SportCard: React.FC<SportCardProps> = ({
                             transition-all duration-200
                             shadow-md hover:shadow-lg
                             flex items-center justify-center gap-2
-                        "
+                            ${isRtl ? 'flex-row' : 'flex-row-reverse'}
+                        `}
                     >
                         <span>🔄</span>
-                        <span>إعادة الانضمام</span>
+                        <span>{t("explore_sports.actions.rejoin")}</span>
                     </button>
-                ) : expiresVerySOon && (joined || status === "نشط") ? (
+                ) : expiresVerySOon && (joined || status === "نشط" || status === "active") ? (
                     <button
                         onClick={onRejoin}
-                        className="
+                        className={`
                             w-full py-3 rounded-xl text-sm font-bold text-white
                             bg-gradient-to-l from-yellow-500 to-amber-500
                             hover:from-yellow-600 hover:to-amber-600
@@ -226,55 +230,50 @@ const SportCard: React.FC<SportCardProps> = ({
                             transition-all duration-200
                             shadow-md hover:shadow-lg
                             flex items-center justify-center gap-2
-                        "
+                            ${isRtl ? 'flex-row' : 'flex-row-reverse'}
+                        `}
                     >
                         <span>🔄</span>
-                        <span>تجديد الاشتراك</span>
+                        <span>{t("sport_card.actions.renew")}</span>
                     </button>
-                ) : status === "منتهي" ? (
+                ) : (status === "منتهي" || status === "expired") ? (
                     <button
                         disabled
-                        className="w-full py-3 rounded-xl text-sm font-bold bg-red-50 text-red-700 border border-red-100 flex items-center justify-center gap-2 cursor-default"
+                        className={`w-full py-3 rounded-xl text-sm font-bold bg-red-50 text-red-700 border border-red-100 flex items-center justify-center gap-2 cursor-default ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                     >
                         <span>❌</span>
-                        <span>الاشتراك منتهي</span>
+                        <span>{t("sport_card.status.expired")}</span>
                     </button>
-                ) : status === "قيد الانتظار" ? (
+                ) : (status === "قيد الانتظار" || status === "pending") ? (
                     <button
                         disabled
-                        className="w-full py-3 rounded-xl text-sm font-bold bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center gap-2 cursor-default"
+                        className={`w-full py-3 rounded-xl text-sm font-bold bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center gap-2 cursor-default ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                     >
                         <span>⏳</span>
-                        <span>قيد المراجعة</span>
+                        <span>{t("explore_sports.status.pending_review")}</span>
                     </button>
-                ) : joined || status === "نشط" ? (
+                ) : (joined || status === "نشط" || status === "active") ? (
                     <button
                         disabled
-                        className="
-                            w-full py-3 rounded-xl text-sm font-bold
-                            bg-green-100 text-green-700 border border-green-200
-                            flex items-center justify-center gap-2
-                            cursor-default
-                        "
+                        className={`w-full py-3 rounded-xl text-sm font-bold bg-green-50 text-green-700 border border-green-100 flex items-center justify-center gap-2 cursor-default ${isRtl ? 'flex-row' : 'flex-row-reverse'}`}
                     >
                         <span>✓</span>
-                        <span>منضم بالفعل</span>
+                        <span>{t("explore_sports.actions.already_joined")}</span>
                     </button>
                 ) : (
                     <button
                         onClick={onJoin}
-                        className="
+                        className={`
                             w-full py-3 rounded-xl text-sm font-bold text-white
-                            bg-gradient-to-l from-amber-400 to-orange-400
-                            hover:from-amber-500 hover:to-orange-500
-                            active:scale-95
+                            bg-ds-primary hover:opacity-90 active:scale-95
                             transition-all duration-200
                             shadow-md hover:shadow-lg
                             flex items-center justify-center gap-2
-                        "
+                            ${isRtl ? 'flex-row' : 'flex-row-reverse'}
+                        `}
                     >
-                        <span>الانضمام الآن</span>
                         <span>🏅</span>
+                        <span>{t("explore_sports.actions.join_now")}</span>
                     </button>
                 )}
             </div>

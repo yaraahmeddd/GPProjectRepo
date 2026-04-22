@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../hooks/useLanguage";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -195,6 +197,8 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 
 export default function DashboardPage() {
   const { hasPrivilege, user } = useAuth();
+  const { t } = useTranslation(["DashboardPage", "common"]);
+  const { language } = useLanguage();
   const [dashboard, setDashboard] = useState<DashboardState>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -271,9 +275,10 @@ export default function DashboardPage() {
         const sportsRaw = toArray(sportsPayloadObj?.data ?? sportsPayload) as Array<Record<string, unknown>>;
         const sports = sportsRaw.map((sport) => {
           const price = toNumber(sport?.price);
+          const name = language === 'ar' ? (sport?.name_ar || sport?.name_en || sport?.name) : (sport?.name_en || sport?.name_ar || sport?.name);
           return {
             id: toNumber(sport?.id),
-            name: String(sport?.name_ar || sport?.name_en || sport?.name || "Unnamed Sport"),
+            name: String(name || t("unnamedSport")),
             status: normalizeStatus(sport?.status),
             isActive: Boolean(sport?.is_active),
             price,
@@ -312,10 +317,10 @@ export default function DashboardPage() {
         const tasksRaw = toArray(tasksPayloadObj?.data ?? tasksPayload) as Array<Record<string, unknown>>;
         const tasks = tasksRaw.map((task) => ({
           id: toNumber(task?.id),
-          title: String(task?.title || "Untitled Task"),
+          title: String(task?.title || t("untitledTask")),
           type: String(task?.type || "GENERAL"),
           status: normalizeStatus(task?.status),
-          createdBy: String(task?.created_by || "System"),
+          createdBy: String(task?.created_by || t("system")),
           createdAt: String(task?.created_at || ""),
         }));
 
@@ -370,7 +375,7 @@ export default function DashboardPage() {
           Object.keys(sectionErrors).length === Object.values(access).filter(Boolean).length;
 
         if (fullFailure) {
-          setError("Failed to load dashboard data from backend. Check backend server and login token.");
+          setError(t("dataLoadError"));
         }
 
         setDashboard({
@@ -417,6 +422,7 @@ export default function DashboardPage() {
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [hasPrivilege, user?.staff_id]
   );
 
@@ -426,18 +432,18 @@ export default function DashboardPage() {
 
   const memberStatusChart = useMemo(
     () => [
-      { name: "Active", value: dashboard.summary.activeMembers },
-      { name: "Pending", value: dashboard.summary.pendingMembers },
-      { name: "Other", value: dashboard.summary.otherMembers },
+      { name: t("status.active"), value: dashboard.summary.activeMembers },
+      { name: t("status.pending"), value: dashboard.summary.pendingMembers },
+      { name: t("status.other"), value: dashboard.summary.otherMembers },
     ].filter((item) => item.value > 0),
     [dashboard.summary.activeMembers, dashboard.summary.pendingMembers, dashboard.summary.otherMembers]
   );
 
   // Still keeping taskStatusChart because we removed the <BarChart> but recentTasks table still uses status styling logic
   const taskStatusLabel = (status: string) => {
-    if (status === "approved") return "Approved";
-    if (status === "rejected") return "Rejected";
-    return "Pending";
+    if (status === "approved") return t("status.approved");
+    if (status === "rejected") return t("status.rejected");
+    return t("status.pending");
   };
 
   const taskStatusClassName = (status: string) => {
@@ -449,8 +455,8 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="h-full overflow-y-auto p-6 pb-8 space-y-6">
-        <h1 className="text-2xl font-bold">لوحة تحكم الموظفين</h1>
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">جاري تحميل بيانات لوحة التحكم...</div>
+        <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
+        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">{t("loadingMessage")}</div>
       </div>
     );
   }
@@ -461,10 +467,10 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#214474]">
-            مرحباً، {user?.fullName || "Staff Member"}
+            {t("welcomeMessage", { name: user?.fullName || "Staff Member" })}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {new Date().toLocaleDateString("ar-EG", {
+            {new Date().toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -476,7 +482,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <span className="text-xs text-muted-foreground">
-              آخر تحديث: {lastUpdated.toLocaleTimeString()}
+              {t("lastUpdated", { time: lastUpdated.toLocaleTimeString(language === "ar" ? "ar-EG" : "en-US") })}
             </span>
           )}
           <Button
@@ -485,7 +491,7 @@ export default function DashboardPage() {
             disabled={refreshing}
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "جارٍ التحديث..." : "تحديث"}
+            {refreshing ? t("refreshingBtn") : t("refreshBtn")}
           </Button>
         </div>
       </div>
@@ -501,75 +507,75 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
         <div className="lg:col-span-6">
           <StatCard
-            title="إجمالي الأعضاء"
+            title={t("stats.totalMembers")}
             value={dashboard.summary.totalMembers}
             icon={Users}
-            subtitle={dashboard.access.members ? "متصل بالخادم" : "لا توجد صلاحية"}
+            subtitle={dashboard.access.members ? t("stats.connectedToServer") : t("stats.noAccess")}
             tone="blue"
             emphasis="primary"
           />
         </div>
         <div className="lg:col-span-6">
           <StatCard
-            title="الأعضاء النشطون"
+            title={t("stats.activeMembers")}
             value={dashboard.summary.activeMembers}
             icon={CheckCircle2}
-            subtitle={`${dashboard.summary.pendingMembers} pending approvals`}
+            subtitle={t("stats.pendingApprovals", { count: dashboard.summary.pendingMembers })}
             tone="cyan"
             emphasis="primary"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="الأنشطة الرياضية"
+            title={t("stats.totalSports")}
             value={dashboard.summary.totalSports}
             icon={Trophy}
-            subtitle={`${dashboard.summary.activeSports} active | ${dashboard.summary.pendingSports} pending`}
+            subtitle={t("stats.activeAndPending", { active: dashboard.summary.activeSports, pending: dashboard.summary.pendingSports })}
             tone="orange"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="الإيرادات الرياضية"
+            title={t("stats.sportsRevenue")}
             value={currencyFormatter.format(dashboard.summary.estimatedSportsRevenue)}
             icon={DollarSign}
-            subtitle={`Avg sport fee: ${currencyFormatter.format(dashboard.summary.averageSportPrice)}`}
+            subtitle={t("stats.avgSportFee", { fee: currencyFormatter.format(dashboard.summary.averageSportPrice) })}
             tone="blue"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="قائمة المهام"
+            title={t("stats.tasksList")}
             value={dashboard.summary.totalTasks}
             icon={ListChecks}
-            subtitle={`${dashboard.summary.pendingTasks} pending actions`}
+            subtitle={t("stats.pendingActions", { count: dashboard.summary.pendingTasks })}
             tone="cyan"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="خطط العضوية"
+            title={t("stats.membershipPlans")}
             value={dashboard.summary.totalPlans}
             icon={ShieldCheck}
-            subtitle={`${dashboard.summary.activePlans} active plans`}
+            subtitle={t("stats.activePlans", { count: dashboard.summary.activePlans })}
             tone="orange"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="سجل التدقيق (اليوم)"
+            title={t("stats.auditLogsToday")}
             value={dashboard.summary.auditToday}
             icon={Clock3}
-            subtitle={`${dashboard.summary.auditTotal} total logs`}
+            subtitle={t("stats.totalLogs", { count: dashboard.summary.auditTotal })}
             tone="blue"
           />
         </div>
         <div className="lg:col-span-4">
           <StatCard
-            title="صلاحياتي"
+            title={t("stats.myPrivileges")}
             value={dashboard.privilegeCount}
             icon={ShieldCheck}
-            subtitle={`${dashboard.privilegeModules.length} visible modules`}
+            subtitle={t("stats.visibleModules", { count: dashboard.privilegeModules.length })}
             tone="cyan"
           />
         </div>
@@ -583,10 +589,10 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-lg bg-card p-6 shadow-sm border h-full min-h-[350px]"
         >
-          <h2 className="text-lg font-bold mb-4 text-[#214474]">توزيع حالات الأعضاء</h2>
+          <h2 className="text-lg font-bold mb-4 text-[#214474]">{t("charts.memberDistribution")}</h2>
           {dashboard.access.members ? (
             memberStatusChart.length === 0 ? (
-              <p className="text-sm text-muted-foreground">لا توجد بيانات أعضاء متاحة.</p>
+              <p className="text-sm text-muted-foreground">{t("charts.noMemberData")}</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -609,7 +615,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             )
           ) : (
-            <p className="text-sm text-muted-foreground">ليس لديك إمكانية الوصول إلى تحليلات الأعضاء.</p>
+            <p className="text-sm text-muted-foreground">{t("charts.noMemberAccess")}</p>
           )}
         </motion.div>
 
@@ -620,10 +626,10 @@ export default function DashboardPage() {
           transition={{ delay: 0.1 }}
           className="rounded-lg bg-card p-6 shadow-sm border h-full min-h-[350px]"
         >
-          <h2 className="text-lg font-bold mb-4 text-[#214474]">أكثر الرياضات تسجيلاً</h2>
+          <h2 className="text-lg font-bold mb-4 text-[#214474]">{t("charts.topSports")}</h2>
           {dashboard.access.sports ? (
             dashboard.topSportsChart.length === 0 ? (
-              <p className="text-sm text-muted-foreground">لا توجد بيانات تسجيل رياضي متاحة.</p>
+              <p className="text-sm text-muted-foreground">{t("charts.noSportsData")}</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={dashboard.topSportsChart}>
@@ -636,7 +642,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             )
           ) : (
-            <p className="text-sm text-muted-foreground">ليس لديك إمكانية الوصول إلى تحليلات الرياضات.</p>
+            <p className="text-sm text-muted-foreground">{t("charts.noSportsAccess")}</p>
           )}
         </motion.div>
       </div>
@@ -651,9 +657,9 @@ export default function DashboardPage() {
               <Bell className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="font-semibold text-sm">تنبيهات الاشتراكات</p>
+              <p className="font-semibold text-sm">{t("alerts.title")}</p>
               <p className="text-[11px] text-muted-foreground">
-                {PAYMENT_ALERTS.length} تنبيه يحتاج متابعة
+                {t("alerts.needsAttention", { count: PAYMENT_ALERTS.length })}
               </p>
             </div>
           </div>
@@ -661,7 +667,7 @@ export default function DashboardPage() {
             href="/staff/dashboard/finance/subscriptions"
             className="text-xs text-primary hover:underline"
           >
-            عرض الكل
+            {t("alerts.viewAll")}
           </a>
         </div>
 
@@ -689,8 +695,8 @@ export default function DashboardPage() {
                   <p className={`text-xs font-bold ${status === "overdue" ? "text-rose-600" : "text-amber-600"
                     }`}>
                     {status === "overdue"
-                      ? `متأخر ${Math.abs(days)} يوم`
-                      : `فاضل ${days} يوم`}
+                      ? t("alerts.overdue", { days: Math.abs(days) })
+                      : t("alerts.dueIn", { days })}
                   </p>
                 </div>
               </div>
@@ -701,14 +707,14 @@ export default function DashboardPage() {
         {/* If more than 5 alerts */}
         {PAYMENT_ALERTS.length > 5 && (
           <p className="text-xs text-center text-muted-foreground">
-            +{PAYMENT_ALERTS.length - 5} تنبيهات أخرى
+            {t("alerts.moreAlerts", { count: PAYMENT_ALERTS.length - 5 })}
           </p>
         )}
 
         {/* Empty state */}
         {PAYMENT_ALERTS.length === 0 && (
           <div className="text-center py-4 text-sm text-muted-foreground">
-            ✅ جميع الاشتراكات سارية
+            {t("alerts.allValid")}
           </div>
         )}
       </div>
@@ -716,19 +722,19 @@ export default function DashboardPage() {
       {/* Detailed Tables */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">المهام الأخيرة</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("tables.recentTasksTitle")}</h2>
           {!dashboard.access.tasks ? (
-            <p className="text-sm text-muted-foreground">قائمة المهام غير متاحة لدورك.</p>
+            <p className="text-sm text-muted-foreground">{t("tables.noTasksAccess")}</p>
           ) : dashboard.recentTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لم يتم العثور على مهام.</p>
+            <p className="text-sm text-muted-foreground">{t("tables.noTasksFound")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>المهمة</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>تم الإنشاء بواسطة</TableHead>
-                  <TableHead>تم الإنشاء في</TableHead>
+                  <TableHead>{t("tables.columns.taskName")}</TableHead>
+                  <TableHead>{t("tables.columns.status")}</TableHead>
+                  <TableHead>{t("tables.columns.createdBy")}</TableHead>
+                  <TableHead>{t("tables.columns.createdAt")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -739,7 +745,7 @@ export default function DashboardPage() {
                       <Badge className={taskStatusClassName(task.status)}>{taskStatusLabel(task.status)}</Badge>
                     </TableCell>
                     <TableCell>{task.createdBy}</TableCell>
-                    <TableCell>{task.createdAt ? new Date(task.createdAt).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell>{task.createdAt ? new Date(task.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US") : "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -748,19 +754,19 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">الرياضات الأخيرة</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("tables.recentSportsTitle")}</h2>
           {!dashboard.access.sports ? (
-            <p className="text-sm text-muted-foreground">قائمة الرياضات غير متاحة لدورك.</p>
+            <p className="text-sm text-muted-foreground">{t("tables.noSportsAccess")}</p>
           ) : dashboard.recentSports.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لم يتم العثور على رياضات.</p>
+            <p className="text-sm text-muted-foreground">{t("tables.noSportsFound")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الرياضة</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الأعضاء</TableHead>
-                  <TableHead>السعر</TableHead>
+                  <TableHead>{t("tables.columns.sportName")}</TableHead>
+                  <TableHead>{t("tables.columns.status")}</TableHead>
+                  <TableHead>{t("tables.columns.members")}</TableHead>
+                  <TableHead>{t("tables.columns.price")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -769,7 +775,7 @@ export default function DashboardPage() {
                     <TableCell className="font-medium">{sport.name}</TableCell>
                     <TableCell>
                       <Badge className={sport.status === "active" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
-                        {sport.status}
+                        {sport.status === "active" ? t("status.active") : t("status.pending")}
                       </Badge>
                     </TableCell>
                     <TableCell>{sport.membersCount}</TableCell>

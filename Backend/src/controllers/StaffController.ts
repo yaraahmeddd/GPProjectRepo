@@ -79,27 +79,6 @@ export class StaffController {
    */
   static async getPrivileges(req: Request, res: Response): Promise<void> {
     try {
-      // Check authorization - only ADMIN (1) and EXECUTIVE_MANAGER (2) can view privileges
-      const user = (req as unknown as Record<string, unknown>).user as Record<string, unknown> | undefined;
-
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authorization required',
-        });
-        return;
-      }
-
-      const staffTypeId = user.staff_type_id as number;
-
-      if (staffTypeId !== 1 && staffTypeId !== 2) {
-        res.status(403).json({
-          success: false,
-          message: 'Only administrators and executive managers can view privileges',
-        });
-        return;
-      }
-
       const { module } = req.query;
       const requestedModule = module as string | undefined;
 
@@ -847,6 +826,8 @@ export class StaffController {
 
       // Revoke each privilege individually
       const results: Array<Record<string, unknown>> = [];
+      const failedAttempts: Array<{ privilege_id: number; error: string }> = [];
+
       for (const privId of ids) {
         try {
           const result = await staffService.revokePrivilege(
@@ -855,12 +836,19 @@ export class StaffController {
             Number(user.staff_id),
             reason
           );
-          results.push(result);
+          results.push({ ...result, privilege_id: privId, success: true });
         } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
           results.push({
             success: false,
             privilege_id: privId,
-            error: err instanceof Error ? err.message : 'Unknown error',
+            error: errorMsg,
+          });
+
+          // Track all failures for detailed response
+          failedAttempts.push({
+            privilege_id: privId,
+            error: errorMsg,
           });
         }
       }
@@ -869,13 +857,29 @@ export class StaffController {
 
       if (allSuccessful) {
         await StaffController.logAction(req, 'Revoke Privilege', `Revoked privileges from staff ID: ${id}`, undefined, { ids, reason });
+        res.status(200).json({
+          success: true,
+          count: ids.length,
+          results,
+        });
+      } else if (failedAttempts.length > 0) {
+        // Some failed - return details
+        res.status(409).json({
+          success: false,
+          count: ids.length,
+          successful_revokes: results.filter((r: Record<string, unknown>) => r.success).length,
+          failed_revokes: failedAttempts.length,
+          results,
+          failed_attempts: failedAttempts,
+          hint: 'Some privileges could not be revoked. See failed_attempts for details.',
+        });
+      } else {
+        res.status(207).json({
+          success: false,
+          count: ids.length,
+          results,
+        });
       }
-
-      res.status(allSuccessful ? 200 : 207).json({
-        success: allSuccessful,
-        count: ids.length,
-        results,
-      });
     } catch (error: Error | unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(400).json({
@@ -1012,22 +1016,44 @@ export class StaffController {
   static async getFinalPrivileges(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const staffId = Number(id);
 
-      const privileges = await staffService.getFinalPrivileges(Number(id));
+      if (!Number.isFinite(staffId) || staffId <= 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid staff ID',
+          code: 'INVALID_STAFF_ID',
+        });
+        return;
+      }
+
+      const privileges = await staffService.getFinalPrivileges(staffId);
 
       res.status(200).json({
         success: true,
-        staff_id: Number(id),
+        staff_id: staffId,
         count: privileges.length,
         privileges,
       });
     } catch (error: Error | unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      res.status(404).json({
-        success: false,
-        message: 'Error fetching final privileges',
-        error: errorMessage,
-      });
+      
+      if (errorMessage.includes('not found')) {
+        res.status(404).json({
+          success: false,
+          message: 'Staff member not found',
+          code: 'STAFF_NOT_FOUND',
+          error: errorMessage,
+        });
+      } else {
+        console.error('Error fetching final privileges:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Error fetching final privileges',
+          code: 'INTERNAL_ERROR',
+          error: errorMessage,
+        });
+      }
     }
   }
 

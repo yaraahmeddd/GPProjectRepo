@@ -1,24 +1,35 @@
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface LanguageSwitcherProps {
-  lang: 'ar' | 'en';
-  setLang: (lang: 'ar' | 'en') => void;
+  lang?: 'ar' | 'en';
+  setLang?: (lang: 'ar' | 'en') => void;
 }
 
 export const LanguageSwitcher = ({ lang, setLang }: LanguageSwitcherProps) => {
-  
+  const { i18n } = useTranslation();
+
+  const activeLang = (lang ?? i18n.resolvedLanguage ?? i18n.language).startsWith('en') ? 'en' : 'ar';
+
+  const changeLanguage = async (targetLang: 'ar' | 'en') => {
+    if (targetLang === activeLang) {
+      return;
+    }
+
+    setLang?.(targetLang);
+    await i18n.changeLanguage(targetLang);
+  };
+
   const toggleSwitch = () => {
-    const newLang = lang === 'ar' ? 'en' : 'ar';
-    setLang(newLang);
-    document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = newLang;
+    const newLang = activeLang === 'ar' ? 'en' : 'ar';
+    void changeLanguage(newLang);
   };
 
   const switchTo = (target: 'ar' | 'en') => {
-    if (lang !== target) toggleSwitch();
+    void changeLanguage(target);
   };
 
-  const isArabic = lang === 'ar';
+  const isArabic = activeLang === 'ar';
 
   return (
     <div className="flex items-center gap-3 select-none" dir="ltr">
