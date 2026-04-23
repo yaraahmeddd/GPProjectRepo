@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { ROLE_PRIVILEGES, type Role, type UserToken } from "../types/auth";
 import { resolveFileUrl } from "../utils/fileUrl";
+import { usePrivilegeWebSocket } from "../hooks/usePrivilegeWebSocket";
 
 interface AuthContextType {
   user: UserToken | null;
@@ -182,6 +183,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener("auth:logout", handleAuthLogout);
     return () => window.removeEventListener("auth:logout", handleAuthLogout);
   }, []);
+
+  // Handle real-time privilege updates via WebSocket
+  const handlePrivilegeUpdate = useCallback((newPrivileges: string[]) => {
+    setUser((prevUser) => {
+      if (!prevUser) return prevUser;
+
+      console.log("[AuthContext] Privilege update received:", newPrivileges);
+
+      // Update user with new privileges
+      const updatedUser = {
+        ...prevUser,
+        privileges: newPrivileges,
+      };
+
+      // Persist to localStorage
+      localStorage.setItem("huc_user", JSON.stringify(updatedUser));
+
+      // Dispatch a custom event so other components can react to privilege changes
+      window.dispatchEvent(
+        new CustomEvent("privilege_update", {
+          detail: { privileges: newPrivileges, user: updatedUser },
+        })
+      );
+
+      console.log("[AuthContext] User privileges updated successfully");
+      
+      return updatedUser;
+    });
+  }, []);
+
+  // Connect WebSocket for real-time privilege updates
+  usePrivilegeWebSocket({
+    staffId: (user as any)?.staff_id,
+    memberId: (user as any)?.member_id,
+    userId: user?.email,
+    onPrivilegeUpdate: handlePrivilegeUpdate,
+    enabled: !!user && !!token,
+  });
 
   const login = (data: any) => {
     const userData = buildUserToken(data);

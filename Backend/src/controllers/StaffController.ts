@@ -3,6 +3,8 @@ import { Privilege } from '../entities/Privilege';
 import StaffService from '../services/StaffService';
 import { AuditLogService } from '../services/AuditLogService';
 import { AuthenticatedRequest } from '../middleware/authorizePrivilege';
+import { socketManager } from '../websocket/SocketManager';
+import { PrivilegeCalculationService } from '../services/PrivilegeCalculationService';
 
 const staffService = new StaffService();
 const auditLogService = new AuditLogService();
@@ -37,6 +39,24 @@ export class StaffController {
       console.error('Failed to create audit log in StaffController:', error);
     }
   }
+
+  /**
+   * Emit privilege update to connected clients via WebSocket
+   * Fetches the latest privilege codes and broadcasts them
+   */
+  private static async emitPrivilegeUpdate(staffId: number): Promise<void> {
+    try {
+      const privilegeCodes = await PrivilegeCalculationService.calculateFinalPrivilegeCodes(staffId);
+      const privilegesArray = Array.from(privilegeCodes);
+      socketManager.broadcastPrivilegeUpdate('staff', staffId, privilegesArray);
+      console.log(`[StaffController] Privilege update emitted for staff ${staffId}: ${privilegesArray.join(', ')}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[StaffController] Failed to emit privilege update for staff ${staffId}:`, errorMessage);
+      // Don't throw - logging failure shouldn't break the response
+    }
+  }
+
   /**
    * GET /staff/types
    * Get all available staff types
@@ -694,6 +714,9 @@ export class StaffController {
 
       const result = await staffService.assignPackages(Number(id), package_ids, Number(user.staff_id));
 
+      // Emit privilege update to connected clients
+      await StaffController.emitPrivilegeUpdate(Number(id));
+
       await StaffController.logAction(req, 'Assign Packages', `Assigned privilege packages to staff ID: ${id}`, undefined, { package_ids });
 
       res.status(200).json(result);
@@ -769,6 +792,8 @@ export class StaffController {
 
       if (allSuccessful) {
         await StaffController.logAction(req, 'Grant Privilege', `Granted privileges to staff ID: ${id}`, undefined, { ids, reason });
+        // Emit privilege update to connected clients
+        await StaffController.emitPrivilegeUpdate(Number(id));
       }
 
       res.status(allSuccessful ? 200 : 207).json({
@@ -857,13 +882,16 @@ export class StaffController {
 
       if (allSuccessful) {
         await StaffController.logAction(req, 'Revoke Privilege', `Revoked privileges from staff ID: ${id}`, undefined, { ids, reason });
+        // Emit privilege update to connected clients
+        await StaffController.emitPrivilegeUpdate(Number(id));
         res.status(200).json({
           success: true,
           count: ids.length,
           results,
         });
       } else if (failedAttempts.length > 0) {
-        // Some failed - return details
+        // Some failed - return details, but still emit update for successful ones
+        await StaffController.emitPrivilegeUpdate(Number(id));
         res.status(409).json({
           success: false,
           count: ids.length,

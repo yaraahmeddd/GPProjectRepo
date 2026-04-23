@@ -4,7 +4,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createServer } from 'http';
 import { AppDataSource } from './database/data-source';
+import { socketManager } from './websocket/SocketManager';
 import registrationRoutes from './routes/RegistrationRoutes';
 import membershipRoutes from './routes/MembershipRoutes';
 import StaffRoutes from './routes/StaffRoutes';
@@ -98,11 +100,17 @@ const getDefaultOrigins = (): string[] => {
   return [
     'http://localhost:3000',
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:5176',
     'http://localhost',
     'http://10.100.104.157:8080',
     'http://10.100.104.157',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
+    'http://127.0.0.1:5176',
   ];
 };
 
@@ -217,8 +225,16 @@ AppDataSource.initialize()
     const { initializeDefaultPlans } = await import('./utils/initializePlans');
     await initializeDefaultPlans();
 
-    app.listen(PORT, '0.0.0.0', () => {
+    // Create HTTP server with Express app
+    const httpServer = createServer(app);
+
+    // Initialize WebSocket server
+    socketManager.initialize(httpServer, allowedOrigins);
+
+    // Start server
+    httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+      console.log(`🔌 WebSocket ready at ws://0.0.0.0:${PORT}`);
     });
   })
   .catch((error) => {
