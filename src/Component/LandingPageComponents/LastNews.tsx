@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../api/axios';
 import { X, Calendar, Play, ArrowLeft, ArrowUpRight } from 'lucide-react';
@@ -63,8 +62,6 @@ const mapMediaCategory = (category: string): NewsCategory => {
 };
 
 const LastNews: React.FC = () => {
-  const { t } = useTranslation("landing");
-  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [posts, setPosts] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -80,14 +77,11 @@ const LastNews: React.FC = () => {
   const [isReaderOpen, setIsReaderOpen] = useState(false);
 
   const categories: Category[] = [
-    { id: 'all', name: 'all', label: t('news.cats.all', 'الكل') },
-    { id: 'photos', name: 'photos', label: t('news.cats.photos', 'الصور') },
-    { id: 'videos', name: 'videos', label: t('news.cats.videos', 'الفيديوهات') },
-    { id: 'events', name: 'events', label: t('news.cats.events', 'الفعاليات') },
-    { id: 'promotions', name: 'promotions', label: t('news.cats.promotions', 'العروض الترويجية') },
-    { id: 'news', name: 'news', label: t('news.cats.news', 'الأخبار') },
-    { id: 'announcements', name: 'announcements', label: t('news.cats.announcements', 'الإعلانات') },
-    { id: 'maintenance', name: 'maintenance', label: t('news.cats.maintenance', 'الصيانة') },
+    { id: 'all', name: 'all', label: 'الكل' },
+    { id: 'photos', name: 'photos', label: 'الصور' },
+    { id: 'videos', name: 'videos', label: 'الفيديوهات' },
+    { id: 'events', name: 'events', label: 'الفعاليات' },
+    { id: 'news', name: 'news', label: 'الأخبار' },
   ];
 
   useEffect(() => {
@@ -133,59 +127,16 @@ const LastNews: React.FC = () => {
     fetchMediaPosts();
   }, []);
 
-  useEffect(() => {
-    if (loading) return;
-
-    const timer = setTimeout(() => {
-      newsCardsRef.current.forEach((card, index) => {
-        if (card) {
-          setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-          }, index * 100);
+  const openPostDetails = async (postId: number) => {
+    try {
+        const response = await api.get(`/media-posts/${postId}`);
+        if (response.data.success) {
+            setSelectedPostDetails(response.data.data);
+            setIsReaderOpen(true);
+            document.body.style.overflow = 'hidden'; // Lock background scroll
         }
-      });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [loading, posts, activeFilter, searchTerm]);
-
-  const handleFilterClick = (filterId: FilterKey) => {
-    setActiveFilter(filterId);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const openPostDetails = (postId: number) => {
-    navigate(`/news/${postId}`);
-  };
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`شكراً لاشتراكك! سنرسل لك آخر الأخبار على: ${email}`);
-    setEmail('');
-  };
-
-  const getCategoryBadge = (category: NewsCategory) => {
-    switch (category) {
-      case 'photos':
-        return { label: t('news.badge.photos', 'صور'), class: 'bg-slate-600/90 text-white' };
-      case 'videos':
-        return { label: t('news.badge.video', 'فيديو'), class: 'bg-[#FDBF00]/90 text-[#0A1A44]' };
-      case 'events':
-        return { label: t('news.badge.event', 'فعالية'), class: 'bg-blue-500/90 text-white' };
-      case 'promotions':
-        return { label: t('news.badge.offer', 'عرض'), class: 'bg-purple-500/90 text-white' };
-      case 'news':
-        return { label: t('news.badge.news', 'خبر'), class: 'bg-emerald-500/90 text-white' };
-      case 'announcements':
-        return { label: t('news.badge.announcement', 'إعلان'), class: 'bg-red-500/90 text-white' };
-      case 'maintenance':
-        return { label: t('news.badge.maintenance', 'صيانة'), class: 'bg-amber-500/90 text-white' };
-      default:
-        return { label: t('news.badge.post', 'منشور'), class: 'bg-gray-500/90 text-white' };
+    } catch (error) {
+        console.error('Failed to fetch single post:', error);
     }
   };
 
@@ -201,212 +152,226 @@ const LastNews: React.FC = () => {
   const featuredMain = featuredNews[0];
 
   const filteredNews = useMemo(() => {
-    const searchQuery = normalizeSearchText(searchTerm);
-    const shouldSearchAllPosts = activeFilter !== 'all' || Boolean(searchQuery);
-    const sourcePosts = shouldSearchAllPosts ? posts : posts.slice(3);
-
-    return sourcePosts.filter((item) => {
-      const matchesFilter = activeFilter === 'all' || item.category === activeFilter;
-
-      if (!searchQuery) {
-        return matchesFilter;
-      }
-
-      const haystack = normalizeSearchText(
-        `${item.title} ${item.excerpt} ${item.content} ${item.sourceCategory || ''}`,
-      );
-
-      return matchesFilter && haystack.includes(searchQuery);
-    });
-  }, [activeFilter, posts, searchTerm]);
+    const sourcePosts = activeFilter !== 'all' ? posts : posts.slice(5);
+    return sourcePosts.filter((item) => activeFilter === 'all' || item.category === activeFilter);
+  }, [activeFilter, posts]);
 
   return (
-    <div className="font-cairo bg-gray-50" >
-      <section className="relative overflow-hidden bg-[#0e1c38] hero-pattern">
-        <div className="gradient-overlay">
-          <div className="container mx-auto px-4 py-20 md:py-32">
-            <div className="max-w-4xl mx-auto text-center text-white animate-fade-in">
-              <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">{t("news.title", "آخر الأخبار")}</h1>
-              <p className="text-xl md:text-2xl text-white/90 leading-relaxed">
-                {t("news.subtitle", "تابع أحدث أخبار نادي حلوان والإنجازات والفعاليات")}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#ffffff] text-[#0e1c38] font-['Cairo'] pb-24" dir="rtl">
+        <style dangerouslySetInnerHTML={{__html: `
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800;900&display=swap');
+            
+            @keyframes scaleUp {
+                from { opacity: 0; transform: scale(0.95) translateY(20px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            
+            @keyframes slideUpFullscreen {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
 
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="#F9FAFB" />
-          </svg>
-        </div>
-      </section>
+            @keyframes fadeOutFullscreen {
+                from { transform: translateY(0); }
+                to { transform: translateY(100%); }
+            }
 
-      <section className="py-8 bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-gray-700 font-bold">{t("news.filter_by", "تصفية حسب:")}</span>
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => handleFilterClick(category.id as FilterKey)}
-                  className={`filter-btn px-6 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 ${
-                    activeFilter === category.id
-                      ? 'bg-gradient-to-r from-[#0A1A44] to-[#0e1c38] text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
-                  }`}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
+            .animate-reader-open {
+                animation: slideUpFullscreen 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
 
-            <div className="flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder={t("news.search_placeholder", "ابحث في الأخبار...")}
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="bg-transparent border-none outline-none text-gray-700 w-48"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+            .animate-reader-close {
+                animation: fadeOutFullscreen 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
 
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t("news.featured", "الأخبار المميزة")}</h2>
-            <div className="h-1 w-20 bg-[#FDBF00] rounded-full"></div>
-          </div>
+            .grid-item-reveal {
+                animation: scaleUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+            }
+            
+            .hide-scroll::-webkit-scrollbar { display: none; }
+        `}} />
 
-          {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("news.loading", "جاري تحميل الأخبار...")}</div>
-          ) : featuredMain ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-              <div
-                onClick={() => openPostDetails(featuredMain.id)}
-                className="news-card bg-white rounded-3xl shadow-xl overflow-hidden cursor-pointer opacity-0 transform translate-y-4 transition-all duration-300"
-                data-category={featuredMain.category}
-                ref={(el) => {
-                  newsCardsRef.current[0] = el;
-                }}
-              >
-                <div className="relative h-80 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                  <img src={featuredMain.image} alt={featuredMain.title} className="news-image w-full h-full object-cover" />
-                  <div className="absolute top-4 right-4 z-20">
-                    <span className="category-badge bg-[#FDBF00]/90 text-[#0A1A44] px-4 py-2 rounded-full text-sm font-bold">
-                      {getCategoryBadge(featuredMain.category).label}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-6 right-6 left-6 z-20 text-white">
-                    <h3 className="text-2xl md:text-3xl font-bold mb-2 leading-tight">{featuredMain.title}</h3>
-                    <p className="text-white/90 text-sm mb-3">{featuredMain.timeAgo}</p>
-                  </div>
+        {/* Editorial Header */}
+        <header className="px-6 md:px-12 py-32 bg-[#0e1c38] relative overflow-hidden flex items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a1526] to-[#0e1c38] z-0"></div>
+
+            <div className="max-w-[1400px] mx-auto relative z-10 text-center">
+                <div className="flex flex-col items-center">
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1] mb-6 text-white">
+                        آخر الأخبار
+                    </h1>
+                    <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl leading-relaxed">
+                        تغطية حصرية لأهم الأحداث، الإنجازات، والفعاليات داخل النادي.
+                    </p>
                 </div>
-                <div className="p-6">
-                  <p className="text-gray-600 leading-relaxed">{featuredMain.excerpt}</p>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPostDetails(featuredMain.id);
-                    }}
-                    className="mt-4 text-[#0A1A44] font-bold hover:text-[#FDBF00] transition-colors flex items-center gap-2"
-                  >
-                    <span>{t("news.read_more", "اقرأ المزيد")}</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+            </div>
+        </header>
 
-              <div className="grid grid-cols-1 gap-6">
-                {secondaryFeatured.map((news, index) => (
-                  <div
-                    key={news.id}
-                    onClick={() => openPostDetails(news.id)}
-                    className="news-card bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer flex opacity-0 transform translate-y-4 transition-all duration-300"
-                    data-category={news.category}
-                    ref={(el) => {
-                      newsCardsRef.current[index + 1] = el;
-                    }}
-                  >
-                    <div className="relative w-40 flex-shrink-0 overflow-hidden">
-                      <img src={news.image} alt={news.title} className="news-image w-full h-full object-cover" />
-                    </div>
-                    <div className="p-6 flex-1">
-                      <span className={`inline-block ${getCategoryColor(news.category)} px-3 py-1 rounded-full text-xs font-bold mb-2`}>
-                        {getCategoryBadge(news.category).label}
-                      </span>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{news.title}</h3>
-                      <p className="text-gray-600 text-sm mb-2">{news.timeAgo}</p>
-                    </div>
-                  </div>
+        {/* Main Content */}
+        <main className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
+            {/* Filter Pills - Moved below the header */}
+            <div className="flex gap-2 overflow-x-auto hide-scroll pb-6 w-full justify-center border-b border-gray-100 mb-12">
+                {categories.map((filter) => (
+                    <button 
+                        key={filter.id}
+                        onClick={() => setActiveFilter(filter.id as FilterKey)}
+                        className={`px-6 py-2.5 rounded-full text-sm font-bold tracking-wide transition-all duration-300 whitespace-nowrap border ${
+                            activeFilter === filter.id 
+                            ? 'bg-[#2596be] border-[#2596be] text-white shadow-[0_4px_10px_rgba(37,150,190,0.3)]' 
+                            : 'bg-white border-gray-200 text-gray-500 hover:border-[#2596be] hover:text-[#2596be]'
+                        }`}
+                    >
+                        {filter.label}
+                    </button>
                 ))}
-              </div>
             </div>
-          ) : (
-            <div className="py-12 text-center text-gray-500">{t("news.no_news", "لا توجد أخبار متاحة حالياً.")}</div>
-          )}
-        </div>
-      </section>
-
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t("news.all_news", "جميع الأخبار")}</h2>
-            <div className="h-1 w-20 bg-[#FDBF00] rounded-full"></div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {!loading && filteredNews.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-gray-500">{t("news.no_results", "لا توجد نتائج مطابقة للبحث أو الفلتر.")}</div>
+            {loading ? (
+                <div className="h-[40vh] flex items-center justify-center">
+                    <div className="w-12 h-12 border-4 border-gray-100 border-t-[#2596be] rounded-full animate-spin"></div>
+                </div>
+            ) : posts.length === 0 ? (
+                <div className="text-center py-32">
+                    <h2 className="text-3xl font-black text-gray-300">لا توجد تغطية حالياً.</h2>
+                </div>
             ) : (
-              filteredNews.map((news, index) => {
-                const badge = getCategoryBadge(news.category);
-                return (
-                  <div
-                    key={news.id}
-                    onClick={() => openPostDetails(news.id)}
-                    className="news-card bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer opacity-0 transform translate-y-4 transition-all duration-300"
-                    data-category={news.category}
-                    ref={(el) => {
-                      newsCardsRef.current[index + 1 + secondaryFeatured.length] = el;
-                    }}
-                  >
-                    <div className="relative h-56 overflow-hidden">
-                      <img src={news.image} alt={news.title} className="news-image w-full h-full object-cover" />
-                      <div className="absolute top-4 right-4">
-                        <span className={`category-badge ${badge.class} px-3 py-1.5 rounded-full text-xs font-bold`}>{badge.label}</span>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{news.date}</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">{news.title}</h3>
-                      <p className="text-gray-600 text-sm leading-relaxed mb-4">{news.excerpt}</p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openPostDetails(news.id);
-                        }}
-                        className="text-[#0A1A44] font-bold hover:text-[#FDBF00] transition-colors text-sm flex items-center gap-2"
-                      >
-                        <span>{t("news.read_more", "اقرأ المزيد")}</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
+                <>
+                    {/* Featured Section (1 Big + 4 Small) */}
+                    {activeFilter === 'all' && featuredMain && (
+                        <div className="mb-20">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">الأخبار المميزة</h2>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 auto-rows-[minmax(200px,auto)]">
+                                {/* 1 BIG HERO */}
+                                <div 
+                                    className="lg:col-span-8 lg:row-span-2 group cursor-pointer relative overflow-hidden bg-gray-100 rounded-[2rem] grid-item-reveal min-h-[400px]"
+                                    onClick={() => openPostDetails(featuredMain.id)}
+                                >
+                                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#0e1c38]/90 via-[#0e1c38]/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
+                                    
+                                    <img 
+                                        src={featuredMain.image} 
+                                        alt={featuredMain.title} 
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+                                    />
+
+                                    <div className="absolute inset-0 z-20 p-8 flex flex-col justify-end">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="bg-[#2596be] text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider">
+                                                {featuredMain.sourceCategory}
+                                            </span>
+                                            <span className="text-white/80 text-sm font-medium flex items-center gap-1.5">
+                                                <Calendar size={14} /> {featuredMain.date}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4 group-hover:-translate-y-2 transition-transform duration-500 line-clamp-2">
+                                            {featuredMain.title}
+                                        </h2>
+                                        <div className="w-12 h-1 bg-white/30 rounded-full overflow-hidden group-hover:w-24 transition-all duration-700">
+                                            <div className="w-full h-full bg-[#2596be] -translate-x-full group-hover:translate-x-0 transition-transform duration-700 delay-100" />
+                                        </div>
+                                    </div>
+                                    
+                                    {featuredMain.category === 'videos' && (
+                                        <div className="absolute top-8 left-8 z-20 w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 group-hover:bg-white group-hover:text-[#2596be] transition-colors duration-500">
+                                            <Play size={24} className="ml-1" fill="currentColor" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 4 SMALL ITEMS */}
+                                <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-6">
+                                    {secondaryFeatured.map((post, i) => (
+                                        <div 
+                                            key={post.id}
+                                            className="group cursor-pointer relative overflow-hidden bg-gray-50 rounded-2xl grid-item-reveal flex flex-col h-full min-h-[200px]"
+                                            style={{ animationDelay: `${(i + 1) * 0.1}s` }}
+                                            onClick={() => openPostDetails(post.id)}
+                                        >
+                                            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#0e1c38]/90 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
+                                            <img 
+                                                src={post.image} 
+                                                alt={post.title} 
+                                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
+                                            />
+                                            <div className="absolute inset-0 z-20 p-5 flex flex-col justify-end">
+                                                <h3 className="text-white font-bold leading-snug line-clamp-3 group-hover:-translate-y-1 transition-transform duration-300">
+                                                    {post.title}
+                                                </h3>
+                                            </div>
+                                            {post.category === 'videos' && (
+                                                <div className="absolute top-4 left-4 z-20 w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30">
+                                                    <Play size={14} className="ml-0.5" fill="currentColor" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* All Other News Standard Grid */}
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">جميع الأخبار</h2>
+                        
+                        {filteredNews.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500 font-bold">لا توجد نتائج مطابقة.</div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                                    {filteredNews.slice(0, visibleCount).map((post, i) => (
+                                        <div 
+                                            key={post.id}
+                                            className={`group cursor-pointer relative overflow-hidden bg-gray-50 rounded-3xl grid-item-reveal flex flex-col shadow-sm hover:shadow-xl transition-shadow duration-500`}
+                                            style={{ animationDelay: `${(i % 8 + 1) * 0.05}s` }}
+                                            onClick={() => openPostDetails(post.id)}
+                                        >
+                                            <div className="relative aspect-[4/3] overflow-hidden">
+                                                <img 
+                                                    src={post.image} 
+                                                    alt={post.title} 
+                                                    className="w-full h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                                                />
+                                                {post.category === 'videos' && (
+                                                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                                                        <div className="w-12 h-12 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-500">
+                                                            <Play size={20} className="ml-1" fill="currentColor" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-6 md:p-8 flex-1 flex flex-col justify-between bg-white group-hover:bg-gray-50 transition-colors duration-500 border border-t-0 border-gray-100 rounded-b-3xl">
+                                                <div>
+                                                    <span className="text-[#2596be] text-xs font-black tracking-wider uppercase mb-3 block">
+                                                        {post.sourceCategory}
+                                                    </span>
+                                                    <h3 className="text-xl font-bold text-[#0e1c38] leading-snug mb-3 group-hover:text-[#2596be] transition-colors duration-300 line-clamp-2">
+                                                        {post.title}
+                                                    </h3>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
+                                                    <span className="text-gray-400 text-sm font-medium flex items-center gap-1.5">
+                                                        <Calendar size={14} /> {post.date}
+                                                    </span>
+                                                    <ArrowUpRight size={18} className="text-gray-300 group-hover:text-[#2596be] group-hover:-translate-y-1 group-hover:translate-x-1 transition-all duration-300" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {filteredNews.length > visibleCount && (
+                                    <div className="mt-12 flex justify-center">
+                                        <button 
+                                            onClick={() => setVisibleCount(prev => prev + 8)}
+                                            className="px-8 py-3 bg-white border-2 border-gray-100 text-[#0e1c38] font-bold rounded-full hover:border-[#2596be] hover:text-[#2596be] transition-all duration-300 shadow-sm hover:shadow-md"
+                                        >
+                                            عرض المزيد من الأخبار
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </>
             )}
@@ -428,88 +393,58 @@ const LastNews: React.FC = () => {
                     </button>
                 </div>
 
-          <div className="text-center mt-12">
-            <button className="bg-gradient-to-r from-[#0e1c38] to-[#0A1A44] hover:from-[#0A1A44] hover:to-[#0e1c38] text-white px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-              {t("news.load_more", "عرض المزيد من الأخبار")}
-            </button>
-          </div>
-        </div>
-      </section>
+                {/* Article Content */}
+                <article className="max-w-4xl mx-auto px-6 py-24 md:py-32 min-h-screen">
+                    <div className="flex items-center gap-4 mb-8">
+                        <span className="bg-[#2596be]/10 text-[#2596be] px-4 py-1.5 rounded-full text-sm font-black tracking-wider">
+                            {selectedPostDetails.category}
+                        </span>
+                        <span className="text-gray-400 text-sm font-medium flex items-center gap-1.5">
+                            <Calendar size={16} /> {formatDate(selectedPostDetails.date)}
+                        </span>
+                    </div>
 
-      <section className="py-20 bg-gradient-to-r from-[#0e1c38] to-[#0A1A44]">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center text-white">
-            <div className="mb-8">
-              <svg className="w-20 h-20 mx-auto mb-6 text-[#FDBF00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
+                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#0e1c38] leading-[1.3] mb-12">
+                        {selectedPostDetails.title}
+                    </h1>
+
+                    {/* Full Uncropped Photo */}
+                    <div className="rounded-[2rem] overflow-hidden bg-gray-50 mb-12 shadow-sm border border-gray-100 flex items-center justify-center">
+                        <img 
+                            src={normalizeImageUrl(selectedPostDetails.images?.[0]) || DEFAULT_IMAGE} 
+                            alt={selectedPostDetails.title}
+                            className="w-full h-auto max-h-[75vh] object-contain"
+                        />
+                    </div>
+
+                    {/* Details / Description */}
+                    <div className="prose prose-lg prose-headings:font-bold prose-a:text-[#2596be] text-gray-700 font-medium leading-loose max-w-none mb-16 whitespace-pre-wrap text-lg md:text-xl">
+                        {selectedPostDetails.description || 'لا يوجد تفاصيل إضافية لهذا المنشور.'}
+                    </div>
+
+                    {selectedPostDetails.category === 'فيديو' && selectedPostDetails.videoUrl && (
+                        <div className="mt-12 rounded-3xl overflow-hidden bg-gray-100 aspect-video shadow-xl border border-gray-100">
+                            <iframe 
+                                src={selectedPostDetails.videoUrl.replace('watch?v=', 'embed/')} 
+                                className="w-full h-full"
+                                allowFullScreen 
+                                title="Video Player"
+                            />
+                        </div>
+                    )}
+
+                    {/* Article Footer */}
+                    <div className="mt-20 pt-10 border-t border-gray-100 flex justify-center">
+                        <button 
+                            onClick={closeReader}
+                            className="px-8 py-4 bg-[#0e1c38] text-white rounded-full font-bold hover:bg-[#2596be] hover:-translate-y-1 transition-all duration-300 shadow-xl shadow-[#0e1c38]/20"
+                        >
+                            العودة للأخبار
+                        </button>
+                    </div>
+                </article>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">{t("news.subscribe.title", "اشترك في النشرة الإخبارية")}</h2>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">{t("news.subscribe.subtitle", "احصل على آخر الأخبار والإنجازات مباشرة في بريدك الإلكتروني")}</p>
-            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
-              <input
-                type="email"
-                placeholder={t("news.subscribe.placeholder", "أدخل بريدك الإلكتروني")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-6 py-4 rounded-full text-gray-900 text-lg outline-none focus:ring-4 focus:ring-[#FDBF00]/30"
-                required
-              />
-              <button
-                type="submit"
-                className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
-              >{t("news.subscribe.button", "اشترك الآن")}</button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <style>{`
-        .gradient-overlay {
-          background: linear-gradient(135deg, rgba(10, 26, 68, 0.95) 0%, rgba(14, 28, 56, 0.9) 100%);
-        }
-
-        .hero-pattern {
-          background-image:
-            radial-gradient(circle at 20% 50%, rgba(253, 191, 0, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(253, 191, 0, 0.1) 0%, transparent 50%);
-        }
-
-        .news-card {
-          transition: all 0.3s ease;
-        }
-
-        .news-card:hover {
-          transform: translateY(-8px);
-        }
-
-        .news-card:hover .news-image {
-          transform: scale(1.1);
-        }
-
-        .news-image {
-          transition: transform 0.5s ease;
-        }
-
-        .category-badge {
-          backdrop-filter: blur(10px);
-        }
-
-        .animate-fade-in {
-          animation: fadeIn 0.6s ease-in;
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+        )}
     </div>
   );
 };
