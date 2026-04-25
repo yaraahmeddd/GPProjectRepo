@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -31,6 +32,7 @@ interface Facility {
 }
 
 const SportDetailedPG: React.FC = () => {
+  const { t } = useTranslation("landing");
     const asset = (name: string) => `/assets/${name}`;
     const [selectedSport, setSelectedSport] = useState<string>('football');
     const [selectedClub, setSelectedClub] = useState<string>('maadi');
@@ -178,13 +180,13 @@ const SportDetailedPG: React.FC = () => {
     };
 
     return (
-        <div className="font-cairo bg-gray-50" dir="rtl">
+        <div className="font-cairo bg-gray-50" >
             {/* Hero Section */}
             <section className="relative overflow-hidden bg-[#0e1c38] min-h-screen flex items-center">
                 <div className="absolute inset-0">
                     <img
                         src={currentSport.heroImage}
-                        alt={currentSport.nameAr}
+                        alt={t(`sports.info.${currentSport.id}.name`, currentSport.nameAr)}
                         className="w-full h-full object-cover opacity-30"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-[#0e1c38] via-[#0e1c38]/80 to-transparent"></div>
@@ -195,17 +197,17 @@ const SportDetailedPG: React.FC = () => {
                         {/* Left Content */}
                         <div className="text-white order-2 lg:order-1">
                             <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
-                                أكاديمية جامعة العاصمة {currentSport.nameAr}
+                                {t("sports.academy_title", "أكاديمية جامعة العاصمة {{sport}}", { sport: t(`sports.info.${currentSport.id}.name`, currentSport.nameAr) })}
                             </h1>
                             <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
-                                {currentSport.descriptionAr}
+                                {t(`sports.info.${currentSport.id}.desc`, currentSport.descriptionAr)}
                             </p>
                             <div className="flex gap-4">
                                 <button onClick={() => window.location.href = '/re'} className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-                                    كن عضواً
+                                    {t("sports.cta.become_member", "كن عضواً")}
                                 </button>
                                 <button className="border-2 border-white text-white hover:bg-white/10 px-8 py-4 rounded-full font-bold text-lg transition-all duration-300">
-                                    تواصل معنا
+                                    {t("sports.cta.contact", "تواصل معنا")}
                                 </button>
                             </div>
                         </div>
@@ -219,8 +221,8 @@ const SportDetailedPG: React.FC = () => {
                                     onChange={(e) => setSelectedSport(e.target.value)}
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
-                                    <option value="football">كرة القدم</option>
-                                    <option value="swimming">السباحة</option>
+                                    <option value="football">{t("sports.names.football", "كرة القدم")}</option>
+                                    <option value="swimming">{t("sports.names.swimming", "السباحة")}</option>
                                 </select>
                                 <ChevronRight className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#FDBF00] pointer-events-none" />
                             </div>
@@ -233,7 +235,7 @@ const SportDetailedPG: React.FC = () => {
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
                                     {clubs.map((club) => (
-                                        <option key={club.id} value={club.id}>{club.nameAr}</option>
+                                        <option key={club.id} value={club.id}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
                                     ))}
                                 </select>
                                 <ChevronRight className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#FDBF00] pointer-events-none" />
@@ -249,12 +251,12 @@ const SportDetailedPG: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         {/* Left - Description */}
                         <div className="order-2 lg:order-1">
-                            <h2 className="text-4xl font-bold text-gray-900 mb-6">{currentSport.nameAr}</h2>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-6">{t(`sports.info.${currentSport.id}.name`, currentSport.nameAr)}</h2>
                             <p className="text-gray-700 text-lg leading-relaxed mb-8">
-                                {currentSport.descriptionAr}
+                                {t(`sports.info.${currentSport.id}.desc`, currentSport.descriptionAr)}
                             </p>
                             <button onClick={() => window.location.href = '/re'} className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-                                كن عضواً
+                                {t("sports.cta.become_member", "كن عضواً")}
                             </button>
                         </div>
 
@@ -265,7 +267,7 @@ const SportDetailedPG: React.FC = () => {
                                 <div className="text-6xl font-extrabold text-[#FDBF00] mb-2">
                                     {currentSport.foundedYear}
                                 </div>
-                                <div className="text-gray-600 font-semibold text-lg">سنة التأسيس</div>
+                                <div className="text-gray-600 font-semibold text-lg">{t("sports.stats.founded", "سنة التأسيس")}</div>
                             </div>
 
                             {/* Players */}
@@ -273,7 +275,7 @@ const SportDetailedPG: React.FC = () => {
                                 <div className="text-6xl font-extrabold text-[#FDBF00] mb-2">
                                     {currentSport.players.toLocaleString()}
                                 </div>
-                                <div className="text-gray-600 font-semibold text-lg">لاعب</div>
+                                <div className="text-gray-600 font-semibold text-lg">{t("sports.stats.players", "لاعب")}</div>
                             </div>
 
                             {/* Coaches */}
@@ -281,7 +283,7 @@ const SportDetailedPG: React.FC = () => {
                                 <div className="text-6xl font-extrabold text-[#FDBF00] mb-2">
                                     {currentSport.coaches}
                                 </div>
-                                <div className="text-gray-600 font-semibold text-lg">مدرب</div>
+                                <div className="text-gray-600 font-semibold text-lg">{t("sports.stats.coaches", "مدرب")}</div>
                             </div>
 
                             {/* Courts */}
@@ -289,7 +291,7 @@ const SportDetailedPG: React.FC = () => {
                                 <div className="text-6xl font-extrabold text-[#FDBF00] mb-2">
                                     {currentSport.courts}
                                 </div>
-                                <div className="text-gray-600 font-semibold text-lg">ملعب</div>
+                                <div className="text-gray-600 font-semibold text-lg">{t("sports.stats.court", "ملعب")}</div>
                             </div>
                         </div>
                     </div>
@@ -309,10 +311,10 @@ const SportDetailedPG: React.FC = () => {
                 <div className="relative z-10 container mx-auto px-4">
                     <div className="text-center mb-20">
                         <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                            سجل أكاديمية جامعة العاصمة {currentSport.nameAr}
+                            {t("sports.history_title", "سجل أكاديمية جامعة العاصمة {{sport}}", { sport: t(`sports.info.${currentSport.id}.name`, currentSport.nameAr) })}
                         </h2>
                         <p className="text-gray-300 text-lg">
-                            أفضل الإنجازات لأكاديمية جامعة العاصمة {currentSport.nameAr}
+                            {t("sports.history_subtitle", "أفضل الإنجازات لأكاديمية جامعة العاصمة {{sport}}", { sport: t(`sports.info.${currentSport.id}.name`, currentSport.nameAr) })}
                         </p>
                     </div>
 
@@ -344,8 +346,8 @@ const SportDetailedPG: React.FC = () => {
                                                 <div className="bg-[#FDBF00] text-[#0e1c38] font-bold text-lg md:text-xl px-6 py-2 rounded-full inline-block mb-6">
                                                     {achievement.year}
                                                 </div>
-                                                <h3 className="text-2xl md:text-3xl font-bold mb-4">{achievement.titleAr}</h3>
-                                                <p className="text-gray-200 text-lg">{achievement.descriptionAr}</p>
+                                                <h3 className="text-2xl md:text-3xl font-bold mb-4">{t(`sports.info.${currentSport.id}.achievements.${achievement.id}.title`, achievement.titleAr)}</h3>
+                                                <p className="text-gray-200 text-lg">{t(`sports.info.${currentSport.id}.achievements.${achievement.id}.desc`, achievement.descriptionAr)}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -385,11 +387,9 @@ const SportDetailedPG: React.FC = () => {
             <section className="py-20 bg-white">
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                            مرافقنا
-                        </h2>
+                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">{t("sports.facilities.title", "مرافقنا")}</h2>
                         <p className="text-gray-600 text-lg">
-                            مرافق حديثة للتدريب والمنافسة
+                            {t("sports.facilities.subtitle", "مرافق حديثة للتدريب والمنافسة")}
                         </p>
                     </div>
 
@@ -399,7 +399,7 @@ const SportDetailedPG: React.FC = () => {
                             <div className="relative h-96 rounded-3xl overflow-hidden shadow-2xl mb-8">
                                 <img
                                     src={currentSport.facilities[currentFacilityIndex].image}
-                                    alt={currentSport.facilities[currentFacilityIndex].nameAr}
+                                    alt={t(`sports.info.${currentSport.id}.facilities.${currentSport.facilities[currentFacilityIndex].id}.name`, currentSport.facilities[currentFacilityIndex].nameAr)}
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -412,7 +412,7 @@ const SportDetailedPG: React.FC = () => {
                                         className="w-full md:w-64 bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-3 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                     >
                                         {clubs.map((club) => (
-                                            <option key={club.id} value={club.id}>{club.nameAr}</option>
+                                            <option key={club.id} value={club.id}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -434,10 +434,10 @@ const SportDetailedPG: React.FC = () => {
                                 {/* Facility Info */}
                                 <div className="absolute bottom-6 left-6 right-6 text-white">
                                     <h3 className="text-3xl font-bold mb-2">
-                                        {currentSport.facilities[currentFacilityIndex].nameAr}
+                                        {t(`sports.info.${currentSport.id}.facilities.${currentSport.facilities[currentFacilityIndex].id}.name`, currentSport.facilities[currentFacilityIndex].nameAr)}
                                     </h3>
                                     <p className="text-white/90">
-                                        بحجم {currentSport.facilities[currentFacilityIndex].size}
+                                        {t("sports.facilities.size", "بحجم {{size}}", { size: currentSport.facilities[currentFacilityIndex].size })}
                                     </p>
                                 </div>
                             </div>
@@ -445,7 +445,7 @@ const SportDetailedPG: React.FC = () => {
                             {/* Facility Description */}
                             <div className="bg-gray-50 rounded-2xl p-8 text-center">
                                 <p className="text-gray-700 text-lg leading-relaxed mb-6">
-                                    {currentSport.facilities[currentFacilityIndex].descriptionAr}
+                                    {t(`sports.info.${currentSport.id}.facilities.${currentSport.facilities[currentFacilityIndex].id}.desc`, currentSport.facilities[currentFacilityIndex].descriptionAr)}
                                 </p>
                                 <div className="flex justify-center gap-4">
                                     {currentSport.facilities.map((_, index) => (
@@ -472,14 +472,14 @@ const SportDetailedPG: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                             </svg>
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6">اشترك في النشرة الإخبارية</h2>
+                        <h2 className="text-4xl md:text-5xl font-bold mb-6">{t("sports.subscribe.title", "اشترك في النشرة الإخبارية")}</h2>
                         <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                            احصل على آخر الأخبار والتحديثات عن أكاديميتنا الرياضية
+                            {t("sports.subscribe.subtitle", "احصل على آخر الأخبار والتحديثات عن أكاديميتنا الرياضية")}
                         </p>
                         <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-4 max-w-2xl mx-auto">
                             <input
                                 type="email"
-                                placeholder="أدخل بريدك الالكتروني"
+                                placeholder={t("sports.subscribe.placeholder", "أدخل بريدك الالكتروني")}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-6 py-4 rounded-full bg-white text-gray-900 text-lg outline-none border-2 border-white/60 focus:ring-4 focus:ring-[#FDBF00]/30 focus:border-[#FDBF00] placeholder:text-gray-400"
@@ -488,9 +488,7 @@ const SportDetailedPG: React.FC = () => {
                             <button
                                 type="submit"
                                 className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 w-auto self-center"
-                            >
-                                اشترك الآن
-                            </button>
+                            >{t("sports.subscribe.button", "اشترك الآن")}</button>
                         </form>
                     </div>
                 </div>
@@ -503,7 +501,7 @@ const SportDetailedPG: React.FC = () => {
                         {/* Phone */}
                         <div className="bg-gradient-to-br from-[#0e1c38] to-[#0A1A44] rounded-2xl p-8 text-white text-center">
                             <div className="text-4xl mb-4">📞</div>
-                            <h3 className="text-xl font-bold mb-3">الهاتف</h3>
+                            <h3 className="text-xl font-bold mb-3">{t("sports.contact.phone", "الهاتف")}</h3>
                             <a href="tel:1913641" className="text-[#FDBF00] hover:text-[#ffd700] font-bold text-lg">
                                 1913641
                             </a>
@@ -512,7 +510,7 @@ const SportDetailedPG: React.FC = () => {
                         {/* Email */}
                         <div className="bg-gradient-to-br from-[#0e1c38] to-[#0A1A44] rounded-2xl p-8 text-white text-center">
                             <div className="text-4xl mb-4">✉️</div>
-                            <h3 className="text-xl font-bold mb-3">البريد الإلكتروني</h3>
+                            <h3 className="text-xl font-bold mb-3">{t("sports.contact.email", "البريد الإلكتروني")}</h3>
                             <a href="mailto:huc@hq.helwan.edu.eg" className="text-[#FDBF00] hover:text-[#ffd700] font-bold text-lg">
                                 huc@hq.helwan.edu.eg
                             </a>
@@ -521,9 +519,9 @@ const SportDetailedPG: React.FC = () => {
                         {/* Location */}
                         <div className="bg-gradient-to-br from-[#0e1c38] to-[#0A1A44] rounded-2xl p-8 text-white text-center">
                             <div className="text-4xl mb-4">📍</div>
-                            <h3 className="text-xl font-bold mb-3">الموقع</h3>
+                            <h3 className="text-xl font-bold mb-3">{t("sports.contact.location", "الموقع")}</h3>
                             <a href="https://maps.app.goo.gl/QHexupLs17Y7u7rF6" target="_blank" rel="noopener noreferrer" className="text-[#FDBF00] font-bold hover:text-[#ffd700] transition-colors">
-                                الموقع على الخريطة
+                                {t("sports.contact.map", "الموقع على الخريطة")}
                             </a>
                         </div>
                     </div>
@@ -534,16 +532,16 @@ const SportDetailedPG: React.FC = () => {
             <section className="py-20 bg-[#0e1c38]">
                 <div className="container mx-auto px-4 text-center">
                     <div className="max-w-3xl mx-auto text-white">
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6">هل أنت مستعد للانضمام إلينا؟</h2>
+                        <h2 className="text-4xl md:text-5xl font-bold mb-6">{t("sports.cta.title", "هل أنت مستعد للانضمام إلينا؟")}</h2>
                         <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                            ابدأ رحلتك الرياضية مع أكاديمية جامعة العاصمة اليوم
+                            {t("sports.cta.subtitle", "ابدأ رحلتك الرياضية مع أكاديمية جامعة العاصمة اليوم")}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <button onClick={() => window.location.href = '/re'} className="bg-[#FDBF00] hover:bg-[#ffd700] text-[#0e1c38] px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-                                كن عضواً
+                                {t("sports.cta.become_member", "كن عضواً")}
                             </button>
                             <button className="bg-white/10 hover:bg-white/20 text-white px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 border-2 border-white/40 backdrop-blur-sm hover:border-white/60">
-                                تواصل معنا
+                                {t("sports.cta.contact", "تواصل معنا")}
                             </button>
                         </div>
                     </div>

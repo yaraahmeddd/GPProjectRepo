@@ -205,6 +205,18 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // ── TEMPORARY: one-time localStorage purge ──────────────────────────────────
+  // Clears any bad cached locale (e.g. "ar-EG") left over before the i18n fix.
+  // TODO: Remove this block once translations are confirmed working.
+  useEffect(() => {
+    const cached = localStorage.getItem('dashboard-lang');
+    if (cached && cached !== 'ar' && cached !== 'en') {
+      localStorage.removeItem('dashboard-lang');
+      window.location.reload();   // reload once so i18n re-detects cleanly
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ───────────────────────────────────────────────────────────────────────────
+
   const loadDashboard = useCallback(
     async (mode: "initial" | "refresh") => {
       if (mode === "initial") {

@@ -366,6 +366,7 @@ export default function SportsPage() {
   const { toast } = useToast();
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const sportDisplayName = useCallback((s: Pick<Sport, "nameAr" | "nameEn">) => {
@@ -394,6 +395,7 @@ export default function SportsPage() {
   }, []);
 
   const fetchSports = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await api.get<SportsListResponse>("/sports");
       const list = res?.data?.data;
@@ -406,6 +408,8 @@ export default function SportsPage() {
       setSports(fallbackSports);
       const message = err instanceof Error ? err.message : "تعذر تحميل الرياضات";
       toast({ title: "تعذر تحميل الرياضات", description: message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   }, [mapApiSport, toast]);
 
@@ -759,45 +763,64 @@ export default function SportsPage() {
           </TableHeader>
           <TableBody>
             <AnimatePresence>
-              {filteredSports.map((sport) => {
-                const status = getSportStatus(sport);
-                return (
-                  <motion.tr
-                    key={sport.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="border-b border-border transition-colors duration-200 hover:bg-accent/10"
-                  >
-                    {/* Thumbnail */}
-                    <TableCell className="py-2">
-                      <SportImage
-                        src={sport.imageUrl}
-                        alt={sportDisplayName(sport)}
-                        className="w-10 h-10"
-                        fallbackClassName="w-10 h-10"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{sportDisplayName(sport)}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <span
-                        title={status.isDraft ? "هذه الرياضة غير مرئية للأعضاء حتى تتم إضافة مواعيد لها" : undefined}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.className}`}
-                      >
-                        {status.label}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-poppins">{sport.membersCount}</TableCell>
-                    <TableCell className="font-poppins">{sport.price}</TableCell>
-                    <TableCell className="whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <RoleGuard privilege="UPDATE_SPORT">
-                          <Button size="sm" variant="outline" onClick={() => void openEdit(sport)} className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground">
-                            <Pencil className="h-3 w-3" /> تعديل
-                          </Button>
-                        </RoleGuard>
-                        <RoleGuard privilege="DELETE_SPORT">
-                          <Button size="sm" variant="outline" onClick={() => setDeleteId(sport.id)} className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground">
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>جاري التحميل...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredSports.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 opacity-30" />
+                      <span>لا توجد رياضات مضافة حالياً</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSports.map((sport) => {
+                  const status = getSportStatus(sport);
+                  return (
+                    <motion.tr
+                      key={sport.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="border-b border-border transition-colors duration-200 hover:bg-accent/10"
+                    >
+                      {/* Thumbnail */}
+                      <TableCell className="py-2">
+                        <SportImage
+                          src={sport.imageUrl}
+                          alt={sportDisplayName(sport)}
+                          className="w-10 h-10"
+                          fallbackClassName="w-10 h-10"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{sportDisplayName(sport)}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <span
+                          title={status.isDraft ? "هذه الرياضة غير مرئية للأعضاء حتى تتم إضافة مواعيد لها" : undefined}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-poppins">{sport.membersCount}</TableCell>
+                      <TableCell className="font-poppins">{sport.price}</TableCell>
+                      <TableCell className="whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <RoleGuard privilege="UPDATE_SPORT">
+                            <Button size="sm" variant="outline" onClick={() => void openEdit(sport)} className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground">
+                              <Pencil className="h-3 w-3" /> تعديل
+                            </Button>
+                          </RoleGuard>
+                          <RoleGuard privilege="DELETE_SPORT">
+                            <Button size="sm" variant="outline" onClick={() => setDeleteId(sport.id)} className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground">
                             <Trash2 className="h-3 w-3" /> حذف
                           </Button>
                         </RoleGuard>
@@ -808,7 +831,8 @@ export default function SportsPage() {
                     </TableCell>
                   </motion.tr>
                 );
-              })}
+              })
+              )}
             </AnimatePresence>
           </TableBody>
         </Table>

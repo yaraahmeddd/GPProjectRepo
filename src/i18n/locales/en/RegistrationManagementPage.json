@@ -1,0 +1,171 @@
+{
+  "pageTitle": "Registration Requests",
+  "pendingRequests": "Pending: <strong>{{count}}</strong> requests",
+  "membersCount": "Members: {{count}}",
+  "teamMembersCount": "Team Members: {{count}}",
+  "refreshBtn": "Refresh",
+  "searchPlaceholder": "Search by name, national ID, or phone...",
+  "filterAll": "All",
+  "filterMembers": "Members",
+  "filterTeamMembers": "Team Members",
+  "resultsCount": "{{count}} Results",
+  "loadingMsg": "Loading...",
+  "noRequestsTitle": "No requests found",
+  "noRequestsGeneric": "No pending registration requests found",
+  "noRequestsSearch": "No exact match found for \"{{search}}\"",
+  "table": {
+    "name": "Name",
+    "phone": "Phone",
+    "nationalId": "National ID",
+    "regDate": "Reg. Date",
+    "type": "Type",
+    "status": "Status",
+    "actions": "Actions",
+    "justApproved": "Just Approved"
+  },
+  "memberType": {
+    "teamMember": "Team Member",
+    "member": "Member",
+    "sportTeamMemberBadge": "🏅 Sport Team Member",
+    "socialMemberBadge": "👤 Social Member"
+  },
+  "status": {
+    "active": "Active",
+    "pending": "Pending"
+  },
+  "actions": {
+    "review": "Review",
+    "approve": "Approve",
+    "approving": "Approving...",
+    "print": "Print"
+  },
+  "addMember": {
+    "title": "Add New Member",
+    "desc": "Enter new member details for registration",
+    "nameAr": "Name (Arabic)",
+    "nameEn": "Name (English)",
+    "nationalId": "National ID",
+    "phone": "Phone (WhatsApp)",
+    "birthDate": "Birth Date",
+    "gender": {
+      "title": "Gender",
+      "male": "Male",
+      "female": "Female"
+    },
+    "address": "Address",
+    "socialStatus": {
+      "title": "Social Status",
+      "single": "Single",
+      "married": "Married",
+      "widowed": "Widowed",
+      "divorced": "Divorced"
+    },
+    "job": "Job / Occupation",
+    "childrenCount": "Children Count",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "placeholders": {
+      "nameAr": "Full Name in Arabic",
+      "nameEn": "Full Name",
+      "nationalId": "14 digits",
+      "phone": "01xxxxxxxxx",
+      "gender": "Select Gender",
+      "address": "Detailed Address",
+      "socialStatus": "Select Status",
+      "job": "Job / Occupation"
+    }
+  },
+  "printForm": {
+    "teamMemberForm": "Team Member Form",
+    "memberForm": "Membership Form",
+    "teamMemberValue": "Team Member",
+    "memberValue": "Form Value (250 EGP)",
+    "clubNameAr": "نادي جامعة حلوان",
+    "clubNameEn": "Helwan Univ. Club",
+    "photoPlaceholder": "Photo",
+    "name": "Name:",
+    "birthDate": "Birth Date:",
+    "gender": "Gender:",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "address": "Address:",
+    "teams": "Teams:",
+    "socialStatus": "Social Status:",
+    "whatsapp": "WhatsApp:",
+    "declarationTitle": "Declaration",
+    "declarationText": "I declare that the information provided in this form is correct under my personal responsibility, adhering to the Egyptian sports law and the basic statute of clubs of companies, factories, ministries, government departments, local administration units, public bodies, state agencies, and authorities, and the financial regulations and its amendments.",
+    "declareI": "I declare,",
+    "declareNationalId": "National ID",
+    "declareUndersigned": "the undersigned, that",
+    "dateLocation": "Issued on",
+    "declarantDetails": {
+      "declarant": "Declarant:",
+      "name": "Name:",
+      "signature": "Signature:"
+    },
+    "print": "Print",
+    "close": "Close",
+    "socialStatusVals": {
+      "single": "Single",
+      "married": "Married",
+      "marriedProvide": "Married w/ Dep.",
+      "widowed": "Widowed",
+      "divorced": "Divorced"
+    }
+  },
+  "review": {
+    "title": "Review Request",
+    "desc": "Review member details and documents",
+    "tabs": {
+      "data": "👤 Member Data",
+      "photos": "🖼️ Documents & Photos"
+    },
+    "noPhoto": "No photo",
+    "registeredAt": "Reg: {{date}}",
+    "notAvailable": "—",
+    "dataFields": {
+      "nationalId": "National ID",
+      "phone": "Phone",
+      "birthDate": "Birth Date",
+      "age": "({{age}} years)",
+      "regDate": "Reg. Date",
+      "gender": "Gender",
+      "genderMale": "👨 Male",
+      "genderFemale": "👩 Female",
+      "socialStatus": "Social Status",
+      "socialStatusSingle": "Single",
+      "socialStatusMarried": "Married",
+      "socialStatusWidowed": "Widowed",
+      "socialStatusDivorced": "Divorced",
+      "address": "Address",
+      "specialData": "Special Data",
+      "memberType": "Member Type",
+      "job": "Job / Occupation",
+      "teams": "Registered Teams"
+    },
+    "documents": {
+      "personalPhoto": "Personal Photo",
+      "noPersonalPhoto": "No personal photo",
+      "idFront": "National ID (Front)",
+      "idBack": "National ID (Back)",
+      "notUploaded": "Not uploaded",
+      "medicalReport": "Medical Report",
+      "noMedicalReport": "No medical report attached"
+    },
+    "approveTeamMember": "Approve Team Member",
+    "approveMember": "Approve Membership",
+    "approving": "Approving...",
+    "close": "Close"
+  },
+  "toasts": {
+    "errorTitle": "Error",
+    "fetchFailed": "Failed to fetch registration requests",
+    "approveSuccessTitle": "Approved",
+    "approveSuccessDesc": "{{type}} activated successfully",
+    "approveFailedDesc": "Failed to approve request. Try again.",
+    "addSuccessTitle": "Added",
+    "addSuccessDesc": "New member added successfully",
+    "addFailedDesc": "Failed to add member"
+  }
+}

@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 export function useLanguage() {
   const { i18n } = useTranslation();
 
-  const language = i18n.language ?? 'ar';
+  // resolvedLanguage is the actual matched resource key ("ar" / "en"),
+  // whereas i18n.language can be a raw browser locale like "ar-EG".
+  const language = (i18n.resolvedLanguage ?? i18n.language ?? 'ar') as 'ar' | 'en';
   const isRTL = language === 'ar';
 
   const applyToDocument = useCallback((lang: string) => {
@@ -16,8 +18,8 @@ export function useLanguage() {
 
   const toggleLanguage = useCallback(() => {
     const next = language === 'ar' ? 'en' : 'ar';
-    void i18n.changeLanguage(next);
-    applyToDocument(next);
+    // Await changeLanguage so localStorage is written only after i18n is ready.
+    void i18n.changeLanguage(next).then(() => applyToDocument(next));
   }, [language, i18n, applyToDocument]);
 
   return { language, isRTL, toggleLanguage };

@@ -97,6 +97,9 @@ i18n
     // ── Language – Arabic is the default ──────────────────────────────────────
     lng: 'ar',
     fallbackLng: 'ar',
+    load: 'languageOnly',       // strips "en-US" → "en", "ar-EG" → "ar"
+    supportedLngs: ['ar', 'en'], // reject any other locale → fall back to 'ar'
+
 
     // ── Namespace defaults ────────────────────────────────────────────────────
     ns: NS,
@@ -107,6 +110,9 @@ i18n
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'dashboard-lang',
       caches: ['localStorage'],
+      // Sanitize cached region-suffixed locales ("ar-EG" → "ar") at runtime
+      // so users never need to manually clear localStorage.
+      convertDetectedLanguage: (lng: string) => lng.split('-')[0],
     },
 
     // ── Interpolation ──────────────────────────────────────────────────────────

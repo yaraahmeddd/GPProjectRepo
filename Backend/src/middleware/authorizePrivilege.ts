@@ -76,6 +76,13 @@ export function authorizePrivilege(requiredPrivilege: string) {
         return;
       }
 
+      // ADMIN role bypass — admins have unrestricted access to all endpoints
+      if ((decoded.role as string)?.toLowerCase() === 'admin') {
+        req.user = decoded as AuthenticatedRequest['user'];
+        next();
+        return;
+      }
+
       // Extract privileges array from token
       const tokenPrivileges: string[] = (decoded.privileges as string[]) || [];
 
@@ -157,6 +164,13 @@ export function authorizeAnyPrivilege(requiredPrivileges: string[]) {
           success: false,
           message: 'Only staff members with valid privileges can access this endpoint',
         });
+        return;
+      }
+
+      // ADMIN role bypass — admins have unrestricted access to all endpoints
+      if ((decoded.role as string)?.toLowerCase() === 'admin') {
+        req.user = decoded as AuthenticatedRequest['user'];
+        next();
         return;
       }
 
@@ -242,6 +256,13 @@ export function authorizeAllPrivileges(requiredPrivileges: string[]) {
           success: false,
           message: 'Only staff members with valid privileges can access this endpoint',
         });
+        return;
+      }
+
+      // ADMIN role bypass — admins have unrestricted access to all endpoints
+      if ((decoded.role as string)?.toLowerCase() === 'admin') {
+        req.user = decoded as AuthenticatedRequest['user'];
+        next();
         return;
       }
 
