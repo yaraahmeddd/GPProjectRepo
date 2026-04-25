@@ -545,27 +545,27 @@ export default function TeamsManagementPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {loading ? (
-                            // Skeleton rows
-                            [1, 2, 3].map(i => (
-                                <TableRow key={i} className="animate-pulse border-b border-border">
-                                    {Array.from({ length: 7 }).map((_, j) => (
-                                        <TableCell key={j}><div className="h-4 bg-muted rounded w-20" /></TableCell>
-                                    ))}
+                        <AnimatePresence>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-12">
+                                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                            <span>جاري التحميل...</span>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
-                            ))
-                        ) : filtered.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Users className="w-8 h-8 opacity-30" />
-                                        <span className="text-sm">{hasFilters ? "لا توجد فرق تطابق الفلاتر المحددة" : "لا توجد فرق مسجلة بعد"}</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            <AnimatePresence>
-                                {filtered.map((team, idx) => {
+                            ) : filtered.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Users className="w-8 h-8 opacity-30" />
+                                            <span>{hasFilters ? "لا توجد فرق تطابق الفلاتر المحددة" : "لا توجد فرق مسجلة بعد"}</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                filtered.map((team, idx) => {
                                     const sched = team.training_schedules?.[0];
                                     const schedStr = sched
                                         ? `${sched.days_ar} • ${sched.start_time?.slice(0, 5)} → ${sched.end_time?.slice(0, 5)}`
@@ -619,9 +619,9 @@ export default function TeamsManagementPage() {
                                             </TableCell>
                                         </motion.tr>
                                     );
-                                })}
-                            </AnimatePresence>
-                        )}
+                                })
+                            )}
+                        </AnimatePresence>
                     </TableBody>
                 </Table>
             </motion.div>

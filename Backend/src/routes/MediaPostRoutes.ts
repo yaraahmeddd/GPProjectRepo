@@ -9,6 +9,9 @@ const router = Router();
 // Public route to get all posts for landing page
 router.get('/', MediaPostController.getAllPosts);
 
+// Public route to get a single post by ID
+router.get('/:id', MediaPostController.getPostById);
+
 // Allow dedicated Media role/admin accounts to manage gallery even if privilege package is not yet synced.
 const authorizeMediaWrite = (requiredPrivileges: string[]) => {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {

@@ -1,0 +1,171 @@
+{
+  "pageTitle": "طلبات التسجيل",
+  "pendingRequests": "قيد الانتظار: <strong dir=\"ltr\">{{count}}</strong> طلب",
+  "membersCount": "أعضاء: {{count}}",
+  "teamMembersCount": "أعضاء فريق: {{count}}",
+  "refreshBtn": "تحديث",
+  "searchPlaceholder": "بحث بالاسم، الرقم القومي، أو الهاتف...",
+  "filterAll": "الكل",
+  "filterMembers": "أعضاء",
+  "filterTeamMembers": "أعضاء فريق",
+  "resultsCount": "{{count}} نتيجة",
+  "loadingMsg": "جارٍ التحميل...",
+  "noRequestsTitle": "لا يوجد طلبات حالياً",
+  "noRequestsGeneric": "لم يتم العثور على طلبات تسجيل جديدة قيد الانتظار",
+  "noRequestsSearch": "لا توجد نتائج مطابقة لـ \"{{search}}\"",
+  "table": {
+    "name": "الاسم",
+    "phone": "رقم الهاتف",
+    "nationalId": "الرقم القومي",
+    "regDate": "تاريخ التسجيل",
+    "type": "النوع",
+    "status": "الحالة",
+    "actions": "الإجراءات",
+    "justApproved": "تم اعتماده للتو"
+  },
+  "memberType": {
+    "teamMember": "عضو فريق",
+    "member": "عضو",
+    "sportTeamMemberBadge": "🏅 عضو فريق رياضي",
+    "socialMemberBadge": "👤 عضو اجتماعي"
+  },
+  "status": {
+    "active": "نشط",
+    "pending": "قيد الانتظار"
+  },
+  "actions": {
+    "review": "مراجعة",
+    "approve": "اعتماد",
+    "approving": "جارٍ...",
+    "print": "طباعة"
+  },
+  "addMember": {
+    "title": "إضافة عضو جديد",
+    "desc": "أدخل بيانات العضو الجديد للتسجيل",
+    "nameAr": "الاسم (عربي)",
+    "nameEn": "الاسم (English)",
+    "nationalId": "الرقم القومي",
+    "phone": "رقم الهاتف (واتساب)",
+    "birthDate": "تاريخ الميلاد",
+    "gender": {
+      "title": "النوع",
+      "male": "ذكر",
+      "female": "أنثى"
+    },
+    "address": "العنوان",
+    "socialStatus": {
+      "title": "الحالة الاجتماعية",
+      "single": "أعزب",
+      "married": "متزوج",
+      "widowed": "أرمل",
+      "divorced": "مطلق"
+    },
+    "job": "الوظيفة",
+    "childrenCount": "عدد الأبناء",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "cancel": "إلغاء",
+    "placeholders": {
+      "nameAr": "الاسم رباعي",
+      "nameEn": "Full Name",
+      "nationalId": "14 رقم",
+      "phone": "01xxxxxxxxx",
+      "gender": "اختر النوع",
+      "address": "العنوان بالتفصيل",
+      "socialStatus": "اختر الحالة",
+      "job": "المهنة / الوظيفة"
+    }
+  },
+  "printForm": {
+    "teamMemberForm": "استمارة عضوية فريق",
+    "memberForm": "استمارة عضوية",
+    "teamMemberValue": "عضو فريق",
+    "memberValue": "قيمة الإستمارة (٢٥٠ ج)",
+    "clubNameAr": "نادي جامعة حلوان",
+    "clubNameEn": "Helwan Univ. Club",
+    "photoPlaceholder": "صورة",
+    "name": "الاسم:",
+    "birthDate": "تاريخ الميلاد:",
+    "gender": "النوع:",
+    "genderMale": "ذكر",
+    "genderFemale": "أنثى",
+    "address": "العنوان:",
+    "teams": "الفرق:",
+    "socialStatus": "الحالة الاجتماعية:",
+    "whatsapp": "الهاتف واتس اب:",
+    "declarationTitle": "إقرار",
+    "declarationText": "البيانات الواردة في هذه الاستمارة صحيحة على مسؤوليتي الشخصية مع الالتزام بالقانون الرياضي المصري ولائحة النظام الأساسي لأندية الشركات والمصانع والوزارات والمصالح الحكومية ووحدات الإدارة المحلية والهيئات العامة وأجهزة الدولة وسلطاتها واللائحة المالية وتعديلاتها.",
+    "declareI": "أقر أنا",
+    "declareNationalId": "رقم قومي",
+    "declareUndersigned": "الموقع ادناه بأن",
+    "dateLocation": "تحريراً في",
+    "declarantDetails": {
+      "declarant": "المقر بما فيه:",
+      "name": "الاسم:",
+      "signature": "التوقيع:"
+    },
+    "print": "طباعة",
+    "close": "إغلاق",
+    "socialStatusVals": {
+      "single": "اعزب",
+      "married": "متزوج",
+      "marriedProvide": "متزوج ويعول",
+      "widowed": "ارمل",
+      "divorced": "مطلق"
+    }
+  },
+  "review": {
+    "title": "مراجعة الطلب",
+    "desc": "مراجعة بيانات ومستندات العضو",
+    "tabs": {
+      "data": "👤 بيانات العضو",
+      "photos": "🖼️ المستندات والصور"
+    },
+    "noPhoto": "لا توجد صورة",
+    "registeredAt": "تسجيل: {{date}}",
+    "notAvailable": "—",
+    "dataFields": {
+      "nationalId": "الرقم القومي",
+      "phone": "رقم الهاتف",
+      "birthDate": "تاريخ الميلاد",
+      "age": "({{age}} سنة)",
+      "regDate": "تاريخ التسجيل",
+      "gender": "الجنس",
+      "genderMale": "👨 ذكر",
+      "genderFemale": "👩 أنثى",
+      "socialStatus": "الحالة الاجتماعية",
+      "socialStatusSingle": "أعزب / عزباء",
+      "socialStatusMarried": "متزوج / متزوجة",
+      "socialStatusWidowed": "أرمل / أرملة",
+      "socialStatusDivorced": "مطلق / مطلقة",
+      "address": "العنوان",
+      "specialData": "البيانات الخاصة",
+      "memberType": "نوع العضوية",
+      "job": "الوظيفة / المهنة",
+      "teams": "الفرق الرياضية المسجل بها"
+    },
+    "documents": {
+      "personalPhoto": "الصورة الشخصية",
+      "noPersonalPhoto": "لا توجد صورة شخصية",
+      "idFront": "بطاقة الرقم القومي (أمام)",
+      "idBack": "بطاقة الرقم القومي (خلف)",
+      "notUploaded": "لم يتم الرفع",
+      "medicalReport": "التقرير الطبي",
+      "noMedicalReport": "لم يتم ارفاق تقرير طبي"
+    },
+    "approveTeamMember": "اعتماد عضوية الفريق",
+    "approveMember": "اعتماد العضوية",
+    "approving": "جارٍ الاعتماد...",
+    "close": "إغلاق"
+  },
+  "toasts": {
+    "errorTitle": "خطأ",
+    "fetchFailed": "فشل تحميل طلبات التسجيل",
+    "approveSuccessTitle": "تم الاعتماد",
+    "approveSuccessDesc": "تم تفعيل {{type}} بنجاح",
+    "approveFailedDesc": "فشل اعتماد الطلب. حاول مرة أخرى.",
+    "addSuccessTitle": "تم الإضافة",
+    "addSuccessDesc": "تم إضافة العضو الجديد بنجاح",
+    "addFailedDesc": "فشل إضافة العضو"
+  }
+}

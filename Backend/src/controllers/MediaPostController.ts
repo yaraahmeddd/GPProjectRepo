@@ -57,6 +57,20 @@ export class MediaPostController {
         }
     }
 
+    static async getPostById(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const post = await MediaPostController.mediaRepo.findOne({ where: { id: parseInt(id) } });
+            if (!post) {
+                return res.status(404).json({ success: false, message: 'Post not found' });
+            }
+            return res.json({ success: true, data: post });
+        } catch (error) {
+            console.error('Error fetching media post by id:', error);
+            return res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    }
+
     static async createPost(req: AuthenticatedRequest, res: Response) {
         try {
             const { title, description, category, videoUrl, videoDuration } = req.body;

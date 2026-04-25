@@ -29,6 +29,9 @@ const MemberSportPaymentPage = lazy(() => import('./Page/MemberSportPaymentPage'
 const InvitationPage = lazy(() => import('./Page/InvitationPage'));
 const JoinBookingPage = lazy(() => import('./Page/JoinBookingPage'));
 const SecurityDashboardPage = lazy(() => import('./Page/SecurityDashboardPage'));
+const MediaTestingPage = lazy(() => import('./Page/MediaTestingPage'));
+const MediaManagerPage = lazy(() => import('./Page/MediaManagerPage'));
+const MediaViewerPage = lazy(() => import('./Page/MediaViewerPage'));
 
 const Router: React.FC = () => {
   return (
@@ -57,6 +60,9 @@ const Router: React.FC = () => {
             <Route path="/lastNews" element={<Navigate to="/?tab=lastNews" replace />} />
             <Route path="/bookings/share/:shareToken" element={<JoinBookingPage />} />
             <Route path="/security/bookings" element={<SecurityDashboardPage />} />
+            <Route path="/media-testing" element={<MediaTestingPage />} />
+            <Route path="/media-manager" element={<MediaManagerPage />} />
+            <Route path="/media-viewer" element={<MediaViewerPage />} />
 
             {/* Protected Routes - Staff */}
             <Route

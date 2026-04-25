@@ -5,8 +5,10 @@
     "dailyOps": "العمليات اليومية",
     "sports": "إدارة الرياضات",
     "finance": "المالية والخدمات",
-    "staff": "الموظفون",
-    "system": "النظام"
+    "staff": "إدارة الموظفين",
+    "packages": "الباقات والصلاحيات",
+    "media": "المركز الإعلامي",
+    "system": "إعدادات النظام"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -29,7 +31,8 @@
     "branches": "إدارة الفروع",
     "faculties": "إدارة الكليات",
     "professions": "إدارة المهن",
-    "privilegePackages": "باقات الصلاحيات",
+    "privilegePackages": "إنشاء باقة جديدة",
+    "managePackages": "إدارة الباقات",
     "assignPrivileges": "تعيين الصلاحيات",
     "revokePrivileges": "سحب الصلاحيات",
     "auditLog": "سجل التدقيق",

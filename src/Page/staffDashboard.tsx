@@ -15,13 +15,14 @@ import AdminPrivilegesPage from "./AdminPrivilegesPage";
 import NotFound from "./NotFound";
 import './staffDashboard.css'
 import AuditLogPage from "./AuditLogPage";
-import MediaGalleryDashboard, { MediaGalleryPostPage } from "./MediaGalleryDashboard";
+import MediaManagerPage from "./MediaManagerPage";
 import AddNewStaffPage from "./AddNewStaffPage";
 import StaffListPage from "./StaffListPage";
 import StaffManagementPage from "./StaffManagementPage";
 import StaffProfile from "./StaffProfile";
 import ProtectedRoute from "../Component/ProtectedRoute";
 import PrivilegePackageAdminPage from "./PrivilegePackageAdminPage";
+import PackageManagementPage from "./PackageManagementPage";
 import AssignStaffPrivilegesPage from "./AssignStaffPrivilegesPage";
 import RevokePrivilegesPage from "./RevokePrivilegesPage";
 import { CredentialChangeModal } from "../components/CredentialChangeModal";
@@ -58,7 +59,7 @@ const FALLBACK_PAGES: Array<{ path: string; privilege?: string }> = [
   { path: "/staff/dashboard/memberships", privilege: "VIEW_MEMBERSHIP_PLANS" },
   { path: "/staff/dashboard/finance/subscriptions", privilege: "VIEW_FINANCE" },
   // { path: "/staff/dashboard/tasks", privilege: "VIEW_TASKS" },
-  { path: "/staff/dashboard/media-gallery", privilege: "media.view" },
+  { path: "/staff/dashboard/media-gallery", privilege: "MEDIA_CENTER_CREATE" },
   { path: "/staff/dashboard/audit-log", privilege: "VIEW_AUDIT_LOGS" },
   { path: "/staff/dashboard/faculties", privilege: "VIEW_FACULTIES" },
   { path: "/staff/dashboard/branches", privilege: "VIEW_BRANCHES" },
@@ -106,6 +107,7 @@ const StaffDashboard = () => {
             <Route path="finance/subscriptions" element={<ProtectedRoute requiredPrivilege="VIEW_FINANCE"><SubscriptionsPage /></ProtectedRoute>} />
             <Route path="admin/privileges" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><AdminPrivilegesPage /></ProtectedRoute>} />
             <Route path="admin/privilege-packages" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><PrivilegePackageAdminPage /></ProtectedRoute>} />
+            <Route path="admin/manage-packages" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><PackageManagementPage /></ProtectedRoute>} />
             <Route path="audit-log" element={<ProtectedRoute requiredPrivilege="VIEW_AUDIT_LOGS"><AuditLogPage /></ProtectedRoute>} />
             <Route path="admin/staff/new" element={<ProtectedRoute requiredPrivilege="CREATE_STAFF"><AddNewStaffPage /></ProtectedRoute>} />
             <Route path="admin/staff/list" element={<ProtectedRoute requiredPrivilege="VIEW_STAFF"><StaffListPage /></ProtectedRoute>} />
@@ -118,8 +120,7 @@ const StaffDashboard = () => {
             <Route path="members/new" element={<ProtectedRoute requiredPrivilege="CREATE_MEMBER"><StaffAddMemberPage /></ProtectedRoute>} />
             <Route path="members/new-team-member" element={<ProtectedRoute requiredPrivilege="ADD_TEAM_MEMBER"><StaffAddTeamMemberPage /></ProtectedRoute>} />
             <Route path="members/card-print" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><CardPrintPage /></ProtectedRoute>} />
-            <Route path="media-gallery" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryDashboard /></ProtectedRoute>} />
-            <Route path="media-gallery/:id" element={<ProtectedRoute requiredPrivilege="media.view"><MediaGalleryPostPage /></ProtectedRoute>} />
+            <Route path="media-gallery" element={<ProtectedRoute requiredPrivilege="MEDIA_CENTER_CREATE"><MediaManagerPage /></ProtectedRoute>} />
             <Route path="faculties" element={<ProtectedRoute requiredPrivilege="VIEW_FACULTIES"><FacultyManagementPage /></ProtectedRoute>} />
             <Route path="branches" element={<ProtectedRoute requiredPrivilege="VIEW_BRANCHES"><BranchManagementPage /></ProtectedRoute>} />
             <Route path="professions" element={<ProtectedRoute requiredPrivilege="VIEW_PROFESSIONS"><ProfessionManagementPage /></ProtectedRoute>} />

@@ -50,12 +50,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "groups.home",
     collapsible: false,
     items: [
-      {
-        title: "nav.dashboard",
-        icon: LayoutDashboard,
-        path: "/staff/dashboard",
-        privilege: "dashboard.view",
-      },
+      { title: "nav.dashboard", icon: LayoutDashboard, path: "/staff/dashboard", privilege: "dashboard.view" },
     ],
   },
   // ── 2. الأعضاء ────────────────────────────────────────────────────────────
@@ -63,30 +58,10 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "groups.members",
     collapsible: false,
     items: [
-      {
-        title: "nav.registrations",
-        icon: ClipboardList,
-        path: "/staff/dashboard/registrations",
-        privilege: "MANAGE_MEMBERSHIP_REQUEST",
-      },
-      {
-        title: "nav.membersManage",
-        icon: Users,
-        path: "/staff/dashboard/members/manage",
-        privilege: "VIEW_MEMBERS",
-      },
-      {
-        title: "nav.membersNew",
-        icon: UserPlus,
-        path: "/staff/dashboard/members/new",
-        privilege: "CREATE_MEMBER",
-      },
-      {
-        title: "nav.membersNewTeam",
-        icon: UserPlus,
-        path: "/staff/dashboard/members/new-team-member",
-        privilege: "ADD_TEAM_MEMBER",
-      },
+      { title: "nav.registrations",  icon: ClipboardList, path: "/staff/dashboard/registrations",            privilege: "MANAGE_MEMBERSHIP_REQUEST" },
+      { title: "nav.membersManage",  icon: Users,         path: "/staff/dashboard/members/manage",          privilege: "VIEW_MEMBERS" },
+      { title: "nav.membersNew",     icon: UserPlus,      path: "/staff/dashboard/members/new",             privilege: "CREATE_MEMBER" },
+      { title: "nav.membersNewTeam", icon: UserPlus,      path: "/staff/dashboard/members/new-team-member", privilege: "ADD_TEAM_MEMBER" },
     ],
   },
   // ── 3. العمليات اليومية ───────────────────────────────────────────────────
@@ -94,18 +69,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "groups.dailyOps",
     collapsible: false,
     items: [
-      {
-        title: "nav.bookings",
-        icon: CalendarCheck,
-        path: "/staff/dashboard/sports/bookings",
-        privilege: "VIEW_SPORTS",
-      },
-      {
-        title: "nav.invitations",
-        icon: Link2,
-        path: "/staff/dashboard/sports/invitations",
-        privilege: "VIEW_SPORTS",
-      },
+      { title: "nav.bookings",    icon: CalendarCheck, path: "/staff/dashboard/sports/bookings",    privilege: "VIEW_SPORTS" },
+      { title: "nav.invitations", icon: Link2,         path: "/staff/dashboard/sports/invitations", privilege: "VIEW_SPORTS" },
     ],
   },
   // ── 4. إدارة الرياضات ─────────────────────────────────────────────────────
@@ -113,46 +78,20 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "groups.sports",
     collapsible: true,
     items: [
-      {
-        title: "nav.sports",
-        icon: Trophy,
-        path: "/staff/dashboard/sports",
-        privilege: "VIEW_SPORTS",
-      },
-      {
-        title: "nav.teams",
-        icon: Users,
-        path: "/staff/dashboard/sports/teams",
-        privilege: "VIEW_TEAMS",
-      },
-      {
-        title: "nav.courts",
-        icon: MapPin,
-        path: "/staff/dashboard/sports/courts",
-        privilege: "VIEW_FIELDS",
-      },
-      {
-        title: "nav.assignSports",
-        icon: Shield,
-        path: "/staff/dashboard/members/sports",
-        privilege: "ASSIGN_SPORT_TO_MEMBER",
-      },
-      {
-        title: "nav.sportsView",
-        icon: Users,
-        path: "/staff/dashboard/members/sports-view",
-        privilege: "VIEW_TEAM_MEMBERS",
-      },
+      { title: "nav.sports",       icon: Trophy,  path: "/staff/dashboard/sports",                  privilege: "VIEW_SPORTS" },
+      { title: "nav.teams",        icon: Users,   path: "/staff/dashboard/sports/teams",            privilege: "VIEW_TEAMS" },
+      { title: "nav.courts",       icon: MapPin,  path: "/staff/dashboard/sports/courts",           privilege: "VIEW_FIELDS" },
+      { title: "nav.assignSports", icon: Shield,  path: "/staff/dashboard/members/sports",          privilege: "ASSIGN_SPORT_TO_MEMBER" },
+      { title: "nav.sportsView",   icon: Users,   path: "/staff/dashboard/members/sports-view",     privilege: "VIEW_TEAM_MEMBERS" },
     ],
   },
-  // ── 5. المالية والخدمات ───────────────────────────────────────────────────
+  // ── 5. المالية والاشتراكات ─────────────────────────────────────────────────
   {
     label: "groups.finance",
     collapsible: true,
     items: [
       { title: "nav.subscriptions", icon: CreditCard, path: "/staff/dashboard/finance/subscriptions", privilege: "VIEW_FINANCE" },
-      { title: "nav.memberships", icon: BadgeCheck, path: "/staff/dashboard/memberships", privilege: "VIEW_MEMBERSHIP_PLANS" },
-      { title: "nav.media", icon: Image, path: "/staff/dashboard/media-gallery" },
+      { title: "nav.memberships",   icon: BadgeCheck,  path: "/staff/dashboard/memberships",          privilege: "VIEW_MEMBERSHIP_PLANS" },
     ],
   },
   // ── 6. الموظفون ───────────────────────────────────────────────────────────
@@ -160,22 +99,38 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     label: "groups.staff",
     collapsible: true,
     items: [
-      { title: "nav.staffNew", icon: UserPlus, path: "/staff/dashboard/admin/staff/new", privilege: "CREATE_STAFF" },
-      { title: "nav.staffManage", icon: Users, path: "/staff/dashboard/admin/staff/manage", privilege: "VIEW_STAFF" },
+      { title: "nav.staffManage",     icon: Users,    path: "/staff/dashboard/admin/staff/manage",            privilege: "VIEW_STAFF" },
+      { title: "nav.staffNew",        icon: UserPlus, path: "/staff/dashboard/admin/staff/new",               privilege: "CREATE_STAFF" },
+      { title: "nav.assignPrivileges",icon: Shield,   path: "/staff/dashboard/admin/staff/assign-privileges", privilege: "VIEW_PRIVILEGES" },
+      { title: "nav.revokePrivileges",icon: Shield,   path: "/staff/dashboard/admin/staff/revoke-privileges", privilege: "VIEW_PRIVILEGES" },
     ],
   },
-  // ── 7. النظام ─────────────────────────────────────────────────────────────
+  // ── 7. الباقات والصلاحيات ─────────────────────────────────────────────────
+  {
+    label: "groups.packages",
+    collapsible: true,
+    items: [
+      { title: "nav.managePackages",   icon: Shield,   path: "/staff/dashboard/admin/manage-packages",     privilege: "VIEW_PRIVILEGES" },
+      { title: "nav.privilegePackages",icon: UserPlus, path: "/staff/dashboard/admin/privilege-packages", privilege: "VIEW_PRIVILEGES" },
+    ],
+  },
+  // ── 8. المركز الإعلامي ─────────────────────────────────────────────────────
+  {
+    label: "groups.media",
+    collapsible: true,
+    items: [
+      { title: "nav.media",      icon: Image,      path: "/staff/dashboard/media-gallery", privilege: "MEDIA_CENTER_CREATE" },
+    ],
+  },
+  // ── 9. إعدادات النظام ─────────────────────────────────────────────────────
   {
     label: "groups.system",
     collapsible: true,
     items: [
-      { title: "nav.branches", icon: Building, path: "/staff/dashboard/branches", privilege: "VIEW_BRANCHES" },
-      { title: "nav.faculties", icon: Building, path: "/staff/dashboard/faculties", privilege: "VIEW_FACULTIES" },
-      { title: "nav.professions", icon: Briefcase, path: "/staff/dashboard/professions", privilege: "VIEW_PROFESSIONS" },
-      { title: "nav.privilegePackages", icon: Shield, path: "/staff/dashboard/admin/privilege-packages", privilege: "VIEW_PRIVILEGES" },
-      { title: "nav.assignPrivileges", icon: Shield, path: "/staff/dashboard/admin/staff/assign-privileges", privilege: "VIEW_PRIVILEGES" },
-      { title: "nav.revokePrivileges", icon: Shield, path: "/staff/dashboard/admin/staff/revoke-privileges", privilege: "VIEW_PRIVILEGES" },
-      { title: "nav.auditLog", icon: ScrollText, path: "/staff/dashboard/audit-log", privilege: "VIEW_AUDIT_LOGS" },
+      { title: "nav.branches",   icon: Building,   path: "/staff/dashboard/branches",   privilege: "VIEW_BRANCHES" },
+      { title: "nav.faculties",  icon: Building,   path: "/staff/dashboard/faculties",  privilege: "VIEW_FACULTIES" },
+      { title: "nav.professions",icon: Briefcase,  path: "/staff/dashboard/professions",privilege: "VIEW_PROFESSIONS" },
+      { title: "nav.auditLog",   icon: ScrollText, path: "/staff/dashboard/audit-log",  privilege: "VIEW_AUDIT_LOGS" },
     ],
   },
 ];

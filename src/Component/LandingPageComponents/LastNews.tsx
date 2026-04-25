@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { X, Calendar, Play, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import type { Category, NewsCategory, NewsItem } from './new';
 
 const BACKEND_URL = 'http://localhost:3000';
@@ -29,11 +29,11 @@ const formatDate = (date?: string): string => {
   if (!date) return '';
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toLocaleDateString('ar-EG', {
+  return new Intl.DateTimeFormat('ar-EG', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  });
+  }).format(parsed);
 };
 
 const normalizeSearchText = (value = ''): string => {
@@ -66,11 +66,18 @@ const LastNews: React.FC = () => {
   const { t } = useTranslation("landing");
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
   const [posts, setPosts] = useState<NewsItem[]>([]);
-  const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const newsCardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [visibleCount, setVisibleCount] = useState<number>(8);
+
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setVisibleCount(8);
+  }, [activeFilter]);
+  
+  // Reader Modal State
+  const [selectedPostDetails, setSelectedPostDetails] = useState<BackendMediaPost | null>(null);
+  const [isReaderOpen, setIsReaderOpen] = useState(false);
 
   const categories: Category[] = [
     { id: 'all', name: 'all', label: t('news.cats.all', 'الكل') },
@@ -182,29 +189,15 @@ const LastNews: React.FC = () => {
     }
   };
 
-  const getCategoryColor = (category: NewsCategory) => {
-    switch (category) {
-      case 'videos':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'events':
-        return 'bg-blue-100 text-[#0A1A44]';
-      case 'promotions':
-        return 'bg-purple-100 text-purple-800';
-      case 'news':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'announcements':
-        return 'bg-red-100 text-red-800';
-      case 'maintenance':
-        return 'bg-amber-100 text-amber-800';
-      case 'photos':
-        return 'bg-slate-100 text-slate-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const closeReader = () => {
+      setIsReaderOpen(false);
+      setTimeout(() => setSelectedPostDetails(null), 500); // Wait for animation
+      document.body.style.overflow = '';
   };
 
-  const featuredNews = useMemo(() => posts.slice(0, 3), [posts]);
-  const secondaryFeatured = useMemo(() => featuredNews.slice(1), [featuredNews]);
+  // Logic for 1 Big + 4 Smaller on featured
+  const featuredNews = useMemo(() => posts.slice(0, 5), [posts]); // Slice 5 for 1 big + 4 small
+  const secondaryFeatured = useMemo(() => featuredNews.slice(1), [featuredNews]); // 4 items
   const featuredMain = featuredNews[0];
 
   const filteredNews = useMemo(() => {
@@ -415,11 +408,25 @@ const LastNews: React.FC = () => {
                         </svg>
                       </button>
                     </div>
-                  </div>
-                );
-              })
+                </>
             )}
-          </div>
+        </main>
+
+        {/* FULL SCREEN EDITORIAL READER MODAL */}
+        {selectedPostDetails && (
+            <div 
+                className={`fixed inset-0 z-[200] bg-white overflow-y-auto ${isReaderOpen ? 'animate-reader-open' : 'animate-reader-close'}`}
+                dir="rtl"
+            >
+                {/* Floating Controls */}
+                <div className="fixed top-0 left-0 right-0 p-6 md:p-8 flex justify-between items-center z-[210] pointer-events-none bg-gradient-to-b from-white via-white/80 to-transparent">
+                    <button 
+                        onClick={closeReader}
+                        className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center text-[#0e1c38] shadow-sm pointer-events-auto hover:bg-gray-50 hover:shadow-md hover:-translate-x-1 transition-all duration-300"
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
+                </div>
 
           <div className="text-center mt-12">
             <button className="bg-gradient-to-r from-[#0e1c38] to-[#0A1A44] hover:from-[#0A1A44] hover:to-[#0e1c38] text-white px-10 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">

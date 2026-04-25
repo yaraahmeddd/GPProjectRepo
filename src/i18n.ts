@@ -1,52 +1,115 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import Backend from 'i18next-http-backend';
+
+// ─── Arabic namespaces ────────────────────────────────────────────────────────
+import arCommon from './i18n/locales/ar/common.json';
+import arNav from './i18n/locales/ar/nav.json';
+import arDashboard from './i18n/locales/ar/dashboard.json';
+import arDashboardPage from './i18n/locales/ar/DashboardPage.json';
+import arMembers from './i18n/locales/ar/members.json';
+import arSports from './i18n/locales/ar/sports.json';
+import arFinance from './i18n/locales/ar/finance.json';
+import arRegistrations from './i18n/locales/ar/registrations.json';
+import arRegistrationManagementPage from './i18n/locales/ar/RegistrationManagementPage.json';
+import arFaculties from './i18n/locales/ar/faculties.json';
+import arBranches from './i18n/locales/ar/branches.json';
+import arProfessions from './i18n/locales/ar/professions.json';
+import arMedia from './i18n/locales/ar/media.json';
+import arAdmin from './i18n/locales/ar/admin.json';
+
+// ─── English namespaces ───────────────────────────────────────────────────────
+import enCommon from './i18n/locales/en/common.json';
+import enNav from './i18n/locales/en/nav.json';
+import enDashboard from './i18n/locales/en/dashboard.json';
+import enDashboardPage from './i18n/locales/en/DashboardPage.json';
+import enMembers from './i18n/locales/en/members.json';
+import enSports from './i18n/locales/en/sports.json';
+import enFinance from './i18n/locales/en/finance.json';
+import enRegistrations from './i18n/locales/en/registrations.json';
+import enRegistrationManagementPage from './i18n/locales/en/RegistrationManagementPage.json';
+import enFaculties from './i18n/locales/en/faculties.json';
+import enBranches from './i18n/locales/en/branches.json';
+import enProfessions from './i18n/locales/en/professions.json';
+import enMedia from './i18n/locales/en/media.json';
+import enAdmin from './i18n/locales/en/admin.json';
 
 const RTL_LANGUAGES = new Set(['ar']);
-const SUPPORTED_LANGUAGES = ['ar', 'en'] as const;
-const NAMESPACES = ['common', 'auth', 'admin', 'member', 'team', 'landing'] as const;
-const LOCALES_BASE_PATH = import.meta.env.DEV
-  ? `${import.meta.env.BASE_URL}locales`
-  : `${import.meta.env.BASE_URL}locales`;
-
-const normalizeLanguage = (language?: string): 'ar' | 'en' => {
-  const baseLanguage = language?.split('-')[0];
-  return baseLanguage === 'en' ? 'en' : 'ar';
-};
 
 const syncDocumentLanguage = (language?: string) => {
-  if (typeof document === 'undefined') {
-    return;
-  }
-
-  const normalizedLanguage = normalizeLanguage(language);
-  document.documentElement.lang = normalizedLanguage;
-  document.documentElement.dir = RTL_LANGUAGES.has(normalizedLanguage) ? 'rtl' : 'ltr';
-  localStorage.setItem('dashboard-lang', normalizedLanguage);
+  if (typeof document === 'undefined') return;
+  const lang = (language ?? 'ar').split('-')[0];
+  const normalized = lang === 'en' ? 'en' : 'ar';
+  document.documentElement.lang = normalized;
+  document.documentElement.dir = RTL_LANGUAGES.has(normalized) ? 'rtl' : 'ltr';
+  localStorage.setItem('dashboard-lang', normalized);
 };
 
 i18n.on('languageChanged', syncDocumentLanguage);
 
 void i18n
-  .use(Backend)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: 'ar',
-    supportedLngs: [...SUPPORTED_LANGUAGES],
-    load: 'languageOnly',
-    defaultNS: 'common',
-    ns: [...NAMESPACES],
-    backend: {
-      loadPath: `${LOCALES_BASE_PATH}/{{lng}}/{{ns}}.json`,
+    resources: {
+      ar: {
+        common: arCommon,
+        nav: arNav,
+        dashboard: arDashboard,
+        DashboardPage: arDashboardPage,
+        members: arMembers,
+        sports: arSports,
+        finance: arFinance,
+        registrations: arRegistrations,
+        RegistrationManagementPage: arRegistrationManagementPage,
+        faculties: arFaculties,
+        branches: arBranches,
+        professions: arProfessions,
+        media: arMedia,
+        admin: arAdmin,
+      },
+      en: {
+        common: enCommon,
+        nav: enNav,
+        dashboard: enDashboard,
+        DashboardPage: enDashboardPage,
+        members: enMembers,
+        sports: enSports,
+        finance: enFinance,
+        registrations: enRegistrations,
+        RegistrationManagementPage: enRegistrationManagementPage,
+        faculties: enFaculties,
+        branches: enBranches,
+        professions: enProfessions,
+        media: enMedia,
+        admin: enAdmin,
+      },
     },
+
+    fallbackLng: 'ar',
+    supportedLngs: ['ar', 'en'],
+    load: 'languageOnly',         // strips "en-US" → "en", "ar-EG" → "ar"
+
+    defaultNS: 'common',
+    ns: [
+      'common', 'nav', 'dashboard', 'DashboardPage',
+      'members', 'sports', 'finance', 'registrations',
+      'RegistrationManagementPage', 'faculties', 'branches',
+      'professions', 'media', 'admin',
+    ],
+
     interpolation: { escapeValue: false },
+
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'dashboard-lang',
       caches: ['localStorage'],
+      // Sanitize cached region-suffixed locales ("ar-EG" → "ar") at runtime.
+      convertDetectedLanguage: (lng: string) => lng.split('-')[0],
     },
+
+    keySeparator: '.',
+    saveMissing: false,
   })
   .then(() => {
     syncDocumentLanguage(i18n.resolvedLanguage ?? i18n.language);
