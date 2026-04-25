@@ -21,7 +21,7 @@ type FilterKey = 'all' | NewsCategory;
 
 const normalizeImageUrl = (url?: string): string => {
   if (!url) return '';
-  return url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+  return url.startsWith('http') ? url : `${BACKEND_URL}/${url}`;
 };
 
 const formatDate = (date?: string): string => {

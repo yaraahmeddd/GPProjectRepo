@@ -63,7 +63,7 @@ const MediaViewerPage: React.FC = () => {
     const normalizeImage = (post: MediaPost) => {
         const img = post.images?.[0];
         if (!img) return null;
-        return img.startsWith('http') ? img : `${BACKEND_URL}${img}`;
+        return img.startsWith('http') ? img : `${BACKEND_URL}/${img}`;
     };
 
     const formatDate = (dateStr: string) => {

@@ -133,7 +133,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
         }
     };
 
-    const combinedImages = [...existingImages.map(img => img.startsWith('http') ? img : `${BACKEND_URL}${img}`), ...previewImages];
+    const combinedImages = [...existingImages.map(img => img.startsWith('http') ? img : `${BACKEND_URL}/${img}`), ...previewImages];
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto p-4 sm:p-6" dir="rtl">
@@ -346,7 +346,7 @@ const MediaManagerPage: React.FC = () => {
     const normalizeImage = (post: MediaPost) => {
         const img = post.images?.[0];
         if (!img) return null;
-        return img.startsWith('http') ? img : `${BACKEND_URL}${img}`;
+        return img.startsWith('http') ? img : `${BACKEND_URL}/${img}`;
     };
 
     const getIconForCategory = (category: string) => {

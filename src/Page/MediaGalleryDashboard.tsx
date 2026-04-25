@@ -23,7 +23,7 @@ type FilterType = "الكل" | "الصور" | "الفيديوهات" | "الفع
 const BACKEND_URL = "http://localhost:3000";
 
 const normalizeImages = (post?: MediaPost | null) =>
-    post?.images?.map(img => (img.startsWith('http') ? img : `${BACKEND_URL}${img}`)) || [];
+    post?.images?.map(img => (img.startsWith('http') ? img : `${BACKEND_URL}/${img}`)) || [];
 
 // ========== HERO SECTION ==========
 const HeroSection: React.FC = () => {
@@ -92,7 +92,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ post, onClick }) => {
             className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] h-80 font-['Cairo']"
         >
             <img
-                src={post.images?.[0]?.startsWith('http') ? post.images[0] : `${BACKEND_URL}${post.images?.[0]}`}
+                src={post.images?.[0]?.startsWith('http') ? post.images[0] : `${BACKEND_URL}/${post.images?.[0]}`}
                 alt={post.title}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
@@ -141,7 +141,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ post, onClick }) => {
         >
             <div className="relative h-56 overflow-hidden">
                 <img
-                    src={post.images?.[0]?.startsWith('http') ? post.images[0] : (post.images?.[0] ? `${BACKEND_URL}${post.images[0]}` : "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800")}
+                    src={post.images?.[0]?.startsWith('http') ? post.images[0] : (post.images?.[0] ? `${BACKEND_URL}/${post.images[0]}` : "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800")}
                     alt={post.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
@@ -357,7 +357,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
         }
     };
 
-    const combinedImages = [...existingImages.map(img => img.startsWith('http') ? img : `${BACKEND_URL}${img}`), ...previewImages];
+    const combinedImages = [...existingImages.map(img => img.startsWith('http') ? img : `${BACKEND_URL}/${img}`), ...previewImages];
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

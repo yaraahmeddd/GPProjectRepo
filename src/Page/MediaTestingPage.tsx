@@ -39,7 +39,7 @@ const MediaTestingPage: React.FC = () => {
     const normalizeImage = (post: MediaPost) => {
         const img = post.images?.[0];
         if (!img) return "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800";
-        return img.startsWith('http') ? img : `${BACKEND_URL}${img}`;
+        return img.startsWith('http') ? img : `${BACKEND_URL}/${img}`;
     };
 
     const featuredPost = posts[0];
