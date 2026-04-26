@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { CloudUpload, Search, Image as ImageIcon, Video, FileText, Edit2, Trash2, Calendar, Plus, UploadCloud, AlertTriangle } from 'lucide-react';
+import { CloudUpload, Search, Image as ImageIcon, Video, FileText, Edit2, Trash2, Calendar, Plus, UploadCloud, AlertTriangle, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { CustomDatePicker } from '../Component/StaffPagesComponents/ui/CustomDatePicker';
 
 interface MediaPost {
@@ -344,6 +344,107 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
     );
 };
 
+// --- View Media Modal Component ---
+const MediaViewModal: React.FC<{ post: MediaPost | null; onClose: () => void }> = ({ post, onClose }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    // Reset index when post changes
+    useEffect(() => { setCurrentIndex(0); }, [post]);
+
+    if (!post) return null;
+
+    const images = post.images?.map(img => img.startsWith('http') ? img : `${BACKEND_URL}/${img}`) || [];
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-0 lg:p-8 font-['Cairo']" dir="rtl">
+            <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-sm animate-fade-in-down" onClick={onClose} />
+
+            <div className="relative max-w-7xl w-full h-full lg:h-auto lg:max-h-[95vh] flex flex-col items-center justify-center animate-fade-in-up select-none">
+                <button
+                    onClick={onClose}
+                    className="absolute top-6 left-6 w-12 h-12 rounded-full bg-slate-800/50 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all z-50 shadow-2xl ring-1 ring-white/10"
+                >
+                    <X size={24} />
+                </button>
+
+                <div className="w-full flex-1 flex flex-col lg:flex-row bg-slate-900 overflow-hidden lg:rounded-3xl shadow-2xl ring-1 ring-white/5">
+                    {/* Media Display Area */}
+                    <div className="flex-1 relative flex items-center justify-center bg-black min-h-[40vh] lg:min-h-0">
+                        {post.category === 'فيديو' && post.videoUrl ? (
+                            <iframe
+                                src={post.videoUrl}
+                                className="w-full h-full aspect-video"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        ) : (
+                            <div className="w-full h-full flex flex-col group">
+                                <img
+                                    src={images[currentIndex] || ''}
+                                    alt={post.title}
+                                    className="w-full h-full object-contain"
+                                />
+
+                                {images.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1)); }}
+                                            className="absolute left-6 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-slate-900/60 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white hover:text-slate-950 transition-all opacity-0 group-hover:opacity-100 ring-1 ring-white/20"
+                                        >
+                                            <ChevronLeft size={32} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1)); }}
+                                            className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-slate-900/60 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white hover:text-slate-950 transition-all opacity-0 group-hover:opacity-100 ring-1 ring-white/20"
+                                        >
+                                            <ChevronRight size={32} />
+                                        </button>
+                                        <div className="absolute bottom-10 inset-x-0 flex justify-center">
+                                            <div className="bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full text-sm text-white font-black tracking-widest shadow-2xl ring-1 ring-white/20">
+                                                {currentIndex + 1} / {images.length}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Content Sidebar */}
+                    <div className="w-full lg:w-[400px] bg-white p-8 lg:p-10 flex flex-col justify-between overflow-y-auto text-right">
+                        <div>
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="bg-[#2596be]/10 text-[#2596be] px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-[#2596be]/30">
+                                    {post.category}
+                                </span>
+                                <div className="h-px bg-slate-100 flex-1"></div>
+                            </div>
+                            <h3 className="text-3xl font-black text-slate-800 mb-6 leading-tight">
+                                {post.title}
+                            </h3>
+                            <p className="text-slate-500 mb-8 leading-relaxed text-lg font-medium">
+                                {post.description || 'لا يوجد وصف متاح لهذا المنشور.'}
+                            </p>
+                        </div>
+
+                        <div className="pt-8 border-t border-slate-100 space-y-4">
+                            <div className="flex items-center gap-3 text-slate-400 font-bold">
+                                <Calendar size={18} />
+                                <span>تم النشر في: {post.date ? new Date(post.date).toLocaleDateString('ar-EG') : ''}</span>
+                            </div>
+                            {images.length > 0 && post.category !== 'فيديو' && (
+                                <div className="flex items-center gap-3 text-slate-400 font-bold">
+                                    <ImageIcon size={18} />
+                                    <span>يتضمن {images.length} صور عالية الجودة</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- Main Page Component ---
 const MediaManagerPage: React.FC = () => {
@@ -356,6 +457,7 @@ const MediaManagerPage: React.FC = () => {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPost, setEditingPost] = useState<MediaPost | null>(null);
+    const [viewingPost, setViewingPost] = useState<MediaPost | null>(null);
     
     // Delete Confirmation State
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -555,7 +657,8 @@ const MediaManagerPage: React.FC = () => {
                                 return (
                                     <article 
                                         key={post.id} 
-                                        className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-400 group relative flex flex-col"
+                                        onClick={() => setViewingPost(post)}
+                                        className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-400 group relative flex flex-col cursor-pointer"
                                         style={{ animation: `fadeInUp 0.5s ease-out ${index * 0.05}s both` }}
                                     >
                                         
@@ -583,7 +686,7 @@ const MediaManagerPage: React.FC = () => {
                                             {/* Hover Actions (Edit & Delete) */}
                                             <div className="absolute bottom-4 left-4 flex gap-2 z-20">
                                                 <button 
-                                                    onClick={() => { setEditingPost(post); setIsModalOpen(true); }}
+                                                    onClick={(e) => { e.stopPropagation(); setEditingPost(post); setIsModalOpen(true); }}
                                                     title="تعديل"
                                                     className="w-9 h-9 rounded-full bg-white text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-300 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
                                                     style={{ transitionDelay: '0.05s' }}
@@ -591,7 +694,7 @@ const MediaManagerPage: React.FC = () => {
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => setDeleteConfirmId(post.id)}
+                                                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(post.id); }}
                                                     title="حذف"
                                                     className="w-9 h-9 rounded-full bg-rose-600 text-white hover:bg-rose-700 flex items-center justify-center transition-all duration-300 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 shadow-sm"
                                                     style={{ transitionDelay: '0.1s' }}
@@ -663,6 +766,11 @@ const MediaManagerPage: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={fetchPosts}
                 editPost={editingPost}
+            />
+
+            <MediaViewModal 
+                post={viewingPost}
+                onClose={() => setViewingPost(null)}
             />
 
             {/* Delete Confirmation Modal */}
