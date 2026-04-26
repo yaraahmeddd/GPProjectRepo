@@ -594,47 +594,34 @@ export const MediaGalleryPostPage: React.FC = () => {
     const statePost = (location.state as any)?.post as MediaPost | undefined;
 
     const [post, setPost] = useState<MediaPost | null>(statePost ?? null);
-    const [loading, setLoading] = useState(!statePost);
+    const [loading, setLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
         let mounted = true;
         const load = async () => {
             if (!id) {
-                if (mounted) {
-                    setPost(statePost ?? null);
-                    setLoading(false);
-                }
+                if (mounted) { setPost(statePost ?? null); setLoading(false); }
                 return;
             }
-
+            if (statePost && mounted) setPost(statePost);
+            if (mounted) setLoading(true);
             try {
-                if (!statePost && mounted) {
-                    setLoading(true);
-                }
-
                 const res = await api.get(`/media-posts/${id}`);
                 const fullPost = res.data?.success ? res.data.data : null;
-
-                if (mounted) {
-                    setPost(fullPost ?? statePost ?? null);
-                }
+                if (mounted) setPost(fullPost ?? statePost ?? null);
             } catch (e) {
                 console.error('Failed to fetch post:', e);
-                if (mounted && !statePost) {
-                    setPost(null);
-                }
+                if (mounted && !statePost) setPost(null);
             } finally {
                 if (mounted) setLoading(false);
             }
         };
         load();
         return () => { mounted = false; };
-    }, [id, statePost]);
+    }, [id]);
 
-    useEffect(() => {
-        setCurrentIndex(0);
-    }, [post?.id]);
+    useEffect(() => { setCurrentIndex(0); }, [post?.id]);
 
     if (loading) {
         return (
@@ -724,6 +711,25 @@ export const MediaGalleryPostPage: React.FC = () => {
                                         </div>
                                     </>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Thumbnail Strip */}
+                        {images.length > 1 && (
+                            <div className="flex gap-2 overflow-x-auto px-4 py-3 bg-slate-900" style={{ scrollbarWidth: 'none' }}>
+                                {images.map((img, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setCurrentIndex(index)}
+                                        className={`relative flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                                            currentIndex === index
+                                                ? 'border-white scale-105 shadow-lg'
+                                                : 'border-transparent opacity-50 hover:opacity-80'
+                                        }`}
+                                    >
+                                        <img src={img} alt={`صورة ${index + 1}`} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
                             </div>
                         )}
                     </div>
