@@ -600,16 +600,30 @@ export const MediaGalleryPostPage: React.FC = () => {
     useEffect(() => {
         let mounted = true;
         const load = async () => {
-            if (statePost || !id) return;
+            if (!id) {
+                if (mounted) {
+                    setPost(statePost ?? null);
+                    setLoading(false);
+                }
+                return;
+            }
+
             try {
-                setLoading(true);
-                const res = await api.get('/media-posts');
-                const list: MediaPost[] = res.data?.data || [];
-                const found = list.find(p => String(p.id) === String(id)) || null;
-                if (mounted) setPost(found);
+                if (!statePost && mounted) {
+                    setLoading(true);
+                }
+
+                const res = await api.get(`/media-posts/${id}`);
+                const fullPost = res.data?.success ? res.data.data : null;
+
+                if (mounted) {
+                    setPost(fullPost ?? statePost ?? null);
+                }
             } catch (e) {
                 console.error('Failed to fetch post:', e);
-                if (mounted) setPost(null);
+                if (mounted && !statePost) {
+                    setPost(null);
+                }
             } finally {
                 if (mounted) setLoading(false);
             }

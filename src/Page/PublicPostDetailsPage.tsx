@@ -18,7 +18,8 @@ interface MediaPostDetails {
 
 const normalizeUrl = (url?: string): string => {
   if (!url) return '';
-  return url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}/${url.replace(/^\/+/, '')}`;
 };
 
 const formatDate = (date?: string): string => {

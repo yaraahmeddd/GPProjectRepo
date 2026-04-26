@@ -22,6 +22,7 @@ const MediaViewerPage: React.FC = () => {
     // Reader Modal State
     const [selectedPost, setSelectedPost] = useState<MediaPost | null>(null);
     const [isReaderOpen, setIsReaderOpen] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     useEffect(() => {
         const fetchPosts = async () => {
@@ -56,7 +57,10 @@ const MediaViewerPage: React.FC = () => {
 
     const closeReader = () => {
         setIsReaderOpen(false);
-        setTimeout(() => setSelectedPost(null), 500); // Wait for animation
+        setTimeout(() => {
+            setSelectedPost(null);
+            setCurrentImageIndex(0);
+        }, 500); // Wait for animation
         document.body.style.overflow = '';
     };
 
@@ -64,6 +68,29 @@ const MediaViewerPage: React.FC = () => {
         const img = post.images?.[0];
         if (!img) return null;
         return img.startsWith('http') ? img : `${BACKEND_URL}/${img}`;
+    };
+
+    // Get all normalized images
+    const getAllImages = (post: MediaPost | null) => {
+        if (!post?.images) return [];
+        return post.images.map(img => 
+            img.startsWith('http') ? img : `${BACKEND_URL}/${img}`
+        );
+    };
+
+    const getCurrentImage = () => {
+        const images = getAllImages(selectedPost);
+        return images[currentImageIndex] || null;
+    };
+
+    const handlePrevImage = () => {
+        const images = getAllImages(selectedPost);
+        setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    };
+
+    const handleNextImage = () => {
+        const images = getAllImages(selectedPost);
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
     };
 
     const formatDate = (dateStr: string) => {
@@ -226,16 +253,46 @@ const MediaViewerPage: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Parallax Hero Header */}
-                    <div className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e1c38] overflow-hidden">
-                        {normalizeImage(selectedPost) && (
+                    {/* Parallax Hero Header with Image Carousel */}
+                    <div className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e1c38] overflow-hidden group">
+                        {getCurrentImage() ? (
                             <img 
-                                src={normalizeImage(selectedPost)!} 
+                                src={getCurrentImage()!} 
                                 alt={selectedPost.title}
-                                className="absolute inset-0 w-full h-full object-cover opacity-60"
+                                className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500"
                             />
-                        )}
+                        ) : null}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white" />
+
+                        {/* Image Navigation Arrows (only show if multiple images) */}
+                        {selectedPost && getAllImages(selectedPost).length > 1 && (
+                            <>
+                                {/* Previous Button */}
+                                <button 
+                                    onClick={handlePrevImage}
+                                    className="absolute left-6 md:left-8 top-1/2 transform -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#0e1c38] opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+
+                                {/* Next Button */}
+                                <button 
+                                    onClick={handleNextImage}
+                                    className="absolute right-6 md:right-8 top-1/2 transform -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#0e1c38] opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hover:bg-white shadow-lg"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+
+                                {/* Image Counter */}
+                                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold">
+                                    {currentImageIndex + 1} / {getAllImages(selectedPost).length}
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Article Content - Pulled up to overlap the image */}
@@ -256,6 +313,37 @@ const MediaViewerPage: React.FC = () => {
                         <div className="prose prose-lg prose-headings:font-bold prose-a:text-[#2596be] text-gray-600 font-medium leading-loose max-w-none mb-16 whitespace-pre-wrap text-lg md:text-xl">
                             {selectedPost.description || 'لا يوجد تفاصيل إضافية لهذا المنشور.'}
                         </div>
+
+                        {/* Image Gallery Thumbnails (for photo posts with multiple images) */}
+                        {selectedPost.category !== 'فيديو' && getAllImages(selectedPost).length > 1 && (
+                            <div className="mb-16">
+                                <h3 className="text-lg font-bold text-[#0e1c38] mb-4">الصور ({getAllImages(selectedPost).length})</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {getAllImages(selectedPost).map((img, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentImageIndex(index)}
+                                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all duration-300 hover:border-[#2596be] ${
+                                                currentImageIndex === index 
+                                                    ? 'border-[#2596be] ring-2 ring-[#2596be]/30 shadow-lg' 
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <img 
+                                                src={img} 
+                                                alt={`thumbnail-${index}`}
+                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                            />
+                                            {currentImageIndex === index && (
+                                                <div className="absolute inset-0 bg-[#2596be]/20 flex items-center justify-center">
+                                                    <div className="w-6 h-6 bg-[#2596be] rounded-full border-2 border-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {selectedPost.category === 'فيديو' && selectedPost.videoUrl && (
                             <div className="mt-12 rounded-3xl overflow-hidden bg-gray-100 aspect-video shadow-xl border border-gray-100">

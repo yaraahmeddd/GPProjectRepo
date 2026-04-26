@@ -26,6 +26,34 @@ const mapPostImages = (images?: string[]): string[] => {
   return images.map((img) => normalizeImageUrl(img)).filter(Boolean);
 };
 
+const mapBackendPostToMediaItem = (post: BackendMediaPost): MediaItem => {
+  const images = mapPostImages(post.images);
+  const category = post.category || '';
+  const type: MediaItem['type'] =
+    category === 'فيديو' ? 'videos'
+      : category === 'فعاليات' || category === 'حدث' ? 'events'
+        : category === 'عرض ترويجي' ? 'promotions'
+          : category === 'أخبار' ? 'news'
+            : category === 'إعلان' ? 'announcements'
+              : category === 'الصيانة' ? 'maintenance'
+                : 'photos';
+
+  return {
+    id: String(post.id),
+    type,
+    title: post.title,
+    description: post.description || '',
+    imageUrl: images[0] || DEFAULT_IMAGE,
+    images,
+    count: `${images.length} صورة`,
+    duration: post.videoDuration || '00:00',
+    videoUrl: post.videoUrl || '',
+    date: formatDate(post.date),
+    categoryLabel: category,
+    category
+  };
+};
+
 const formatDate = (date?: string): string => {
   if (!date) return '';
   return new Date(date).toLocaleDateString('ar-EG', {
@@ -88,6 +116,20 @@ const MediaGallery: FC = () => {
   useEffect(() => {
     fetchPosts();
   }, []);
+
+  const handlePostOpen = async (post: MediaItem) => {
+    try {
+      const response = await api.get(`/media-posts/${post.id}`);
+      if (response.data?.success && response.data.data) {
+        setSelectedPost(mapBackendPostToMediaItem(response.data.data as BackendMediaPost));
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to fetch single media post:', error);
+    }
+
+    setSelectedPost(post);
+  };
 
   const photoAlbums: PhotoAlbum[] = posts
     .filter((post) => post.category !== 'فيديو')
@@ -165,7 +207,7 @@ const MediaGallery: FC = () => {
         announcementAlbums={announcementAlbums}
         maintenanceAlbums={maintenanceAlbums}
         videos={videos}
-        onPostOpen={setSelectedPost}
+        onPostOpen={handlePostOpen}
       />
 
       <PostDetailsModal post={selectedPost} onClose={() => setSelectedPost(null)} />

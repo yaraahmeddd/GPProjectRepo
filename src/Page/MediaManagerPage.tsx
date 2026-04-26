@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { CloudUpload, Search, Image as ImageIcon, Video, FileText, Edit2, Trash2, Calendar, X, Plus, UploadCloud, AlertTriangle } from 'lucide-react';
+import { CloudUpload, Search, Image as ImageIcon, Video, FileText, Edit2, Trash2, Calendar, Plus, UploadCloud, AlertTriangle } from 'lucide-react';
 import { CustomDatePicker } from '../Component/StaffPagesComponents/ui/CustomDatePicker';
 
 interface MediaPost {
@@ -73,21 +73,25 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setUploadedImages([file]);
-            setPreviewImages([URL.createObjectURL(file)]);
-            setExistingImages([]); // Enforce max 1 image
+        const files = e.target.files;
+        if (files) {
+            const fileList = Array.from(files);
+            setUploadedImages(prev => [...prev, ...fileList]);
+            const imageUrls = fileList.map(file => URL.createObjectURL(file));
+            setPreviewImages(prev => [...prev, ...imageUrls]);
             setErrors(prev => ({ ...prev, media: undefined }));
         }
-        // Reset input value so the same file can be selected again if needed
+        // Reset input value so the same files can be selected again if needed
         e.target.value = '';
     };
 
-    const handleRemoveMedia = () => {
-        setPreviewImages([]);
-        setUploadedImages([]);
-        setExistingImages([]);
+    const handleRemovePreview = (index: number) => {
+        setPreviewImages(prev => prev.filter((_, i) => i !== index));
+        setUploadedImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveExisting = (index: number) => {
+        setExistingImages(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async () => {
@@ -111,12 +115,14 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
             data.append('title', formData.title);
             data.append('description', formData.description);
             data.append('category', formData.category);
-            data.append('date', formData.date); // Allow date edit
+            data.append('date', formData.date);
             data.append('videoUrl', videoUrl);
 
+            // Append all uploaded images
             uploadedImages.forEach(file => data.append('images', file));
 
             if (editPost) {
+                // Append all existing images to keep them
                 existingImages.forEach(img => data.append('existingImages', img));
                 await api.put(`/media-posts/${editPost.id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
             } else {
@@ -160,20 +166,67 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                 {formData.category !== 'فيديو' ? (
                                     <>
                                         {combinedImages.length > 0 ? (
-                                            <div className="relative w-full aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 group shadow-sm bg-gray-50">
-                                                <img src={combinedImages[0]} alt="preview" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleRemoveMedia();
-                                                        }}
-                                                        className="bg-red-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-red-600 transition-colors shadow-lg transform hover:scale-105"
-                                                    >
-                                                        <Trash2 size={18} /> حذف الصورة
-                                                    </button>
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-3 auto-rows-max">
+                                                    {/* Existing Images */}
+                                                    {existingImages.map((img, index) => (
+                                                        <div key={`existing-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group shadow-sm bg-gray-50">
+                                                            <img 
+                                                                src={img.startsWith('http') ? img : `${BACKEND_URL}/${img}`} 
+                                                                alt={`existing-${index}`} 
+                                                                className="w-full h-full object-cover" 
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleRemoveExisting(index);
+                                                                    }}
+                                                                    className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
+                                                                >
+                                                                    <Trash2 size={14} /> حذف
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {/* New Uploaded Images */}
+                                                    {previewImages.map((img, index) => (
+                                                        <div key={`preview-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group shadow-sm bg-gray-50 ring-2 ring-blue-400">
+                                                            <img 
+                                                                src={img} 
+                                                                alt={`preview-${index}`} 
+                                                                className="w-full h-full object-cover" 
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleRemovePreview(index);
+                                                                    }}
+                                                                    className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
+                                                                >
+                                                                    <Trash2 size={14} /> حذف
+                                                                </button>
+                                                            </div>
+                                                            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-md">جديد</div>
+                                                        </div>
+                                                    ))}
                                                 </div>
+                                                
+                                                {/* Add More Images Button */}
+                                                <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-[#2596be] transition-all group bg-white p-6">
+                                                    <div className="flex flex-col items-center justify-center text-center">
+                                                        <div className="w-12 h-12 bg-[#2596be] rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-md">
+                                                            <Plus size={20} className="text-white" />
+                                                        </div>
+                                                        <h3 className="text-sm font-bold text-gray-900">إضافة صور</h3>
+                                                        <p className="text-xs text-gray-500">انقر أو اسحب لإضافة المزيد</p>
+                                                    </div>
+                                                    <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+                                                </label>
                                             </div>
                                         ) : (
                                             <label className="flex flex-col items-center justify-center w-full aspect-square md:aspect-[4/3] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#2596be] transition-all group relative bg-white">
@@ -182,10 +235,10 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                                         <UploadCloud size={28} className="text-white" />
                                                     </div>
                                                     <h3 className="text-lg font-bold text-gray-900 mb-1">انقر للرفع</h3>
-                                                    <p className="text-sm text-gray-500 mb-4">أو قم بسحب وإفلات الملف هنا</p>
-                                                    <p className="text-xs text-gray-400 font-medium">MP4, MOV, JPG, PNG حتى 2 جيجابايت</p>
+                                                    <p className="text-sm text-gray-500 mb-4">أو قم بسحب وإفلات الملفات هنا</p>
+                                                    <p className="text-xs text-gray-400 font-medium">JPG, PNG حتى 2 جيجابايت - يمكن تحميل عدة صور</p>
                                                 </div>
-                                                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                                                <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
                                             </label>
                                         )}
                                     </>
