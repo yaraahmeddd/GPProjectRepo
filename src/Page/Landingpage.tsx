@@ -652,10 +652,10 @@ const App = () => {
               onClick={() => handleTabChange("home")}
             >
               <div className="flex w-16 h-16 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
-                <img src={HUCLogo} alt="نادي جامعه العاصمة" className="w-full h-full object-contain" />
+                <img src={HUCLogo} alt={t("common.club_name", "نادي جامعه العاصمة")} className="w-full h-full object-contain" />
               </div>
               <div className="flex w-16 h-16 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
-                <img src={CapuniLogo} alt="كاب يوني" className="w-full h-full object-contain" />
+                <img src={CapuniLogo} alt={t("common.capuni", "كاب يوني")} className="w-full h-full object-contain" />
               </div>
               {/* <div className="hidden md:block">
                 <h1 className="font-extrabold text-lg text-[#0e1c38] leading-tight">نادي جامعه العاصمة</h1>

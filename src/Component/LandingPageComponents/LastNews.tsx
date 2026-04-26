@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../api/axios';
-import { X, Calendar, Play, ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { Calendar, Play, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import type { Category, NewsCategory, NewsItem } from './new';
+import { useTranslation } from 'react-i18next';
 
 const BACKEND_URL = 'http://localhost:3000';
 const DEFAULT_IMAGE = '/api/placeholder/800/600';
@@ -62,6 +63,7 @@ const mapMediaCategory = (category: string): NewsCategory => {
 };
 
 const LastNews: React.FC = () => {
+  const { t } = useTranslation("landing");
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [posts, setPosts] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -77,11 +79,11 @@ const LastNews: React.FC = () => {
   const [isReaderOpen, setIsReaderOpen] = useState(false);
 
   const categories: Category[] = [
-    { id: 'all', name: 'all', label: 'الكل' },
-    { id: 'photos', name: 'photos', label: 'الصور' },
-    { id: 'videos', name: 'videos', label: 'الفيديوهات' },
-    { id: 'events', name: 'events', label: 'الفعاليات' },
-    { id: 'news', name: 'news', label: 'الأخبار' },
+    { id: 'all', name: 'all', label: t('news.cats.all', 'الكل') },
+    { id: 'photos', name: 'photos', label: t('news.cats.photos', 'الصور') },
+    { id: 'videos', name: 'videos', label: t('news.cats.videos', 'الفيديوهات') },
+    { id: 'events', name: 'events', label: t('news.cats.events', 'الفعاليات') },
+    { id: 'news', name: 'news', label: t('news.cats.news', 'الأخبار') },
   ];
 
   useEffect(() => {
@@ -104,8 +106,8 @@ const LastNews: React.FC = () => {
 
           return {
             id: Number(post.id),
-            title: post.title || 'بدون عنوان',
-            excerpt: post.description || 'لا يوجد وصف لهذا المنشور.',
+            title: post.title || t('news.no_title', 'بدون عنوان'),
+            excerpt: post.description || t('news.no_desc', 'لا يوجد وصف لهذا المنشور.'),
             content: post.description || '',
             image: primaryImage || DEFAULT_IMAGE,
             category: mapMediaCategory(post.category),
@@ -125,7 +127,7 @@ const LastNews: React.FC = () => {
     };
 
     fetchMediaPosts();
-  }, []);
+  }, [t]);
 
   const openPostDetails = async (postId: number) => {
     try {
@@ -198,10 +200,10 @@ const LastNews: React.FC = () => {
             <div className="max-w-[1400px] mx-auto relative z-10 text-center">
                 <div className="flex flex-col items-center">
                     <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1] mb-6 text-white">
-                        آخر الأخبار
+                        {t('news.lastNews_title', 'آخر الأخبار')}
                     </h1>
                     <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl leading-relaxed">
-                        تغطية حصرية لأهم الأحداث، الإنجازات، والفعاليات داخل النادي.
+                        {t('news.lastNews_subtitle', 'تغطية حصرية لأهم الأحداث، الإنجازات، والفعاليات داخل النادي.')}
                     </p>
                 </div>
             </div>
@@ -231,14 +233,14 @@ const LastNews: React.FC = () => {
                 </div>
             ) : posts.length === 0 ? (
                 <div className="text-center py-32">
-                    <h2 className="text-3xl font-black text-gray-300">لا توجد تغطية حالياً.</h2>
+                    <h2 className="text-3xl font-black text-gray-300">{t('news.no_coverage', 'لا توجد تغطية حالياً.')}</h2>
                 </div>
             ) : (
                 <>
                     {/* Featured Section (1 Big + 4 Small) */}
                     {activeFilter === 'all' && featuredMain && (
                         <div className="mb-20">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">الأخبار المميزة</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">{t('news.featured', 'الأخبار المميزة')}</h2>
                             
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 auto-rows-[minmax(200px,auto)]">
                                 {/* 1 BIG HERO */}
@@ -312,10 +314,10 @@ const LastNews: React.FC = () => {
 
                     {/* All Other News Standard Grid */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">جميع الأخبار</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8 border-r-4 border-[#2596be] pr-4">{t('news.all_news', 'جميع الأخبار')}</h2>
                         
                         {filteredNews.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500 font-bold">لا توجد نتائج مطابقة.</div>
+                            <div className="py-12 text-center text-gray-500 font-bold">{t('news.no_results', 'لا توجد نتائج مطابقة.')}</div>
                         ) : (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
@@ -366,7 +368,7 @@ const LastNews: React.FC = () => {
                                             onClick={() => setVisibleCount(prev => prev + 8)}
                                             className="px-8 py-3 bg-white border-2 border-gray-100 text-[#0e1c38] font-bold rounded-full hover:border-[#2596be] hover:text-[#2596be] transition-all duration-300 shadow-sm hover:shadow-md"
                                         >
-                                            عرض المزيد من الأخبار
+                                            {t('news.load_more', 'عرض المزيد من الأخبار')}
                                         </button>
                                     </div>
                                 )}
@@ -419,7 +421,7 @@ const LastNews: React.FC = () => {
 
                     {/* Details / Description */}
                     <div className="prose prose-lg prose-headings:font-bold prose-a:text-[#2596be] text-gray-700 font-medium leading-loose max-w-none mb-16 whitespace-pre-wrap text-lg md:text-xl">
-                        {selectedPostDetails.description || 'لا يوجد تفاصيل إضافية لهذا المنشور.'}
+                        {selectedPostDetails.description || t('news.no_details', 'لا يوجد تفاصيل إضافية لهذا المنشور.')}
                     </div>
 
                     {selectedPostDetails.category === 'فيديو' && selectedPostDetails.videoUrl && (
@@ -439,7 +441,7 @@ const LastNews: React.FC = () => {
                             onClick={closeReader}
                             className="px-8 py-4 bg-[#0e1c38] text-white rounded-full font-bold hover:bg-[#2596be] hover:-translate-y-1 transition-all duration-300 shadow-xl shadow-[#0e1c38]/20"
                         >
-                            العودة للأخبار
+                            {t('news.back_to_news', 'العودة للأخبار')}
                         </button>
                     </div>
                 </article>

@@ -17,6 +17,7 @@ import arBranches from './locales/ar/branches.json';
 import arProfessions from './locales/ar/professions.json';
 import arMedia from './locales/ar/media.json';
 import arAdmin from './locales/ar/admin.json';
+import arLanding from './locales/ar/landing.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './locales/en/common.json';
@@ -33,6 +34,7 @@ import enBranches from './locales/en/branches.json';
 import enProfessions from './locales/en/professions.json';
 import enMedia from './locales/en/media.json';
 import enAdmin from './locales/en/admin.json';
+import enLanding from './locales/en/landing.json';
 
 // ─── Namespace list (single source of truth) ──────────────────────────────────
 export const NS = [
@@ -50,6 +52,7 @@ export const NS = [
   'professions',
   'media',
   'admin',
+  'landing',
 ] as const;
 
 export type Namespace = (typeof NS)[number];
@@ -75,6 +78,7 @@ i18n
         professions: arProfessions,
         media: arMedia,
         admin: arAdmin,
+        landing: arLanding,
       },
       en: {
         common: enCommon,
@@ -91,6 +95,7 @@ i18n
         professions: enProfessions,
         media: enMedia,
         admin: enAdmin,
+        landing: enLanding,
       },
     },
 

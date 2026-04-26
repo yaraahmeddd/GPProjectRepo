@@ -17,6 +17,7 @@ import arBranches from './i18n/locales/ar/branches.json';
 import arProfessions from './i18n/locales/ar/professions.json';
 import arMedia from './i18n/locales/ar/media.json';
 import arAdmin from './i18n/locales/ar/admin.json';
+import arLanding from './i18n/locales/ar/landing.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './i18n/locales/en/common.json';
@@ -33,6 +34,7 @@ import enBranches from './i18n/locales/en/branches.json';
 import enProfessions from './i18n/locales/en/professions.json';
 import enMedia from './i18n/locales/en/media.json';
 import enAdmin from './i18n/locales/en/admin.json';
+import enLanding from './i18n/locales/en/landing.json';
 
 const RTL_LANGUAGES = new Set(['ar']);
 
@@ -67,6 +69,7 @@ void i18n
         professions: arProfessions,
         media: arMedia,
         admin: arAdmin,
+        landing: arLanding,
       },
       en: {
         common: enCommon,
@@ -83,6 +86,7 @@ void i18n
         professions: enProfessions,
         media: enMedia,
         admin: enAdmin,
+        landing: enLanding,
       },
     },
 
@@ -95,7 +99,7 @@ void i18n
       'common', 'nav', 'dashboard', 'DashboardPage',
       'members', 'sports', 'finance', 'registrations',
       'RegistrationManagementPage', 'faculties', 'branches',
-      'professions', 'media', 'admin',
+      'professions', 'media', 'admin', 'landing'
     ],
 
     interpolation: { escapeValue: false },

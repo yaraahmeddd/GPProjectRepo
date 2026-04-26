@@ -1,4 +1,5 @@
 import { useEffect, useState, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../api/axios';
 import type { MediaItem, PhotoAlbum, Video } from './MediaTypes';
 
@@ -94,6 +95,7 @@ const getYouTubeEmbedUrl = (url?: string): string => {
 };
 
 const MediaGallery: FC = () => {
+  const { t } = useTranslation("landing");
   const [activeTab, setActiveTab] = useState<'all' | 'photos' | 'videos' | 'events' | 'promotions' | 'news' | 'announcements' | 'maintenance'>('all');
   const [posts, setPosts] = useState<BackendMediaPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +192,7 @@ const MediaGallery: FC = () => {
   }, [selectedPost]);
 
   if (loading) {
-    return <div className="py-20 text-center">جاري التحميل...</div>;
+    return <div className="py-20 text-center">{t("media.loading", "جاري التحميل...")}</div>;
   }
 
   return (
@@ -215,20 +217,22 @@ const MediaGallery: FC = () => {
   );
 };
 
-const HeroSection: FC = () => (
-  <section className="relative overflow-hidden bg-[#0e1c38] hero-pattern">
-    <div className="gradient-overlay">
-      <div className="container mx-auto px-4 py-20 md:py-32">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
-            معرض الوسائط
-          </h1>
-          <p className="text-xl md:text-2xl text-white/90 leading-relaxed">
-            شاهد أجمل اللحظات والإنجازات من نادي حلوان
-          </p>
+const HeroSection: FC = () => {
+  const { t } = useTranslation("landing");
+  return (
+    <section className="relative overflow-hidden bg-[#0e1c38] hero-pattern">
+      <div className="gradient-overlay">
+        <div className="container mx-auto px-4 py-20 md:py-32">
+          <div className="max-w-4xl mx-auto text-center text-white">
+            <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
+              {t("media.hero_title", "معرض الوسائط")}
+            </h1>
+            <p className="text-xl md:text-2xl text-white/90 leading-relaxed">
+              {t("media.hero_subtitle", "شاهد أجمل اللحظات والإنجازات من نادي حلوان")}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
 
     <div className="absolute bottom-0 left-0 right-0">
       <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -237,26 +241,29 @@ const HeroSection: FC = () => (
     </div>
   </section>
 );
+};
 
 interface TabsSectionProps {
   activeTab: string;
   onTabChange: (tab: 'all' | 'photos' | 'videos' | 'events') => void;
 }
 
-const TabsSection: FC<TabsSectionProps> = ({ activeTab, onTabChange }) => (
-  <section className="py-8 bg-white border-b border-gray-200 sticky top-0 z-40">
-    <div className="container mx-auto px-4">
-      <div className="flex items-center justify-center gap-4 flex-wrap">
-        {[
-          { id: 'all', label: 'الكــل' },
-          { id: 'photos', label: 'الصور' },
-          { id: 'videos', label: 'الفيديوهات' },
-          { id: 'events', label: 'الفعاليات' },
-          { id: 'promotions', label: 'العروض الترويجية' },
-          { id: 'news', label: 'الأخبار' },
-          { id: 'announcements', label: 'الإعلانات' },
-          { id: 'maintenance', label: 'الصيانة' }
-        ].map((tab) => (
+const TabsSection: FC<TabsSectionProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation("landing");
+  return (
+    <section className="py-8 bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          {[
+            { id: 'all', label: t('news.cats.all', 'الكــل') },
+            { id: 'photos', label: t('news.cats.photos', 'الصور') },
+            { id: 'videos', label: t('news.cats.videos', 'الفيديوهات') },
+            { id: 'events', label: t('news.cats.events', 'الفعاليات') },
+            { id: 'promotions', label: t('news.cats.promotions', 'العروض الترويجية') },
+            { id: 'news', label: t('news.cats.news', 'الأخبار') },
+            { id: 'announcements', label: t('news.cats.announcements', 'الإعلانات') },
+            { id: 'maintenance', label: t('news.cats.maintenance', 'الصيانة') }
+          ].map((tab) => (
           <button
             key={tab.id}
             className={`tab-btn px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${activeTab === tab.id
@@ -272,6 +279,7 @@ const TabsSection: FC<TabsSectionProps> = ({ activeTab, onTabChange }) => (
     </div>
   </section>
 );
+};
 
 interface MediaGridProps {
   activeTab: string;
@@ -295,13 +303,15 @@ const MediaGrid: FC<MediaGridProps> = ({
   maintenanceAlbums,
   videos,
   onPostOpen
-}) => (
-  <section className="py-16 bg-gray-50">
-    <div className="container mx-auto px-4">
-      {(activeTab === 'all' || activeTab === 'photos') && (
-        <div className="mb-16">
-          <SectionHeader title="ألبومات الصور" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+}) => {
+  const { t } = useTranslation("landing");
+  return (
+    <section className="py-16 bg-gray-50">
+      <div className="container mx-auto px-4">
+        {(activeTab === 'all' || activeTab === 'photos') && (
+          <div className="mb-16">
+            <SectionHeader title={t('media.albums.photos', 'ألبومات الصور')} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {imageAlbums.map((album) => (
               <MediaCard key={album.id} item={album} onPostOpen={onPostOpen} />
             ))}
@@ -311,7 +321,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'events') && (
         <div className="mb-16">
-          <SectionHeader title="الفعاليات" />
+          <SectionHeader title={t('media.albums.events', 'الفعاليات')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {eventAlbums.map((eventAlbum) => (
               <MediaCard key={eventAlbum.id} item={eventAlbum} onPostOpen={onPostOpen} />
@@ -322,7 +332,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'videos') && videos.length > 0 && (
         <div className="mb-16">
-          <SectionHeader title="الفيديوهات" />
+          <SectionHeader title={t('media.albums.videos', 'الفيديوهات')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {videos.map((video) => (
               <MediaCard key={video.id} item={video} onPostOpen={onPostOpen} />
@@ -333,7 +343,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'promotions') && promotionAlbums.length > 0 && (
         <div className="mb-16">
-          <SectionHeader title="العروض الترويجية" />
+          <SectionHeader title={t('media.albums.promotions', 'العروض الترويجية')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {promotionAlbums.map((album) => (
               <MediaCard key={album.id} item={album} onPostOpen={onPostOpen} />
@@ -344,7 +354,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'news') && newsAlbums.length > 0 && (
         <div className="mb-16">
-          <SectionHeader title="الأخبار" />
+          <SectionHeader title={t('media.albums.news', 'الأخبار')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {newsAlbums.map((album) => (
               <MediaCard key={album.id} item={album} onPostOpen={onPostOpen} />
@@ -355,7 +365,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'announcements') && announcementAlbums.length > 0 && (
         <div className="mb-16">
-          <SectionHeader title="الإعلانات" />
+          <SectionHeader title={t('media.albums.announcements', 'الإعلانات')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {announcementAlbums.map((album) => (
               <MediaCard key={album.id} item={album} onPostOpen={onPostOpen} />
@@ -366,7 +376,7 @@ const MediaGrid: FC<MediaGridProps> = ({
 
       {(activeTab === 'all' || activeTab === 'maintenance') && maintenanceAlbums.length > 0 && (
         <div className="mb-16">
-          <SectionHeader title="الصيانة" />
+          <SectionHeader title={t('media.albums.maintenance', 'الصيانة')} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {maintenanceAlbums.map((album) => (
               <MediaCard key={album.id} item={album} onPostOpen={onPostOpen} />
@@ -377,6 +387,7 @@ const MediaGrid: FC<MediaGridProps> = ({
     </div>
   </section>
 );
+};
 
 const SectionHeader: FC<{ title: string }> = ({ title }) => (
   <div className="mb-8">
@@ -391,6 +402,7 @@ interface MediaCardProps {
 }
 
 const MediaCard: FC<MediaCardProps> = ({ item, onPostOpen }) => {
+  const { t } = useTranslation("landing");
   const isVideo = item.type === 'videos';
   const album = item as PhotoAlbum;
   const video = item as Video;
@@ -443,7 +455,7 @@ const MediaCard: FC<MediaCardProps> = ({ item, onPostOpen }) => {
       {isVideo && (
         <div className="p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-2">{video.title}</h3>
-          <p className="text-gray-600 text-sm">{video.description || 'اضغط لعرض تفاصيل الفيديو'}</p>
+          <p className="text-gray-600 text-sm">{video.description || t("media.click_for_video", "اضغط لعرض تفاصيل الفيديو")}</p>
         </div>
       )}
     </button>
@@ -456,6 +468,7 @@ interface PostDetailsModalProps {
 }
 
 const PostDetailsModal: FC<PostDetailsModalProps> = ({ post, onClose }) => {
+  const { t } = useTranslation("landing");
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -480,7 +493,7 @@ const PostDetailsModal: FC<PostDetailsModalProps> = ({ post, onClose }) => {
           type="button"
           onClick={onClose}
           className="absolute top-4 left-4 z-20 rounded-full bg-black/70 text-white w-10 h-10 flex items-center justify-center hover:bg-black transition-colors"
-          aria-label="إغلاق"
+          aria-label={t("media.close", "إغلاق")}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -524,7 +537,7 @@ const PostDetailsModal: FC<PostDetailsModalProps> = ({ post, onClose }) => {
                     type="button"
                     onClick={() => setCurrentIndex((prev) => (prev === 0 ? postImages.length - 1 : prev - 1))}
                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-900 rounded-full w-11 h-11 flex items-center justify-center shadow"
-                    aria-label="الصورة السابقة"
+                    aria-label={t("media.prev_image", "الصورة السابقة")}
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -534,7 +547,7 @@ const PostDetailsModal: FC<PostDetailsModalProps> = ({ post, onClose }) => {
                     type="button"
                     onClick={() => setCurrentIndex((prev) => (prev === postImages.length - 1 ? 0 : prev + 1))}
                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-gray-900 rounded-full w-11 h-11 flex items-center justify-center shadow"
-                    aria-label="الصورة التالية"
+                    aria-label={t("media.next_image", "الصورة التالية")}
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -568,26 +581,26 @@ const PostDetailsModal: FC<PostDetailsModalProps> = ({ post, onClose }) => {
         <div className="p-6 md:p-8">
           <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{post.title}</h3>
           <p className="text-gray-700 leading-relaxed whitespace-pre-line mb-5">
-            {post.description || 'لا يوجد وصف لهذا المنشور.'}
+            {post.description || t("media.no_desc", "لا يوجد وصف لهذا المنشور.")}
           </p>
 
           <div className="flex flex-wrap gap-3 text-sm">
             <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full font-semibold">
-              التصنيف: {category}
+              {t("media.category", "التصنيف:")} {category}
             </span>
             {!isVideo && (
               <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full font-semibold">
-                عدد الصور: {postImages.length}
+                {t("media.image_count", "عدد الصور:")} {postImages.length}
               </span>
             )}
             {!!post.date && (
               <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full font-semibold">
-                التاريخ: {post.date}
+                {t("media.date", "التاريخ:")} {post.date}
               </span>
             )}
             {isVideo && !!post.duration && (
               <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full font-semibold">
-                المدة: {post.duration}
+                {t("media.duration", "المدة:")} {post.duration}
               </span>
             )}
           </div>
