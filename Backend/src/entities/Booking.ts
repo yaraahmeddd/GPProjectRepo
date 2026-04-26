@@ -11,6 +11,9 @@ import {
 } from "typeorm";
 import { BookingParticipant } from "./BookingParticipant";
 import { Sport } from "./Sport";
+import { Field } from "./Field";
+import { Member } from "./Member";
+import { TeamMember } from "./TeamMember";
 
 export type UserType = "member" | "team_member";
 export type BookingStatus = "pending_payment" | "confirmed" | "completed" | "cancelled";
@@ -42,6 +45,18 @@ export class Booking {
 
   @Column({ type: "uuid", name: "field_id" })
   field_id: string; // UUID reference to Field entity
+
+  @ManyToOne(() => Field, { onDelete: "RESTRICT" })
+  @JoinColumn({ name: "field_id" })
+  field: Field;
+
+  @ManyToOne(() => Member, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "member_id" })
+  member: Member | null;
+
+  @ManyToOne(() => TeamMember, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "team_member_id" })
+  team_member: TeamMember | null;
 
   @Column({ type: "timestamp", name: "start_time" })
   start_time: Date;

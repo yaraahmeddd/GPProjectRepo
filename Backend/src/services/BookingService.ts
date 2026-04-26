@@ -825,4 +825,136 @@ export class BookingService {
 
     return query.getMany();
   }
+
+  /**
+   * Get security dashboard bookings with all necessary details
+   */
+  async getSecurityDashboardBookings(baseUrl: string, filters?: {
+    field_id?: string;
+    sport_id?: number;
+    status?: BookingStatus;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any[]> {
+    const query = this.bookingRepository
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.participants', 'participants')
+      .leftJoinAndSelect('booking.sport', 'sport')
+      .leftJoinAndSelect('booking.field', 'field')
+      .leftJoinAndSelect('booking.member', 'member')
+      .leftJoinAndSelect('member.account', 'member_account')
+      .leftJoinAndSelect('booking.team_member', 'team_member')
+      .leftJoinAndSelect('team_member.account', 'team_member_account')
+      .orderBy('booking.start_time', 'ASC');
+
+    if (filters?.field_id) {
+      query.andWhere('booking.field_id = :fieldId', { fieldId: filters.field_id });
+    }
+
+    if (filters?.sport_id) {
+      query.andWhere('booking.sport_id = :sportId', { sportId: filters.sport_id });
+    }
+
+    if (filters?.status) {
+      query.andWhere('booking.status = :status', { status: filters.status });
+    }
+
+    if (filters?.start_date) {
+      const startDate = new Date(filters.start_date);
+      startDate.setHours(0, 0, 0, 0);
+      query.andWhere('booking.start_time >= :startDate', { startDate });
+    }
+
+    if (filters?.end_date) {
+      const endDate = new Date(filters.end_date);
+      endDate.setHours(23, 59, 59, 999);
+      query.andWhere('booking.start_time <= :endDate', { endDate });
+    }
+
+    const bookings = await query.getMany();
+
+    // Transform to security dashboard format (matching admin invitations API)
+    return bookings.map(booking => {
+      // Get booker from member or team_member relationship
+      const booker = booking.member || booking.team_member;
+      const bookerName = booker 
+        ? `${booker.first_name_en || ''} ${booker.last_name_en || ''}`.trim() || `${booker.first_name_ar || ''} ${booker.last_name_ar || ''}`.trim()
+        : 'N/A';
+      const bookerPhone = booker?.phone || null;
+      
+      // Get email from account relationship
+      const bookerEmail = booking.member?.account?.email || booking.team_member?.account?.email || null;
+
+      // Get creator participant (is_creator = true)
+      const creator = booking.participants?.find(p => p.is_creator) || booking.participants?.[0];
+
+      // Normalize image URLs
+      const normalizeImageUrl = (path: string | null): string | null => {
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+        return `${baseUrl}/${path}`;
+      };
+
+      // Format times in Arabic numerals
+      const startTime = booking.start_time.toLocaleTimeString('ar-EG', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+      const endTime = booking.end_time.toLocaleTimeString('ar-EG', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+
+      const registeredCount = booking.participants?.length || 1;
+      const remainingSlots = Math.max(0, booking.expected_participants - registeredCount);
+
+      return {
+        booking_id: booking.id,
+        share_token: booking.share_token,
+        share_url: `${baseUrl}/bookings/join/${booking.share_token}`,
+        booker: {
+          name: bookerName,
+          type: booking.member_id ? 'member' : 'team_member',
+          phone: bookerPhone,
+          email: bookerEmail,
+        },
+        booking_date: booking.start_time,
+        booking_time: {
+          start: startTime,
+          end: endTime,
+          duration_minutes: booking.duration_minutes || 0,
+        },
+        sport: {
+          name_ar: booking.sport?.name_ar || 'N/A',
+          name_en: booking.sport?.name_en || 'N/A',
+        },
+        field: {
+          name_ar: booking.field?.name_ar || 'N/A',
+          name_en: booking.field?.name_en || 'N/A',
+        },
+        participants: booking.participants?.map(p => ({
+          id: p.id,
+          full_name: p.full_name,
+          phone_number: p.phone_number,
+          email: p.email,
+          national_id: p.national_id,
+          national_id_front: normalizeImageUrl(p.national_id_front),
+          national_id_back: normalizeImageUrl(p.national_id_back),
+          is_creator: p.is_creator,
+          registered_at: p.created_at,
+        })) || [],
+        stats: {
+          expected_participants: booking.expected_participants,
+          registered_count: registeredCount,
+          remaining_slots: remainingSlots,
+          is_full: remainingSlots === 0,
+        },
+        status: booking.status,
+        payment_status: booking.status === 'confirmed' || booking.status === 'completed' ? 'completed' : 'pending',
+        created_at: booking.created_at,
+      };
+    });
+  }
 }

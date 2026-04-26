@@ -20,6 +20,25 @@ const participantController = new ParticipantRegistrationController();
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
+ * SECURITY DASHBOARD ENDPOINTS
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * GET /api/bookings/security/bookings
+ * Get all bookings for security dashboard view with all necessary details
+ * Auth: Required (security staff)
+ * Query Params:
+ *   - field_id: string (optional)
+ *   - sport_id: number (optional)
+ *   - status: "pending_payment" | "confirmed" | "completed" | "cancelled" (optional)
+ *   - start_date: string YYYY-MM-DD (optional)
+ *   - end_date: string YYYY-MM-DD (optional)
+ */
+router.get("/security/bookings", bookingController.getSecurityDashboardBookings);
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
  * ADMIN INVITATION MANAGEMENT ENDPOINTS
  * ─────────────────────────────────────────────────────────────────────────────
  */

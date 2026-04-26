@@ -501,6 +501,35 @@ export class BookingController {
   };
 
   /**
+   * GET /api/security/bookings
+   * Get all bookings for security dashboard (with all necessary details)
+   */
+  getSecurityDashboardBookings = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { field_id, sport_id, status, start_date, end_date } = req.query;
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const bookings = await this.bookingService.getSecurityDashboardBookings(baseUrl, {
+        field_id: field_id as string | undefined,
+        sport_id: sport_id ? parseInt(sport_id as string) : undefined,
+        status: status as BookingStatus | undefined,
+        start_date: start_date as string | undefined,
+        end_date: end_date as string | undefined,
+      });
+
+      res.json({
+        success: true,
+        data: bookings,
+        count: bookings.length,
+      });
+    } catch (err) {
+      console.error('[BookingController] Error in getSecurityDashboardBookings:', err);
+      const error = err instanceof Error ? err.message : "Failed to get security dashboard bookings";
+      res.status(500).json({ success: false, error });
+    }
+  };
+
+  /**
    * GET /api/bookings/all
    * Get all bookings (admin view)
    */

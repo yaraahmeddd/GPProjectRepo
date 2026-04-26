@@ -1,32 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, X, Clock, MapPin, Phone,
   Download, CalendarX, LogOut
 } from 'lucide-react';
-
-// ─── TYPES ───────────────────────────────────────────────────────────────────
-
-interface Guest {
-  name: string;
-  phone: string;
-  relation: string;
-}
-
-interface BookingEntry {
-  id: string;
-  personName: string;
-  phoneNumber: string;
-  membershipId: string;
-  memberType: string;
-  fieldName: string;
-  startTime: string;
-  endTime: string;
-  guests: Guest[];
-  sport: string;
-  frontIdUrl: string | null;
-  backIdUrl: string | null;
-}
+import { useSecurityDashboardBookings, type DisplayBooking, type Guest } from '../hooks/useSecurityDashboardBookings';
+import { useSports } from '../hooks/useSports';
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
 
@@ -55,7 +34,7 @@ function getSlotType(start: string, end: string): 'current' | 'all' | 'past' {
   return 'all';
 }
 
-function getAvatarColor(name: string): string {
+function getAvatarColor(): string {
   return 'bg-[#0e1c38]';
 }
 
@@ -85,7 +64,7 @@ async function downloadImage(url: string, filename: string) {
 
 // ─── MOCK DATA ───────────────────────────────────────────────────────────────
 
-function generateMockData(): BookingEntry[] {
+function generateMockData(): DisplayBooking[] {
   const now = new Date();
   const h = now.getHours();
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -101,49 +80,71 @@ function generateMockData(): BookingEntry[] {
   return [
     {
       id: 'bk-001', personName: 'أحمد محمد علي', phoneNumber: '01012345678',
-      membershipId: 'HC-00441', memberType: 'عضو ذهبي',
+      membershipId: 'HC-00441', memberType: 'عضو',
       fieldName: 'ملعب كرة القدم 1', startTime: tMinus1, endTime: tMinus0,
       sport: 'كرة القدم', guests: [{ name: 'محمود سامي', phone: '01198765432', relation: 'صديق' }],
       frontIdUrl: 'https://picsum.photos/seed/front1/400/300',
-      backIdUrl: 'https://picsum.photos/seed/back1/400/300'
+      backIdUrl: 'https://picsum.photos/seed/back1/400/300',
+      status: 'completed',
+      bookingCreatedAt: new Date().toISOString(),
+      participantsCount: 2,
+      nationalId: '123456789',
+      email: 'email@example.com'
     },
     {
       id: 'bk-002', personName: 'سارة أحمد سليم', phoneNumber: '01098765432',
-      membershipId: 'HC-00512', memberType: 'عضوية عائلية',
+      membershipId: 'HC-00512', memberType: 'عضو',
       fieldName: 'حمام السباحة', startTime: tCurr0, endTime: tPlus1,
       sport: 'السباحة', guests: [],
       frontIdUrl: 'https://picsum.photos/seed/front2/400/300',
-      backIdUrl: null
+      backIdUrl: null,
+      status: 'confirmed',
+      bookingCreatedAt: new Date().toISOString(),
+      participantsCount: 1,
+      nationalId: '987654321',
+      email: null
     },
     {
       id: 'bk-003', personName: 'محمود عبد الرحمن', phoneNumber: '01234567890',
-      membershipId: 'HC-00289', memberType: 'عضو عادي',
+      membershipId: 'HC-00289', memberType: 'عضو',
       fieldName: 'ملعب السلة', startTime: tCurr1, endTime: tPlus2,
       sport: 'كرة السلة', guests: [{ name: 'ياسر عرفات', phone: '0112346678', relation: 'ضيف' }],
       frontIdUrl: 'https://picsum.photos/seed/front3/400/300',
-      backIdUrl: 'https://picsum.photos/seed/back3/400/300'
+      backIdUrl: 'https://picsum.photos/seed/back3/400/300',
+      status: 'confirmed',
+      bookingCreatedAt: new Date().toISOString(),
+      participantsCount: 2,
+      nationalId: '456789123',
+      email: null
     },
     {
       id: 'bk-004', personName: 'مريم حسن إبراهيم', phoneNumber: '01123456789',
-      membershipId: 'HC-00317', memberType: 'عضو فضي',
+      membershipId: 'HC-00317', memberType: 'عضو',
       fieldName: 'ملعب التنس', startTime: tPlus2, endTime: tPlus3,
       sport: 'التنس', guests: [],
       frontIdUrl: null,
-      backIdUrl: 'https://picsum.photos/seed/back4/400/300'
+      backIdUrl: 'https://picsum.photos/seed/back4/400/300',
+      status: 'pending_payment',
+      bookingCreatedAt: new Date().toISOString(),
+      participantsCount: 1,
+      nationalId: null,
+      email: null
     },
     {
       id: 'bk-005', personName: 'يوسف إبراهيم عمر', phoneNumber: '01001122334',
-      membershipId: 'HC-00773', memberType: 'عضو ذهبي',
+      membershipId: 'HC-00773', memberType: 'عضو',
       fieldName: 'ملعب التنس', startTime: '19:00', endTime: '20:30',
       sport: 'التنس', guests: [],
       frontIdUrl: 'https://picsum.photos/seed/front6/400/300',
-      backIdUrl: 'https://picsum.photos/seed/back6/400/300'
+      backIdUrl: 'https://picsum.photos/seed/back6/400/300',
+      status: 'confirmed',
+      bookingCreatedAt: new Date().toISOString(),
+      participantsCount: 1,
+      nationalId: '789123456',
+      email: null
     },
   ];
 }
-
-const MOCK = generateMockData();
-const SPORT_FILTERS = ['الكل', 'كرة القدم', 'التنس', 'كرة السلة', 'السباحة', 'الرياضة'];
 
 // ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
@@ -153,22 +154,48 @@ export default function SecurityDashboardPage() {
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const [lightbox, setLightbox] = useState<{ url: string; label: string; name: string } | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<BookingEntry | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<DisplayBooking | null>(null);
+
+  // Fetch bookings from API (today only)
+  const { displayBookings, loading, error: apiError } = useSecurityDashboardBookings();
+  
+  // Fetch sports from API
+  const { sports, loading: sportsLoading } = useSports();
+  
+  // Build sport filter list from API (with "الكل" at start)
+  const sportFilterOptions = useMemo(() => {
+    const sportNames = sports.map(s => s.name_ar);
+    return ['الكل', ...sportNames];
+  }, [sports]);
+  
+  // Reset sport filter if current selection is not in the new list
+  useEffect(() => {
+    if (sportFilter !== 'الكل' && !sportFilterOptions.includes(sportFilter)) {
+      setSportFilter('الكل');
+    }
+  }, [sportFilterOptions]);
+  
+  // Use API bookings, fallback to mock data if loading or error
+  const bookingsData = loading ? generateMockData() : displayBookings.length > 0 ? displayBookings : generateMockData();
 
   const filteredData = useMemo(() => {
-    let result = [...MOCK].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    let result = [...bookingsData].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
     if (sportFilter !== 'الكل') {
       result = result.filter(b => b.sport === sportFilter);
     }
 
     if (debouncedSearch.trim()) {
-      const q = debouncedSearch.trim();
-      result = result.filter(b => b.personName.includes(q) || b.phoneNumber.includes(q));
+      const q = debouncedSearch.trim().toLowerCase();
+      result = result.filter(b => 
+        b.personName.toLowerCase().includes(q) || 
+        b.phoneNumber.includes(q) ||
+        b.membershipId.includes(q)
+      );
     }
 
     return result;
-  }, [sportFilter, debouncedSearch]);
+  }, [sportFilter, debouncedSearch, bookingsData]);
 
   const hasActiveFilters = sportFilter !== 'الكل' || searchQuery.trim() !== '';
 
@@ -248,18 +275,22 @@ export default function SecurityDashboardPage() {
           <div className="flex-1 overflow-hidden relative">
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10" />
             <div className="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
-              {SPORT_FILTERS.map(sport => (
-                <button
-                  key={sport}
-                  onClick={() => setSportFilter(sport)}
-                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-bold transition-all shrink-0 border ${sportFilter === sport
-                    ? 'bg-[#0e1c38] text-[#ffffff] border-[#0e1c38]'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700'
-                    }`}
-                >
-                  {sport}
-                </button>
-              ))}
+              {sportsLoading ? (
+                <div className="px-4 py-1.5 text-xs text-slate-400 font-bold whitespace-nowrap">جاري تحميل الرياضات...</div>
+              ) : (
+                sportFilterOptions.map(sport => (
+                  <button
+                    key={sport}
+                    onClick={() => setSportFilter(sport)}
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-bold transition-all shrink-0 border ${sportFilter === sport
+                      ? 'bg-[#0e1c38] text-[#ffffff] border-[#0e1c38]'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700'
+                      }`}
+                  >
+                    {sport}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -267,9 +298,10 @@ export default function SecurityDashboardPage() {
             <AnimatePresence>
               {hasActiveFilters && (
                 <motion.button
-                  initial={{ opacity: 0, w: 0 }}
-                  animate={{ opacity: 1, w: 'auto' }}
-                  exit={{ opacity: 0, w: 0 }}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
                   onClick={handleClearFilters}
                   className="flex items-center gap-1.5 text-xs font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors border border-rose-100 whitespace-nowrap"
                 >
@@ -287,7 +319,31 @@ export default function SecurityDashboardPage() {
       {/* ── 3. MAIN CONTENT ── */}
       <main className="max-w-7xl mx-auto px-6 py-8 pb-32 flex flex-col gap-10">
 
-        {filteredData.length === 0 ? (
+        {loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 mt-4">
+            <div className="w-16 h-16 rounded-full border-4 border-[#0e1c38]/10 border-t-[#0e1c38] animate-spin mb-4" />
+            <h3 className="text-lg font-bold text-[#0e1c38] mb-1">جاري التحميل...</h3>
+            <p className="text-sm text-slate-500">يتم جلب بيانات الحجوزات</p>
+          </motion.div>
+        )}
+
+        {apiError && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 mt-4 bg-rose-50 backdrop-blur rounded-2xl border border-rose-200 border-dashed">
+            <div className="w-16 h-16 bg-white shadow-sm rounded-full flex items-center justify-center mb-4 border border-rose-100">
+              <X size={28} className="text-rose-400" strokeWidth={2} />
+            </div>
+            <h3 className="text-lg font-bold text-rose-600 mb-1">خطأ في التحميل</h3>
+            <p className="text-sm text-rose-500">{apiError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-rose-600 text-white rounded-lg font-bold text-sm hover:bg-rose-700 transition-colors"
+            >
+              إعادة محاولة
+            </button>
+          </motion.div>
+        )}
+
+        {!loading && !apiError && filteredData.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 mt-4 bg-white/50 backdrop-blur rounded-2xl border border-slate-200 border-dashed">
             <div className="w-16 h-16 bg-white shadow-sm rounded-full flex items-center justify-center mb-4 border border-slate-100">
               <CalendarX size={28} className="text-slate-300" strokeWidth={2} />
@@ -295,7 +351,9 @@ export default function SecurityDashboardPage() {
             <h3 className="text-lg font-bold text-[#0e1c38] mb-1">لا توجد حجوزات</h3>
             <p className="text-sm text-slate-500">جرّب تغيير الفلتر أو البحث بكلمة مختلفة</p>
           </motion.div>
-        ) : (
+        )}
+
+        {!loading && !apiError && filteredData.length > 0 && (
           <>
             {/* ── SECTION 1: NOW & NEXT 1 HR ── */}
             {currentBookings.length > 0 && (
@@ -349,7 +407,7 @@ export default function SecurityDashboardPage() {
 function BookingCard({
   booking, index, type, isNext, onClick, onThumbClick
 }: {
-  booking: BookingEntry, index: number, type: 'current' | 'all' | 'past', isNext: boolean, onClick: () => void, onThumbClick: (v: any) => void
+  booking: DisplayBooking, index: number, type: 'current' | 'all' | 'past', isNext: boolean, onClick: () => void, onThumbClick: (v: any) => void
 }) {
   const isCurrent = type === 'current';
   const isPast = type === 'past';
@@ -441,7 +499,7 @@ function SmallThumb({ url, label, name, onClick }: { url: string | null, label: 
 
 // ─── FULL INFO POPUP ─────────────────────────────────────────────────────────
 
-function MemberDetailPopup({ booking, onClose, onThumbClick }: { booking: BookingEntry; onClose: () => void; onThumbClick: (v: any) => void }) {
+function MemberDetailPopup({ booking, onClose, onThumbClick }: { booking: DisplayBooking; onClose: () => void; onThumbClick: (v: any) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -456,7 +514,7 @@ function MemberDetailPopup({ booking, onClose, onThumbClick }: { booking: Bookin
       >
         <div className="bg-[#0e1c38] px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center text-white font-extrabold text-xl border-[2px] border-white/20 ${getAvatarColor(booking.personName)}`}>
+            <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center text-white font-extrabold text-xl border-[2px] border-white/20 ${getAvatarColor()}`}>
               {[...booking.personName.trim()][0]}
             </div>
             <div>
@@ -507,7 +565,7 @@ function MemberDetailPopup({ booking, onClose, onThumbClick }: { booking: Bookin
               <div className="text-center text-sm font-bold text-slate-400 py-6 border border-dashed border-slate-300 rounded-xl bg-white">لا يوجد ضيوف مسجلين</div>
             ) : (
               <div className="flex flex-col gap-2">
-                {booking.guests.map((g, i) => (
+                {booking.guests.map((g: Guest, i: number) => (
                   <div key={i} className="flex justify-between items-center p-3 bg-white border border-slate-200 rounded-xl">
                     <div>
                       <div className="font-bold text-sm text-[#0e1c38]">{g.name}</div>
