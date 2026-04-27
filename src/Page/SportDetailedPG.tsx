@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../api/axios';
 
 interface Sport {
     id: string;
@@ -31,11 +32,34 @@ interface Facility {
     descriptionAr: string;
 }
 
+interface BranchOption {
+    id: number;
+    name_ar?: string;
+    name_en?: string;
+}
+
+interface BranchSportOption {
+    id: number;
+    code?: string;
+    name_ar?: string;
+    name_en?: string;
+}
+
+const resolveSportKey = (sport: BranchSportOption): string => {
+    const signal = `${sport.code || ''} ${sport.name_en || ''} ${sport.name_ar || ''}`.toLowerCase();
+    if (signal.includes('football') || signal.includes('soccer') || signal.includes('قدم')) return 'football';
+    if (signal.includes('swim') || signal.includes('سباح')) return 'swimming';
+    return `sport-${sport.id}`;
+};
+
 const SportDetailedPG: React.FC = () => {
-  const { t } = useTranslation("landing");
+  const { t, i18n } = useTranslation("landing");
     const asset = (name: string) => `/assets/${name}`;
-    const [selectedSport, setSelectedSport] = useState<string>('football');
-    const [selectedClub, setSelectedClub] = useState<string>('maadi');
+    const isArabic = i18n.language?.toLowerCase().startsWith('ar');
+    const [selectedSport, setSelectedSport] = useState<string>('');
+    const [selectedClub, setSelectedClub] = useState<string>('');
+    const [branches, setBranches] = useState<BranchOption[]>([]);
+    const [branchSports, setBranchSports] = useState<BranchSportOption[]>([]);
     const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
     const [currentFacilityIndex, setCurrentFacilityIndex] = useState(0);
     const [email, setEmail] = useState<string>('');
@@ -149,13 +173,91 @@ const SportDetailedPG: React.FC = () => {
         }
     };
 
-    const clubs = [
-        { id: 'maadi', nameAr: 'المعادي' },
-        { id: 'manshiyat', nameAr: 'منشية ناصر' },
-        { id: 'matarya', nameAr: 'مطرية' }
-    ];
 
-    const currentSport = sports[selectedSport];
+    const availableSports = useMemo(
+        () =>
+            branchSports.map((sport) => ({
+                value: resolveSportKey(sport),
+                labelAr: sport.name_ar || sport.name_en || t("sports.default_sport", "رياضة"),
+                labelEn: sport.name_en || sport.name_ar || t("sports.default_sport_en", "Sport"),
+            })),
+        [branchSports, t]
+    );
+
+    const currentSport = useMemo(() => {
+        if (selectedSport && sports[selectedSport]) return sports[selectedSport];
+        const selected = availableSports.find((s) => s.value === selectedSport);
+        return {
+            id: selectedSport || 'football',
+            nameAr: selected?.labelAr || t("sports.default_sport", "رياضة"),
+            descriptionAr: t("sports.default_description", "تفاصيل هذه الرياضة غير متاحة حالياً."),
+            foundedYear: 0,
+            players: 0,
+            coaches: 0,
+            courts: 0,
+            image: asset('club.png'),
+            heroImage: asset('club.png'),
+            achievements: [
+                {
+                    id: 1,
+                    year: '—',
+                    titleAr: t("sports.no_achievements_title", "لا يوجد سجل متاح"),
+                    descriptionAr: t("sports.no_achievements_desc", "سيتم تحديث الإنجازات قريباً."),
+                },
+            ],
+            facilities: [
+                {
+                    id: 1,
+                    nameAr: t("sports.default_facility", "مرافق النادي"),
+                    size: '-',
+                    image: asset('club.png'),
+                    descriptionAr: t("sports.default_facility_desc", "سيتم تحديث بيانات المرافق قريباً."),
+                },
+            ],
+        } as Sport;
+    }, [selectedSport, availableSports, t]);
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const res = await api.get('/register/branches');
+                const list: BranchOption[] = Array.isArray(res?.data?.branches) ? res.data.branches : [];
+                setBranches(list);
+                setSelectedClub(list.length > 0 ? String(list[0].id) : '');
+            } catch {
+                setBranches([]);
+                setSelectedClub('');
+            }
+        };
+
+        void fetchBranches();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedClub) {
+            setBranchSports([]);
+            setSelectedSport('');
+            return;
+        }
+
+        const fetchSportsByBranch = async () => {
+            try {
+                const res = await api.get(`/branches/${selectedClub}/sports`);
+                const list: BranchSportOption[] = Array.isArray(res?.data?.data) ? res.data.data : [];
+                setBranchSports(list);
+                setSelectedSport(list.length > 0 ? resolveSportKey(list[0]) : '');
+            } catch {
+                setBranchSports([]);
+                setSelectedSport('');
+            }
+        };
+        void fetchSportsByBranch();
+    }, [selectedClub]);
+
+    useEffect(() => {
+        setCurrentAchievementIndex(0);
+        setCurrentFacilityIndex(0);
+    }, [selectedSport]);
 
     const handleNewsletterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -214,29 +316,43 @@ const SportDetailedPG: React.FC = () => {
 
                         {/* Right - Dropdowns */}
                         <div className="space-y-6 order-1 lg:order-2">
-                            {/* Sport Dropdown */}
-                            <div className="relative">
-                                <select
-                                    value={selectedSport}
-                                    onChange={(e) => setSelectedSport(e.target.value)}
-                                    className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
-                                >
-                                    <option value="football">{t("sports.names.football", "كرة القدم")}</option>
-                                    <option value="swimming">{t("sports.names.swimming", "السباحة")}</option>
-                                </select>
-                                <ChevronRight className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#FDBF00] pointer-events-none" />
-                            </div>
-
-                            {/* Club Dropdown */}
+                            {/* Branch Dropdown */}
                             <div className="relative">
                                 <select
                                     value={selectedClub}
                                     onChange={(e) => setSelectedClub(e.target.value)}
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
-                                    {clubs.map((club) => (
-                                        <option key={club.id} value={club.id}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
-                                    ))}
+                                    {branches.length === 0 ? (
+                                        <option value="">{t("clubs.no_branches", "?? ???? ???? ?????")}</option>
+                                    ) : (
+                                        branches.map((branch) => (
+                                            <option key={branch.id} value={String(branch.id)}>
+                                                {isArabic ? (branch.name_ar || branch.name_en || `#${branch.id}`) : (branch.name_en || branch.name_ar || `#${branch.id}`)}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                                <ChevronRight className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#FDBF00] pointer-events-none" />
+                            </div>
+
+                            {/* Sport Dropdown */}
+                            <div className="relative">
+                                <select
+                                    value={selectedSport}
+                                    onChange={(e) => setSelectedSport(e.target.value)}
+                                    disabled={availableSports.length === 0}
+                                    className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
+                                >
+                                    {availableSports.length === 0 ? (
+                                        <option value="">{t("sports.no_sports_for_branch", "?? ???? ?????? ????? ?? ??? ?????")}</option>
+                                    ) : (
+                                        availableSports.map((sport) => (
+                                            <option key={sport.value} value={sport.value}>
+                                                {isArabic ? sport.labelAr : sport.labelEn}
+                                            </option>
+                                        ))
+                                    )}
                                 </select>
                                 <ChevronRight className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#FDBF00] pointer-events-none" />
                             </div>
@@ -411,8 +527,10 @@ const SportDetailedPG: React.FC = () => {
                                         onChange={(e) => setSelectedClub(e.target.value)}
                                         className="w-full md:w-64 bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-3 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                     >
-                                        {clubs.map((club) => (
-                                            <option key={club.id} value={club.id}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
+                                        {branches.map((branch) => (
+                                            <option key={branch.id} value={String(branch.id)}>
+                                                {isArabic ? (branch.name_ar || branch.name_en || `#${branch.id}`) : (branch.name_en || branch.name_ar || `#${branch.id}`)}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -552,3 +670,4 @@ const SportDetailedPG: React.FC = () => {
 };
 
 export default SportDetailedPG;
+

@@ -31,6 +31,7 @@ import api from "../api/axios";
 interface MembershipPlan {
   id: number;
   name_ar: string;
+  name_en?: string;
   price: number;
   currency: string;
   duration_months: number;
@@ -49,6 +50,16 @@ interface HomeNewsItem {
   image: string;
 }
 
+interface BranchItem {
+  id: number;
+  code?: string;
+  name_en?: string;
+  name_ar?: string;
+  location_en?: string | null;
+  location_ar?: string | null;
+  phone?: string | null;
+}
+
 const BACKEND_URL = "http://localhost:3000";
 const asset = (p: string) => `/assets/${p}`;
 const DEFAULT_NEWS_IMAGE = asset("HUC Picture Full.jpg");
@@ -56,6 +67,15 @@ const DEFAULT_NEWS_IMAGE = asset("HUC Picture Full.jpg");
 const normalizeImageUrl = (url?: string): string => {
   if (!url) return "";
   return url.startsWith("http") ? url : `${BACKEND_URL}/${url}`;
+};
+
+const toBranchRouteId = (branch: BranchItem): string => {
+  const signal = `${branch.code || ""} ${branch.name_en || ""} ${branch.name_ar || ""}`.toLowerCase();
+  if (signal.includes("helwan") || signal.includes("حلوان")) return "helwan";
+  if (signal.includes("maadi") || signal.includes("المعادي")) return "maadi";
+  if (signal.includes("tagamoa") || signal.includes("tajamoa") || signal.includes("التجمع")) return "tagamoa";
+  if (signal.includes("zayed") || signal.includes("زايد")) return "zayed";
+  return String(branch.id);
 };
 
 
@@ -105,12 +125,15 @@ const App = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const { t, i18n } = useTranslation("landing");
+  const isArabic = i18n.language?.toLowerCase().startsWith("ar");
 
   // 1️⃣ State لتخزين خطط العضوية من الباك اند
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [latestNewsItems, setLatestNewsItems] = useState<HomeNewsItem[]>([]);
   const [loadingLatestNews, setLoadingLatestNews] = useState(true);
+  const [branches, setBranches] = useState<BranchItem[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(true);
 
   // 2️⃣ جلب البيانات من الباك اند
   useEffect(() => {
@@ -208,6 +231,36 @@ const App = () => {
     };
 
     fetchLatestNews();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBranches = async () => {
+      try {
+        setLoadingBranches(true);
+        const response = await api.get("/register/branches");
+        const list: BranchItem[] = Array.isArray(response?.data?.branches) ? response.data.branches : [];
+        if (isMounted) {
+          setBranches(list);
+        }
+      } catch (error) {
+        console.error("Failed to load branches:", error);
+        if (isMounted) {
+          setBranches([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingBranches(false);
+        }
+      }
+    };
+
+    fetchBranches();
 
     return () => {
       isMounted = false;
@@ -325,19 +378,37 @@ const App = () => {
                   modules={[EffectCoverflow, Pagination, Navigation]}
                   className="w-full py-10"
                 >
-                  {[
-                    { id: "helwan", name: t("branches.helwan_name", "فرع حلوان"), location: t("branches.helwan_loc", "حلوان"), image: asset("BrancheHU1.jpg"), isMain: true },
-                    { id: "maadi", name: t("branches.maadi_name", "فرع المعادي"), location: t("branches.maadi_loc", "زهراء المعادي"), image: asset("club.png"), isMain: false },
-                    { id: "tagamoa", name: t("branches.tagamoa_name", "فرع التجمع"), location: t("branches.tagamoa_loc", "التجمع الخامس"), image: asset("club.png"), isMain: false },
-                    { id: "zayed", name: t("branches.zayed_name", "فرع الشيخ زايد"), location: t("branches.zayed_loc", "الشيخ زايد"), image: asset("club.png"), isMain: false },
-                  ].map((branch) => (
-                    <SwiperSlide key={branch.id} className="w-[85vw] md:w-[900px] bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-gray-100">
+                  {(loadingBranches
+                    ? []
+                    : branches.map((branch, idx) => {
+                        const routeId = toBranchRouteId(branch);
+                        const branchName = isArabic
+                          ? (branch.name_ar || branch.name_en || `#${branch.id}`)
+                          : (branch.name_en || branch.name_ar || `#${branch.id}`);
+                        const branchLocation = isArabic
+                          ? (branch.location_ar || branch.location_en || t("common.not_available", "Not available"))
+                          : (branch.location_en || branch.location_ar || t("common.not_available", "N/A"));
+                        const signal = `${branch.code || ""} ${branch.name_en || ""} ${branch.name_ar || ""}`.toLowerCase();
+                        const image = signal.includes("helwan") || signal.includes("?????")
+                          ? asset("BrancheHU1.jpg")
+                          : asset("club.png");
+
+                        return {
+                          id: routeId,
+                          name: branchName,
+                          location: branchLocation,
+                          image,
+                          isMain: idx === 0,
+                        };
+                      })
+                  ).map((branch) => (
+                    <SwiperSlide key={`${branch.id}-${branch.name}`} className="w-[85vw] md:w-[900px] bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-gray-100">
                       <div className="flex flex-col md:flex-row h-full">
                         <div className="md:w-1/2 relative h-64 md:h-auto overflow-hidden">
                           <div className="absolute inset-0 bg-[#0e1c38]/10 z-10"></div>
                           <img src={branch.image} alt={branch.name} className="w-full h-full object-cover" />
                           <div className="absolute top-6 end-6 z-20 bg-white/90 backdrop-blur-sm px-5 py-2 rounded-xl text-sm font-bold text-[#2596be] shadow-lg">
-                            {branch.isMain ? t("branches.main_branch", "الفرع الرئيسي") : t("branches.new_branch", "فرع حديث")}
+                            {branch.isMain ? t("branches.main_branch", "Main Branch") : t("branches.new_branch", "New Branch")}
                           </div>
                         </div>
 
@@ -580,7 +651,9 @@ const App = () => {
                     ? "border-4 border-[#f8941c] ring-4 ring-[#f8941c]/20 transform md:scale-105"
                     : "hover:shadow-2xl"
                     }`}>
-                    <h3 className="text-2xl md:text-3xl font-bold text-center mb-6 text-gray-900 px-2">{plan.name_ar}</h3>
+                    <h3 className="text-2xl md:text-3xl font-bold text-center mb-6 text-gray-900 px-2">
+                      {isArabic ? (plan.name_ar || plan.name_en || "") : (plan.name_en || plan.name_ar || "")}
+                    </h3>
                     <div className="text-4xl md:text-5xl font-bold text-center text-[#2596be] mb-8">
                       {plan.price} <span className="text-xl md:text-2xl">{plan.currency}</span>
                       <span className="text-sm md:text-base text-gray-500 block mt-2">
