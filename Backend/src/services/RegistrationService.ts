@@ -12,6 +12,40 @@ import * as bcrypt from 'bcrypt';
 
 export class RegistrationService {
 
+    /**
+     * Map member type code to classification (Internal/External)
+     */
+    static getMemberTypeClassification(memberTypeCode: string): 'Internal' | 'External' | 'Unknown' {
+        // Codes for Internal
+        const internal = [
+            'WORKING', 'STUDENT', 'GRADUATE', 'DEPENDENT_WORKING'
+        ];
+        // Codes for External
+        const external = [
+            'FOREIGNER', 'VISITOR', 'DEPENDENT_VISITOR'
+        ];
+        if (internal.includes(memberTypeCode)) return 'Internal';
+        if (external.includes(memberTypeCode)) return 'External';
+        return 'Unknown';
+    }
+
+    /**
+     * Map member type code to form schema key (for frontend)
+     * You can expand this mapping as needed
+     */
+    static getFormSchemaKey(memberTypeCode: string): string {
+        const mapping: Record<string, string> = {
+            'WORKING': 'working_member_form',
+            'STUDENT': 'student_form',
+            'GRADUATE': 'graduate_form',
+            'DEPENDENT_WORKING': 'dependent_working_form',
+            'FOREIGNER': 'foreigner_form',
+            'VISITOR': 'visitor_form',
+            'DEPENDENT_VISITOR': 'dependent_visitor_form',
+        };
+        return mapping[memberTypeCode] || 'generic_form';
+    }
+
     // دالة للتأكد من وجود الإيميل
     static async emailExists(email: string): Promise<boolean> {
         const accountRepository = AppDataSource.getRepository(Account);

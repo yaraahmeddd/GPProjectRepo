@@ -10,6 +10,11 @@ import { upload } from '../middleware/upload';
 
 const router = Router();
 
+// Get member type classification and form schema
+router.get('/member-type-info', (req, res) => RegistrationController.getMemberTypeInfo(req, res));
+
+
+
 /**
  * Registration Routes
  * ==================

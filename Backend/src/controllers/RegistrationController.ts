@@ -17,6 +17,31 @@ const getFile = (files: { [fieldname: string]: Express.Multer.File[] } | Express
 export class RegistrationController {
 
   /**
+   * GET /register/member-type-info?code=MEMBER_TYPE_CODE
+   * Returns classification and form schema key for a given member type code
+   */
+  async getMemberTypeInfo(req: Request, res: Response) {
+    try {
+      const code = req.query.code as string;
+      if (!code) {
+        return res.status(400).json({ success: false, message: 'Missing member type code' });
+      }
+      const classification = RegistrationService.getMemberTypeClassification(code);
+      const formSchemaKey = RegistrationService.getFormSchemaKey(code);
+      return res.json({
+        success: true,
+        data: {
+          code,
+          classification,
+          formSchemaKey
+        }
+      });
+    } catch (error: Error | unknown) {
+      return res.status(500).json({ success: false, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+
+  /**
    * STEP 0: Choose Role
    * Route: POST /register/choose-role
    */
