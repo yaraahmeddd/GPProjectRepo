@@ -1,5 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useRef } from 'react';
+import api from '../../api/axios';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
+import 'swiper/css/pagination';
 
 interface FormData {
   name: string;
@@ -12,47 +18,26 @@ interface FormData {
 interface ClubData {
   id: string;
   nameAr: string;
+  nameEn?: string;
+  locationAr?: string;
+  locationEn?: string;
   courts: number;
   pools: number;
   restaurants: number;
   kidsArea: number;
 }
 
-const clubsData: ClubData[] = [
-  {
-    id: 'maadi',
-    nameAr: 'المعادي',
-    courts: 26,
-    pools: 3,
-    restaurants: 2,
-    kidsArea: 2,
-  },
-  {
-    id: 'manshiyat',
-    nameAr: 'منشية ناصر',
-    courts: 20,
-    pools: 2,
-    restaurants: 1,
-    kidsArea: 1,
-  },
-  {
-    id: 'matarya',
-    nameAr: 'مطرية',
-    courts: 18,
-    pools: 2,
-    restaurants: 1,
-    kidsArea: 1,
-  },
-];
 
 interface ClubsProps {
   onNavigate?: (tab: string) => void;
 }
 
 const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
-  const { t } = useTranslation("landing");
+  const { t, i18n } = useTranslation("landing");
+  const isArabic = i18n.language?.toLowerCase().startsWith('ar');
   const asset = (name: string) => `/assets/${name}`;
-  const [selectedClub, setSelectedClub] = useState<string>('maadi');
+  const [selectedClub, setSelectedClub] = useState<string>('');
+  const [clubsData, setClubsData] = useState<ClubData[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -65,7 +50,16 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [selectedService, setSelectedService] = useState<string>('social');
 
-  const currentClub = clubsData.find(club => club.id === selectedClub) || clubsData[0];
+  const currentClub =
+    clubsData.find(club => club.id === selectedClub) ||
+    clubsData[0] ||
+    ({ id: "", nameAr: "", nameEn: "", locationAr: "", locationEn: "", courts: 0, pools: 0, restaurants: 0, kidsArea: 0 } as ClubData);
+  const currentClubName = currentClub
+    ? (isArabic ? (currentClub.nameAr || currentClub.nameEn || "") : (currentClub.nameEn || currentClub.nameAr || ""))
+    : "";
+  const currentClubLocation = currentClub
+    ? (isArabic ? (currentClub.locationAr || currentClub.locationEn || "") : (currentClub.locationEn || currentClub.locationAr || ""))
+    : "";
 
   const servicesData = {
     social: {
@@ -99,6 +93,7 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
 
   const contactCardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const faqItemsRef = useRef<(HTMLDetailsElement | null)[]>([]);
+  const branchSwiperRef = useRef<SwiperType | null>(null);
 
   useEffect(() => {
     // // Add Cairo font to document head
@@ -134,6 +129,54 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
       observer.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBranches = async () => {
+      try {
+        const response = await api.get('/register/branches');
+        const raw = Array.isArray(response?.data?.branches) ? response.data.branches : [];
+        const mapped: ClubData[] = raw.map((branch: any, idx: number) => ({
+          id: String(branch.id),
+          nameAr: String(branch.name_ar || branch.name_en || `#${branch.id}`),
+          nameEn: String(branch.name_en || branch.name_ar || `#${branch.id}`),
+          locationAr: String(branch.location_ar || branch.location_en || ""),
+          locationEn: String(branch.location_en || branch.location_ar || ""),
+          courts: idx === 0 ? 26 : 20,
+          pools: idx === 0 ? 3 : 2,
+          restaurants: idx === 0 ? 2 : 1,
+          kidsArea: idx === 0 ? 2 : 1,
+        }));
+
+        if (isMounted) {
+          setClubsData(mapped);
+          setSelectedClub(mapped[0]?.id || "");
+        }
+      } catch {
+        if (isMounted) {
+          setClubsData([]);
+          setSelectedClub("");
+        }
+      }
+    };
+
+    fetchBranches();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!clubsData.length || !selectedClub || !branchSwiperRef.current) {
+      return;
+    }
+
+    const selectedIndex = clubsData.findIndex((club) => club.id === selectedClub);
+    if (selectedIndex >= 0 && selectedIndex !== branchSwiperRef.current.activeIndex) {
+      branchSwiperRef.current.slideTo(selectedIndex);
+    }
+  }, [selectedClub, clubsData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -254,10 +297,58 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                     }}
                   >
                     {clubsData.map((club) => (
-                      <option key={club.id} value={club.id} style={{ backgroundColor: '#0e1c38', color: 'white' }}>{t(`clubs.names.${club.id}`, club.nameAr)}</option>
+                      <option key={club.id} value={club.id} style={{ backgroundColor: '#0e1c38', color: 'white' }}>
+                        {isArabic ? (club.nameAr || club.nameEn) : (club.nameEn || club.nameAr)}
+                      </option>
                     ))}
                   </select>
                 </div>
+
+                {clubsData.length > 1 && (
+                  <div className="pt-1">
+                    <Swiper
+                      modules={[Pagination]}
+                      onSwiper={(swiper) => {
+                        branchSwiperRef.current = swiper;
+                      }}
+                      onSlideChange={(swiper) => {
+                        const club = clubsData[swiper.activeIndex];
+                        if (club && club.id !== selectedClub) {
+                          setSelectedClub(club.id);
+                        }
+                      }}
+                      spaceBetween={10}
+                      slidesPerView={1.25}
+                      breakpoints={{
+                        640: { slidesPerView: 1.8 },
+                        1024: { slidesPerView: 1.5 },
+                      }}
+                      pagination={{ clickable: true }}
+                      dir={isArabic ? 'rtl' : 'ltr'}
+                      className="pb-7"
+                    >
+                      {clubsData.map((club) => {
+                        const label = isArabic ? (club.nameAr || club.nameEn) : (club.nameEn || club.nameAr);
+                        const isSelected = club.id === selectedClub;
+                        return (
+                          <SwiperSlide key={club.id}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedClub(club.id)}
+                              className={`w-full rounded-xl border px-4 py-3 text-sm font-bold transition-all ${
+                                isSelected
+                                  ? 'border-[#FDBF00] bg-[#FDBF00]/20 text-[#0e1c38]'
+                                  : 'border-[#c9d3e5] bg-white text-[#0e1c38] hover:border-[#FDBF00]'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          </SwiperSlide>
+                        );
+                      })}
+                    </Swiper>
+                  </div>
+                )}
 
                 {/* Address and Tour buttons */}
                 <div className="space-y-3 pt-4">
@@ -267,20 +358,20 @@ const Clubs: React.FC<ClubsProps> = ({ onNavigate }) => {
                         <path id="Path_8" data-name="Path 8" d="M29.352,0A20.439,20.439,0,0,0,8.9,20.452,20.761,20.761,0,0,0,10.661,28.8c5.113,11.135,14.941,22.952,17.782,26.3a1.112,1.112,0,0,0,1.7,0c2.9-3.352,12.669-15.169,17.782-26.36A19.849,19.849,0,0,0,49.69,20.4,20.33,20.33,0,0,0,29.352,0Zm0,31.076A10.624,10.624,0,1,1,39.919,20.452,10.644,10.644,0,0,1,29.352,31.076Z" transform="translate(-8.9 0)" fill="#0e1c38" />
                       </g>
                     </svg>
-                    <span className="font-bold">{t("common.address", "العنوان")}</span>
+                    <span className="font-bold">{currentClubLocation || t("common.address", "Address")}</span>
                   </button>
                 </div>
               </div>
 
               {/* Middle: Image */}
               <div className="flex justify-center lg:justify-center">
-                <img src={asset('club.png')} alt={t(`clubs.names.${currentClub.id}`, currentClub.nameAr)} className="w-full max-w-sm h-auto object-contain drop-shadow-2xl" />
+                <img src={asset('club.png')} alt={currentClubName || t("clubs.title", "Branches")} className="w-full max-w-sm h-auto object-contain drop-shadow-2xl" />
               </div>
 
               {/* Right: Content */}
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-4xl font-bold text-[#0e1c38] mb-2">{t(`clubs.names.${currentClub.id}`, currentClub.nameAr)}</h3>
+                  <h3 className="text-4xl font-bold text-[#0e1c38] mb-2">{currentClubName}</h3>
                   <div className="w-16 h-1 bg-[#FDBF00]"></div>
                 </div>
 
