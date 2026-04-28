@@ -135,7 +135,7 @@ router.get('/sports/:sportId/branches', (req, res) =>
  *   "message": "This sport is already associated with this branch"
  * }
  */
-router.post('/', authorizePrivilege('CREATE_BRANCH'), (req, res) =>
+router.post('/branch-sports', authorizePrivilege('CREATE_BRANCH'), (req, res) =>
   BranchSportController.createBranchSport(req as AuthenticatedRequest, res)
 );
 
@@ -170,7 +170,7 @@ router.post('/', authorizePrivilege('CREATE_BRANCH'), (req, res) =>
  *   }
  * }
  */
-router.put('/:id', authorizePrivilege('UPDATE_BRANCH'), (req, res) =>
+router.put('/branch-sports/:id', authorizePrivilege('UPDATE_BRANCH'), (req, res) =>
   BranchSportController.updateBranchSport(req as AuthenticatedRequest, res)
 );
 
@@ -191,7 +191,7 @@ router.put('/:id', authorizePrivilege('UPDATE_BRANCH'), (req, res) =>
  *   "message": "Sport removed from branch successfully"
  * }
  */
-router.delete('/:id', authorizePrivilege('DELETE_BRANCH'), (req, res) =>
+router.delete('/branch-sports/:id', authorizePrivilege('DELETE_BRANCH'), (req, res) =>
   BranchSportController.deleteBranchSport(req as AuthenticatedRequest, res)
 );
 

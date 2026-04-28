@@ -251,7 +251,7 @@ export default function BranchManagementPage() {
         if (!addSportDialogOpen || !selectedGlobalSport) return;
         setAddingSport(true);
         try {
-            await api.post("/branch-sports", { branchId: addSportDialogOpen, sportId: Number(selectedGlobalSport) });
+            await api.post("/branch-sports", { branch_id: addSportDialogOpen, sport_id: Number(selectedGlobalSport) });
             toast({ title: "تم الإضافة", description: "تم ربط الرياضة بالفرع بنجاح." });
             setAddSportDialogOpen(null);
             void loadBranchSports(addSportDialogOpen);
