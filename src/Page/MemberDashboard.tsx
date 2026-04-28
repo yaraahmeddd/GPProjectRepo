@@ -30,16 +30,18 @@ const MemberDashboard = () => {
                 <Toaster />
                 <Sonner />
                 <MainLayout>
-                    <Routes>
-                        <Route index element={<Navigate to="home" replace />} />
-                        <Route path="home" element={<MemberHomePage />} />
-                        <Route path="profile" element={<MemberProfilePage />} />
-                        <Route path="memberships" element={<MemberMembershipPage />} />
-                        <Route path="sports" element={<MemberSportsPage />} />
-                        <Route path="subscribe" element={<MemberSubscribePage />} />
-                        <Route path="courts" element={<CourtRentalPage showToast={showToast} />} />
-                        <Route path="*" element={<Navigate to="home" replace />} />
-                    </Routes>
+                    <div className="p-4 md:p-6 max-w-7xl mx-auto w-full min-h-full pb-8">
+                        <Routes>
+                            <Route index element={<Navigate to="home" replace />} />
+                            <Route path="home" element={<MemberHomePage />} />
+                            <Route path="profile" element={<MemberProfilePage />} />
+                            <Route path="memberships" element={<MemberMembershipPage />} />
+                            <Route path="sports" element={<MemberSportsPage />} />
+                            <Route path="subscribe" element={<MemberSubscribePage />} />
+                            <Route path="courts" element={<CourtRentalPage showToast={showToast} />} />
+                            <Route path="*" element={<Navigate to="home" replace />} />
+                        </Routes>
+                    </div>
                 </MainLayout>
             </TooltipProvider>
         </QueryClientProvider>
