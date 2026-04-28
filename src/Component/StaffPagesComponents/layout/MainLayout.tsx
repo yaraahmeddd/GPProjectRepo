@@ -2,9 +2,12 @@ import { type ReactNode, useEffect } from "react";
 import { Navbar } from "./Navbar";
 import { AppSidebar } from "./AppSidebar";
 import { useLanguage } from "../../../hooks/useLanguage";
+import { useAuth } from "../../../context/AuthContext";
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { isRTL } = useLanguage();
+  const { user } = useAuth();
+  const isMember = user?.role === "MEMBER";
 
   useEffect(() => {
     const savedLang = Object.keys(localStorage).includes('dashboard-lang') 
@@ -18,7 +21,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="h-screen bg-background huc-app huc-page overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
       <Navbar />
-      <AppSidebar />
+      {!isMember && <AppSidebar />}
       {/*
         Main content area: exactly the remaining height after the 4rem navbar.
         overflow-hidden here; each page decides its own scrolling strategy.
@@ -27,9 +30,9 @@ export function MainLayout({ children }: { children: ReactNode }) {
       */}
       <main
         className="pt-16 h-screen overflow-hidden transition-[margin-inline-start] duration-[250ms] ease-in-out min-w-0"
-        style={{ marginInlineStart: "var(--sidebar-width, 256px)" }}
+        style={isMember ? undefined : { marginInlineStart: "var(--sidebar-width, 256px)" }}
       >
-        <div className="h-[calc(100vh-4rem)] min-w-0 overflow-y-auto">
+        <div className={`h-[calc(100vh-4rem)] min-w-0 overflow-y-auto ${isMember ? 'pb-16 md:pb-0' : ''}`}>
           {children}
         </div>
       </main>

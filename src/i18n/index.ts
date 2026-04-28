@@ -18,6 +18,8 @@ import arProfessions from './locales/ar/professions.json';
 import arMedia from './locales/ar/media.json';
 import arAdmin from './locales/ar/admin.json';
 import arLanding from './locales/ar/landing.json';
+import arTeam from './locales/ar/team.json';
+import arMember from './locales/ar/member.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './locales/en/common.json';
@@ -35,6 +37,8 @@ import enProfessions from './locales/en/professions.json';
 import enMedia from './locales/en/media.json';
 import enAdmin from './locales/en/admin.json';
 import enLanding from './locales/en/landing.json';
+import enTeam from './locales/en/team.json';
+import enMember from './locales/en/member.json';
 
 // ─── Namespace list (single source of truth) ──────────────────────────────────
 export const NS = [
@@ -53,6 +57,8 @@ export const NS = [
   'media',
   'admin',
   'landing',
+  'team',
+  'member',
 ] as const;
 
 export type Namespace = (typeof NS)[number];
@@ -79,6 +85,8 @@ i18n
         media: arMedia,
         admin: arAdmin,
         landing: arLanding,
+        team: arTeam,
+        member: arMember,
       },
       en: {
         common: enCommon,
@@ -96,6 +104,8 @@ i18n
         media: enMedia,
         admin: enAdmin,
         landing: enLanding,
+        team: enTeam,
+        member: enMember,
       },
     },
 
