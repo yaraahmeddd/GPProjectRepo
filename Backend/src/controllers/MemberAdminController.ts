@@ -8,6 +8,7 @@ import { TeamMemberTeam } from '../entities/TeamMemberTeam';
 import { AuthenticatedRequest } from '../middleware/authorizePrivilege';
 import * as bcrypt from 'bcrypt';
 import { AuditLogService } from '../services/AuditLogService';
+import { TeamStatus } from '../constants/TeamEnums';
 
 const auditLogService = new AuditLogService();
 
@@ -1020,7 +1021,7 @@ export class MemberController {
         for (const sportId of validSportIds) {
           // Find first active team for this sport
           const teams = await teamRepo.find({
-            where: { sport_id: sportId, status: 'active' },
+            where: { sport_id: sportId, status: TeamStatus.ACTIVE },
             take: 1
           });
 

@@ -1,337 +1,322 @@
+/**
+ * TeamController
+ *
+ * Thin HTTP adapter: parse request → call service → return response.
+ * All business-rule validation lives in TeamValidationService.
+ * All data-access operations live in TeamService.
+ */
+
 import { Request, Response } from 'express';
-import { TeamService } from '../services/TeamService';
+import { TeamService, UpdateTeamInput } from '../services/TeamService';
+import { CreateTeamInput } from '../services/TeamValidationService';
+import { TeamStatus, TeamVisibilityType } from '../constants/TeamEnums';
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+/**
+ * Determines the appropriate HTTP status code for a given Error.
+ * Validation errors (detected by the "Validation error:" prefix or
+ * "conflict" keyword) are surfaced as 422 / 409; anything else as 400.
+ */
+function errorStatus(error: unknown): number {
+    if (!(error instanceof Error)) return 400;
+    const msg = error.message.toLowerCase();
+    if (msg.startsWith('validation error')) return 422;
+    if (msg.includes('conflict')) return 409;
+    if (msg.includes('not found')) return 404;
+    return 400;
+}
+
+// ─── Controller ───────────────────────────────────────────────────────────────
 
 export class TeamController {
     /**
      * @route   POST /api/teams
-     * @desc    Create a new team (Admin/Staff only)
-     * @access  SportActivityManager, SportActivitySpecialist
-     * @body    {
-     *   sport_id: number,
-     *   branch_id?: number,
-     *   name_en: string,
-     *   name_ar: string,
-     *   max_participants?: number,
-     *   status?: string,
-     *   training?: {
-     *     days_en: string,
-     *     days_ar: string,
-     *     start_time: string,
-     *     end_time: string,
-     *     field_id: string,
-     *     training_fee: number
-     *   }
+     * @desc    Create a new team with full backend validation
+     * @access  Requires CREATE_TEAM privilege
+     *
+     * @body {
+     *   sport_id:          number          — required; must exist
+     *   field_id:          string (UUID)   — required; must belong to sport
+     *   name_en:           string          — required
+     *   name_ar:           string          — required
+     *   max_participants:  number          — required; must be ≤ field.capacity
+     *   visibility_type:   "INTERNAL" | "EXTERNAL" | "BOTH"  — required
+     *   price:             number          — required; ≥ 0
+     *   status?:           "active" | "inactive" | "suspended" | "archived"  (default: "active")
+     *   branch_id?:        number
+     *   training_schedules?: Array<{
+     *     days_en:       string   — comma-separated day names, e.g. "Sunday,Tuesday"
+     *     days_ar:       string
+     *     start_time:    string   — HH:MM or HH:MM:SS
+     *     end_time:      string
+     *     field_id:      string   — UUID
+     *     training_fee?: number
+     *   }>
      * }
      */
     static async createTeam(req: Request, res: Response): Promise<void> {
         try {
             const user = (req as unknown as { user?: Record<string, unknown> }).user;
-
             if (!user) {
-                res.status(401).json({
-                    success: false,
-                    message: 'User not authenticated',
-                });
+                res.status(401).json({ success: false, message: 'Authentication required.' });
                 return;
             }
 
             const body = req.body as Record<string, unknown>;
-            const { sport_id, branch_id, name_en, name_ar, max_participants, status, training } = body;
 
-            if (!sport_id || !name_en || !name_ar) {
-                res.status(400).json({
+            // Minimal presence check before handing off to the validation service
+            const missing: string[] = [];
+            if (!body.sport_id) missing.push('sport_id');
+            if (!body.field_id) missing.push('field_id');
+            if (!body.name_en) missing.push('name_en');
+            if (!body.name_ar) missing.push('name_ar');
+            if (body.max_participants === undefined || body.max_participants === null) missing.push('max_participants');
+            if (!body.visibility_type) missing.push('visibility_type');
+            if (body.price === undefined || body.price === null) missing.push('price');
+
+            if (missing.length > 0) {
+                res.status(422).json({
                     success: false,
-                    message: 'sport_id, name_en, and name_ar are required',
+                    message: `Missing required fields: ${missing.join(', ')}.`,
+                    missing_fields: missing,
                 });
                 return;
             }
 
-            const teamData: {
-                sport_id: number;
-                branch_id?: number;
-                name_en: string;
-                name_ar: string;
-                max_participants?: number;
-                status?: string;
-                training?: {
-                    days_en: string;
-                    days_ar: string;
-                    start_time: string;
-                    end_time: string;
-                    field_id: string;
-                    training_fee: number;
-                };
-            } = {
-                sport_id: sport_id as number,
-                branch_id: branch_id as number | undefined,
-                name_en: name_en as string,
-                name_ar: name_ar as string,
-                max_participants: max_participants as number | undefined,
-                status: (status as string) || 'active',
+            const input: CreateTeamInput = {
+                sport_id: Number(body.sport_id),
+                field_id: body.field_id as string,
+                name_en: body.name_en as string,
+                name_ar: body.name_ar as string,
+                max_participants: Number(body.max_participants),
+                visibility_type: body.visibility_type as TeamVisibilityType,
+                price: Number(body.price),
+                status: (body.status as TeamStatus) || TeamStatus.ACTIVE,
+                branch_id: body.branch_id ? Number(body.branch_id) : undefined,
+                training_schedules: Array.isArray(body.training_schedules)
+                    ? (body.training_schedules as Record<string, unknown>[]).map((s) => ({
+                          days_en: s.days_en as string,
+                          days_ar: s.days_ar as string,
+                          start_time: s.start_time as string,
+                          end_time: s.end_time as string,
+                          field_id: s.field_id as string,
+                          training_fee: s.training_fee !== undefined ? Number(s.training_fee) : 0,
+                      }))
+                    : [],
             };
 
-            if (training) {
-                const trainingData = training as Record<string, unknown>;
-                teamData.training = {
-                    days_en: trainingData.days_en as string,
-                    days_ar: trainingData.days_ar as string,
-                    start_time: trainingData.start_time as string,
-                    end_time: trainingData.end_time as string,
-                    field_id: trainingData.field_id as string,
-                    training_fee: trainingData.training_fee as number,
-                };
-            }
-
             const teamService = new TeamService();
-            const team = await teamService.createTeam(teamData);
+            const team = await teamService.createTeam(input);
 
             res.status(201).json({
                 success: true,
-                message: 'Team created successfully',
+                message: 'Team created successfully.',
                 data: team,
             });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to create team';
-            console.error('Error creating team:', error);
-            res.status(400).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to create team.';
+            console.error('[TeamController] createTeam:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
         }
     }
 
     /**
      * @route   GET /api/teams
      * @desc    Get all teams with optional filters
-     * @access  Admin/Staff, Member, TeamMember
-     * @query   sport_id?: number, status?: string, branch_id?: number
+     * @access  Requires VIEW_TEAMS privilege
+     * @query   sport_id?, status?, branch_id?, visibility_type?
      */
     static async getAllTeams(req: Request, res: Response): Promise<void> {
         try {
             const query = req.query as Record<string, unknown>;
-            const { sport_id, status, branch_id } = query;
-
             const filters: Record<string, unknown> = {};
-            if (sport_id) filters.sport_id = parseInt(sport_id as string);
-            if (status) filters.status = status;
-            if (branch_id) filters.branch_id = parseInt(branch_id as string);
+            if (query.sport_id)       filters.sport_id = parseInt(query.sport_id as string);
+            if (query.status)         filters.status = query.status;
+            if (query.branch_id)      filters.branch_id = parseInt(query.branch_id as string);
+            if (query.visibility_type) filters.visibility_type = query.visibility_type;
 
             const teamService = new TeamService();
             const teams = await teamService.getAllTeams(filters);
 
-            res.status(200).json({
-                success: true,
-                data: teams,
-                count: teams.length,
-            });
+            res.status(200).json({ success: true, data: teams, count: teams.length });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch teams';
-            console.error('Error fetching teams:', error);
-            res.status(500).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to fetch teams.';
+            console.error('[TeamController] getAllTeams:', error);
+            res.status(500).json({ success: false, message });
         }
     }
 
     /**
      * @route   GET /api/teams/:id
      * @desc    Get team by ID with full details
-     * @access  Admin/Staff, Member, TeamMember
+     * @access  Requires VIEW_TEAMS privilege
      */
     static async getTeamById(req: Request, res: Response): Promise<void> {
         try {
-            const teamId = req.params.id as string;
-
             const teamService = new TeamService();
-            const team = await teamService.getTeamById(teamId);
+            const team = await teamService.getTeamById(req.params.id);
 
             if (!team) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Team not found',
-                });
+                res.status(404).json({ success: false, message: 'Team not found.' });
                 return;
             }
 
-            res.status(200).json({
-                success: true,
-                data: team,
-            });
+            res.status(200).json({ success: true, data: team });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch team';
-            console.error('Error fetching team:', error);
-            res.status(500).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to fetch team.';
+            console.error('[TeamController] getTeamById:', error);
+            res.status(500).json({ success: false, message });
         }
     }
 
     /**
      * @route   PUT /api/teams/:id
-     * @desc    Update team details
-     * @access  Authenticated users
+     * @desc    Update team details (partial update supported)
+     * @access  Requires UPDATE_TEAM privilege
      */
     static async updateTeam(req: Request, res: Response): Promise<void> {
         try {
-            const teamId = req.params.id as string;
+            const teamId = req.params.id;
             const body = req.body as Record<string, unknown>;
 
+            const updates: UpdateTeamInput = {};
+            if (body.name_en !== undefined)         updates.name_en = body.name_en as string;
+            if (body.name_ar !== undefined)         updates.name_ar = body.name_ar as string;
+            if (body.branch_id !== undefined)       updates.branch_id = body.branch_id !== null ? Number(body.branch_id) : null;
+            if (body.field_id !== undefined)        updates.field_id = body.field_id as string | null;
+            if (body.max_participants !== undefined) updates.max_participants = Number(body.max_participants);
+            if (body.status !== undefined)          updates.status = body.status as TeamStatus;
+            if (body.visibility_type !== undefined) updates.visibility_type = body.visibility_type as TeamVisibilityType;
+            if (body.price !== undefined)           updates.price = Number(body.price);
+
+            if (Array.isArray(body.training_schedules)) {
+                updates.training_schedules = (body.training_schedules as Record<string, unknown>[]).map((s) => ({
+                    days_en:       s.days_en as string,
+                    days_ar:       s.days_ar as string,
+                    start_time:    s.start_time as string,
+                    end_time:      s.end_time as string,
+                    field_id:      s.field_id as string,
+                    training_fee:  s.training_fee !== undefined ? Number(s.training_fee) : 0,
+                }));
+            }
+
             const teamService = new TeamService();
-            const updatedTeam = await teamService.updateTeam(teamId, body);
+            const updatedTeam = await teamService.updateTeam(teamId, updates);
 
             res.status(200).json({
                 success: true,
-                message: 'Team updated successfully',
+                message: 'Team updated successfully.',
                 data: updatedTeam,
             });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to update team';
-            console.error('Error updating team:', error);
-            res.status(400).json({
-                success: false,
-                message: errorMessage,
+            const message = error instanceof Error ? error.message : 'Failed to update team.';
+            console.error('[TeamController] updateTeam:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
+        }
+    }
+
+    /**
+     * @route   PATCH /api/teams/:id/status
+     * @desc    Update team status only
+     * @access  Requires MANAGE_TEAM_STATUS privilege
+     */
+    static async updateTeamStatus(req: Request, res: Response): Promise<void> {
+        try {
+            const { status } = req.body as { status: string };
+            if (!status) {
+                res.status(422).json({ success: false, message: '"status" is required.' });
+                return;
+            }
+
+            const teamService = new TeamService();
+            const updatedTeam = await teamService.updateTeamStatus(req.params.id, status);
+
+            res.status(200).json({
+                success: true,
+                message: 'Team status updated successfully.',
+                data: updatedTeam,
             });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to update team status.';
+            console.error('[TeamController] updateTeamStatus:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
         }
     }
 
     /**
      * @route   DELETE /api/teams/:id
      * @desc    Delete a team
-     * @access  SportActivityManager
+     * @access  Requires DELETE_TEAM privilege
      */
     static async deleteTeam(req: Request, res: Response): Promise<void> {
         try {
-            const teamId = req.params.id as string;
-            
             const teamService = new TeamService();
-            await teamService.deleteTeam(teamId);
-
-            res.status(200).json({
-                success: true,
-                message: 'Team deleted successfully',
-            });
+            await teamService.deleteTeam(req.params.id);
+            res.status(200).json({ success: true, message: 'Team deleted successfully.' });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to delete team';
-            console.error('Error deleting team:', error);
-            res.status(400).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to delete team.';
+            console.error('[TeamController] deleteTeam:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
         }
     }
 
     /**
      * @route   GET /api/teams/:id/members
-     * @desc    Get all members in a team
-     * @access  Admin/Staff, Team owner
+     * @desc    Get all members in a team (regular + team members)
+     * @access  Requires VIEW_TEAM_MEMBERS privilege
      */
     static async getTeamMembers(req: Request, res: Response): Promise<void> {
         try {
-            const teamId = req.params.id as string;
-
             const teamService = new TeamService();
-            const members = await teamService.getTeamMembers(teamId);
-
-            res.status(200).json({
-                success: true,
-                data: members,
-            });
+            const members = await teamService.getTeamMembers(req.params.id);
+            res.status(200).json({ success: true, data: members });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch team members';
-            console.error('Error fetching team members:', error);
-            res.status(500).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to fetch team members.';
+            console.error('[TeamController] getTeamMembers:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
         }
     }
 
     /**
      * @route   GET /api/teams/:id/available-slots
-     * @desc    Get available slots in a team
-     * @access  Public (for availability check)
+     * @desc    Get available participant slots in a team
+     * @access  Requires VIEW_AVAILABLE_SLOTS privilege
      */
     static async getAvailableSlots(req: Request, res: Response): Promise<void> {
         try {
-            const teamId = req.params.id as string;
-
             const teamService = new TeamService();
-            const slots = await teamService.getAvailableSlots(teamId);
-
-            res.status(200).json({
-                success: true,
-                data: slots,
-            });
+            const slots = await teamService.getAvailableSlots(req.params.id);
+            res.status(200).json({ success: true, data: slots });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch available slots';
-            console.error('Error fetching available slots:', error);
-            res.status(500).json({
-                success: false,
-                message: errorMessage,
-            });
-        }
-    }
-
-    /**
-     * @route   PATCH /api/teams/:id/status
-     * @desc    Update team status
-     * @access  SportActivityManager
-     */
-    static async updateTeamStatus(req: Request, res: Response): Promise<void> {
-        try {
-            const teamId = req.params.id as string;
-            const { status } = req.body as { status: string };
-
-            if (!status) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Status is required',
-                });
-                return;
-            }
-
-            const teamService = new TeamService();
-            const updatedTeam = await teamService.updateTeamStatus(teamId, status);
-
-            res.status(200).json({
-                success: true,
-                message: 'Team status updated successfully',
-                data: updatedTeam,
-            });
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to update team status';
-            console.error('Error updating team status:', error);
-            res.status(400).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to fetch available slots.';
+            console.error('[TeamController] getAvailableSlots:', error);
+            res.status(errorStatus(error)).json({ success: false, message });
         }
     }
 
     /**
      * @route   GET /api/teams/sport/:sport_id/with-members
-     * @desc    Get all teams for a specific sport with their members
-     * @access  Admin/Staff with VIEW_TEAMS privilege
-     * @query   team_id?: string (optional - filter to specific team)
+     * @desc    Get all teams for a specific sport, including their members
+     * @access  Requires VIEW_TEAMS privilege
+     * @query   team_id? (optional — filter to a single team)
      */
     static async getTeamsBySportWithMembers(req: Request, res: Response): Promise<void> {
         try {
-            const sportId = req.params.sport_id as string;
-            const query = req.query as Record<string, unknown>;
-            const teamId = query.team_id as string | undefined;
-
+            const sportId = req.params.sport_id;
             if (!sportId) {
-                res.status(400).json({
-                    success: false,
-                    message: 'sport_id is required',
-                });
+                res.status(422).json({ success: false, message: '"sport_id" is required.' });
                 return;
             }
 
+            const query = req.query as Record<string, unknown>;
+            const teamId = query.team_id as string | undefined;
+
             const teamService = new TeamService();
-            const teamsWithMembers = await teamService.getTeamsBySportWithMembers(parseInt(sportId), teamId);
+            const teamsWithMembers = await teamService.getTeamsBySportWithMembers(
+                parseInt(sportId),
+                teamId,
+            );
 
             res.status(200).json({
                 success: true,
@@ -339,12 +324,9 @@ export class TeamController {
                 count: teamsWithMembers.length,
             });
         } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch teams with members';
-            console.error('Error fetching teams with members:', error);
-            res.status(500).json({
-                success: false,
-                message: errorMessage,
-            });
+            const message = error instanceof Error ? error.message : 'Failed to fetch teams with members.';
+            console.error('[TeamController] getTeamsBySportWithMembers:', error);
+            res.status(500).json({ success: false, message });
         }
     }
 }

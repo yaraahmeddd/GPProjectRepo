@@ -4,6 +4,7 @@ import { TeamMemberTeam } from '../entities/TeamMemberTeam';
 import { ActivityLog } from '../entities/ActivityLog';
 import { Sport } from '../entities/Sport';
 import { Account } from '../entities/Account';
+import { TeamStatus } from '../constants/TeamEnums';
 
 export class TeamMemberService {
     private teamMemberRepo = AppDataSource.getRepository(TeamMember);
@@ -523,7 +524,7 @@ export class TeamMemberService {
 
             // Find teams for this sport
             const teams = await teamRepository.find({
-                where: { sport_id: sportId, status: 'active' },
+                where: { sport_id: sportId, status: TeamStatus.ACTIVE },
                 take: 1 // Take first active team for this sport
             });
 
@@ -772,7 +773,7 @@ export class TeamMemberService {
         for (const sportId of sportIds) {
             // Find first active team for this sport
             const teams = await teamRepository.find({
-                where: { sport_id: sportId, status: 'active' },
+                where: { sport_id: sportId, status: TeamStatus.ACTIVE },
                 take: 1
             });
 

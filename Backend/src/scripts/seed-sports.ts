@@ -4,6 +4,7 @@ import { Staff } from '../entities/Staff';
 import { Team } from '../entities/Team';
 import { TeamTrainingSchedule } from '../entities/TeamTrainingSchedule';
 import { Field } from '../entities/Field';
+import { TeamStatus, TeamVisibilityType } from '../constants/TeamEnums';
 
 async function seed() {
     await AppDataSource.initialize();
@@ -72,7 +73,10 @@ async function seed() {
                 name_en: `${s.name_en} Main Team`,
                 name_ar: `فريق ${s.name_ar} الأساسي`,
                 max_participants: 20,
-                status: 'active'
+                status: TeamStatus.ACTIVE,
+                visibility_type: TeamVisibilityType.BOTH,
+                price: s.price,
+                subscription_price: s.price,
             });
             await teamRepo.save(team);
             console.log(`✅ Created team for: ${s.name_en}`);

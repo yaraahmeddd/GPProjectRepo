@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { TeamService } from '../services/TeamService';
+import { TeamStatus } from '../constants/TeamEnums';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -61,11 +62,14 @@ export class BranchSportTeamController {
 
       const team = await this.teamService.createTeam({
         sport_id: Number(sport_id),
+        field_id: req.body.field_id as string,
         branch_id: Number(branch_id),
         name_en: name_en,
         name_ar: name_ar,
         max_participants: max_participants ? Number(max_participants) : 20,
-        status: 'active',
+        status: TeamStatus.ACTIVE,
+        visibility_type: req.body.visibility_type ?? 'BOTH',
+        price: req.body.price ? Number(req.body.price) : 0,
       });
 
       res.status(201).json({
