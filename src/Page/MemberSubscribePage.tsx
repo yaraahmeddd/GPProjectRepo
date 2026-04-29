@@ -441,7 +441,7 @@ export default function MemberSubscribePage() {
     const isPendingReview = joinedStatus === "pending" || joinedStatus === "pending_admin_approval";
 
     return (
-        <div className="animate-fade-up h-[calc(100vh-140px)] flex flex-col mt-4 pl-6 pr-2 mb-6" dir="rtl">
+        <div className="animate-fade-up min-h-[calc(100vh-140px)] lg:h-[calc(100vh-140px)] flex flex-col mt-4 px-4 sm:pl-6 sm:pr-2 mb-6" dir="rtl">
             <div className="mb-5 flex-shrink-0 flex items-center gap-2">
                 <span className="text-ds-primary text-[32px]">🏅</span>
                 <h1 className="text-[24px] font-black text-ds-primary tracking-tight">اشترك في رياضة جديدة</h1>
@@ -449,7 +449,7 @@ export default function MemberSubscribePage() {
 
             <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px]">
                 {/* Right side: Sports List */}
-                <div className="w-full lg:w-[380px] bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col flex-shrink-0">
+                <div className="w-full lg:w-[380px] h-[320px] lg:h-auto bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col flex-shrink-0">
                     <div className="p-5 border-b border-gray-100 bg-gradient-to-l from-gray-50/80 to-transparent rounded-t-2xl">
                         <h2 className="text-[17px] font-extrabold text-ds-primary">الرياضات المتاحة</h2>
                         <p className="text-[12px] text-ds-text-secondary mt-1">اختر رياضة لعرض فرقها ومواعيد تدريبها</p>

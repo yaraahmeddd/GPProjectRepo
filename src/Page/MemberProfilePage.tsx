@@ -395,10 +395,10 @@ export default function MemberProfilePage() {
                 className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
             >
                 <div
-                    className="relative w-full flex items-center px-6 py-4"
+                    className="relative w-full flex flex-col sm:flex-row items-center px-4 py-6 sm:px-6 sm:py-4 gap-4 sm:gap-0"
                     style={{ background: "linear-gradient(135deg, #F8F9FB 0%, #EEF1F6 100%)", borderBottom: "1px solid #E5E7EB" }}
                 >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 min-w-0 w-full">
                         {/* Avatar with photo upload */}
                         <div className="relative shrink-0">
                             <div
@@ -443,12 +443,12 @@ export default function MemberProfilePage() {
                             )}
                         </div>
 
-                        <div className="min-w-0">
-                            <h1 className="text-xl font-bold text-[#1F3A5F] leading-tight truncate">
+                        <div className="min-w-0 flex flex-col items-center sm:items-start text-center sm:text-right w-full sm:w-auto">
+                            <h1 className="text-xl font-bold text-[#1F3A5F] leading-tight truncate w-full">
                                 {profile.firstNameAr} {profile.lastNameAr}
                             </h1>
-                            <p className="text-sm text-muted-foreground truncate">{profile.firstNameEn} {profile.lastNameEn}</p>
-                            <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            <p className="text-sm text-muted-foreground truncate w-full">{profile.firstNameEn} {profile.lastNameEn}</p>
+                            <div className="mt-2 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                                 <Badge className={statusStyle(profile.status)}>
                                     {statusLabel(profile.status)}
                                 </Badge>
@@ -461,7 +461,7 @@ export default function MemberProfilePage() {
                         </div>
                     </div>
 
-                    <div className="shrink-0 mr-2">
+                    <div className="shrink-0 sm:mr-2 w-full sm:w-auto flex justify-center sm:justify-end mt-2 sm:mt-0">
                         {editing ? (
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={handleCancel} className="gap-1.5 border-[#1F3A5F]/30 text-[#1F3A5F] hover:bg-[#1F3A5F]/5">

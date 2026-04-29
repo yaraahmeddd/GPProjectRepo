@@ -91,6 +91,8 @@ function savePendingToStorage(userId: number | string | undefined | null, list: 
 }
 
 const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ sport, delay }) => {
+    const { t, i18n } = useTranslation("team");
+    const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
     const pct = sport.total > 0 ? Math.round((sport.attended / sport.total) * 100) : 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
