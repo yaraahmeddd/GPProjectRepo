@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TeamController } from '../controllers/TeamController';
 import { authorizePrivilege } from '../middleware/authorizePrivilege';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -8,6 +9,19 @@ const router = Router();
  * All team routes require authentication and appropriate privileges
  * Privileges are enforced through authorizePrivilege middleware
  */
+
+// ==================== MEMBER-FACING (visibility-filtered) ====================
+
+/**
+ * GET /api/teams/available/for-me
+ * Returns teams visible to the currently logged-in Member or TeamMember.
+ * Filtered by their member type:
+ *   Internal types (working, student, graduate, retired, dependents) → INTERNAL + BOTH
+ *   External types (foreigner, visitor, dependents)                  → EXTERNAL + BOTH
+ * Query: sport_id? (optional filter)
+ * NOTE: must be registered BEFORE /:id to avoid route collision
+ */
+router.get('/available/for-me', authenticate, TeamController.getAvailableTeamsForMe);
 
 // ==================== TEAM MANAGEMENT ====================
 
@@ -22,7 +36,7 @@ router.post('/', authorizePrivilege('CREATE_TEAM'), TeamController.createTeam);
  * GET /api/teams
  * Get all teams with optional filters
  * Required Privilege: VIEW_TEAMS
- * Query: sport_id?, status?, branch_id?
+ * Query: sport_id?, status?, branch_id?, visibility_type?
  */
 router.get('/', authorizePrivilege('VIEW_TEAMS'), TeamController.getAllTeams);
 

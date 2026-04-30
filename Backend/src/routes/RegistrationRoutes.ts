@@ -10,10 +10,20 @@ import { upload } from '../middleware/upload';
 
 const router = Router();
 
-// Get member type classification and form schema
+// Get member type classification and form schema (legacy, by code)
 router.get('/member-type-info', (req, res) => RegistrationController.getMemberTypeInfo(req, res));
 
+// ── STEP 0a: Get all member types with classification ─────────────────────────
+// GET /register/member-types
+// Returns all member types from DB with Internal/External classification.
+// Frontend uses this to show the member-type selection dropdown.
+router.get('/member-types', (req, res) => RegistrationController.getMemberTypes(req, res));
 
+// ── STEP 0b: Select member type AND role ──────────────────────────────────────
+// POST /register/choose-member-type
+// Body: { member_type_id: number, role: 'member' | 'team_member' }
+// Returns: classification, form_schema_key, next_step hint
+router.post('/choose-member-type', (req, res) => RegistrationController.chooseMemberType(req, res));
 
 /**
  * Registration Routes

@@ -8,6 +8,7 @@
 
 import { Request, Response } from 'express';
 import { TeamService, UpdateTeamInput } from '../services/TeamService';
+import { TeamVisibilityService, CallerIdentity } from '../services/TeamVisibilityService';
 import { CreateTeamInput } from '../services/TeamValidationService';
 import { TeamStatus, TeamVisibilityType } from '../constants/TeamEnums';
 
@@ -326,6 +327,62 @@ export class TeamController {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Failed to fetch teams with members.';
             console.error('[TeamController] getTeamsBySportWithMembers:', error);
+            res.status(500).json({ success: false, message });
+        }
+    }
+
+    /**
+     * @route   GET /api/teams/available/for-me
+     * @desc    Returns only the teams visible to the currently logged-in Member or TeamMember.
+     *          Visibility is resolved from the JWT payload (member_id / team_member_id)
+     *          and the member's type:
+     *            - Internal members/team-members → INTERNAL + BOTH teams
+     *            - External members/team-members → EXTERNAL + BOTH teams
+     * @access  Requires authenticate middleware (member or team_member role)
+     * @query   sport_id? — filter results to a specific sport
+     */
+    static async getAvailableTeamsForMe(req: Request, res: Response): Promise<void> {
+        try {
+            const user = (req as unknown as { user?: Record<string, unknown> }).user;
+
+            if (!user) {
+                res.status(401).json({ success: false, message: 'Authentication required.' });
+                return;
+            }
+
+            // Only members and team-members should call this endpoint
+            const role = user.role as string | undefined;
+            if (role !== 'member' && role !== 'team_member') {
+                res.status(403).json({
+                    success: false,
+                    message: 'This endpoint is only available for members and team-members.',
+                });
+                return;
+            }
+
+            // Build caller identity from the JWT payload
+            const caller: CallerIdentity = {
+                member_id: user.member_id as number | undefined,
+                team_member_id: user.team_member_id as number | undefined,
+                member_type_id: user.member_type_id as number | undefined,
+            };
+
+            // Optional sport filter
+            const sportId = req.query.sport_id
+                ? parseInt(req.query.sport_id as string)
+                : undefined;
+
+            const visibilityService = new TeamVisibilityService();
+            const teams = await visibilityService.getTeamsForCaller(caller, sportId);
+
+            res.status(200).json({
+                success: true,
+                data: teams,
+                count: teams.length,
+            });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to fetch available teams.';
+            console.error('[TeamController] getAvailableTeamsForMe:', error);
             res.status(500).json({ success: false, message });
         }
     }

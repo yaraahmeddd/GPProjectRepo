@@ -2,6 +2,7 @@ import { AppDataSource } from '../database/data-source';
 import { Account } from '../entities/Account';
 import { Member } from '../entities/Member';
 import { TeamMember } from '../entities/TeamMember';
+import { MemberType } from '../entities/MemberType';
 import { EmployeeDetail } from '../entities/EmployeeDetail';
 import { RetiredEmployeeDetail } from '../entities/RetiredEmployeeDetail';
 import { UniversityStudentDetail } from '../entities/UniversityStudentDetail';
@@ -44,6 +45,32 @@ export class RegistrationService {
             'DEPENDENT_VISITOR': 'dependent_visitor_form',
         };
         return mapping[memberTypeCode] || 'generic_form';
+    }
+
+    /**
+     * GET /register/member-types
+     * Fetches all member types from DB and enriches with
+     * classification (Internal/External) and form schema key.
+     * This is Step 0 of the new registration flow.
+     */
+    static async getMemberTypes(): Promise<{
+        id: number;
+        code: string;
+        name_en: string;
+        name_ar: string;
+        classification: 'Internal' | 'External' | 'Unknown';
+        form_schema_key: string;
+    }[]> {
+        const repo = AppDataSource.getRepository(MemberType);
+        const types = await repo.find({ order: { id: 'ASC' } });
+        return types.map((t) => ({
+            id: t.id,
+            code: t.code,
+            name_en: t.name_en,
+            name_ar: t.name_ar,
+            classification: this.getMemberTypeClassification(t.code),
+            form_schema_key: this.getFormSchemaKey(t.code),
+        }));
     }
 
     // دالة للتأكد من وجود الإيميل
@@ -191,6 +218,18 @@ export class RegistrationService {
                 newTeamMember.is_foreign = isForeign;
                 newTeamMember.status = 'pending';
 
+                // NEW: Save member_type_id for team members too (drives visibility)
+                const membershipTypeCode = data.membership_type_code;
+                if (membershipTypeCode) {
+                    newTeamMember.member_type_id = this.getMemberTypeIdForCode(membershipTypeCode);
+                    console.log(`✅ Setting team_member member_type_id=${newTeamMember.member_type_id} for code="${membershipTypeCode}"`);
+                } else {
+                    // Derive from nationality as fallback
+                    newTeamMember.member_type_id = isForeign
+                        ? this.getMemberTypeIdForCode('FOREIGNER')
+                        : this.getMemberTypeIdForCode('WORKING');
+                }
+
                 const savedTeamMember = await transactionalEntityManager.save(TeamMember, newTeamMember);
 
                 return {
@@ -198,7 +237,7 @@ export class RegistrationService {
                     member_id: null,
                     team_member_id: savedTeamMember.id,
                     is_foreign: savedTeamMember.is_foreign,
-                    membership_type_code: undefined,
+                    membership_type_code: membershipTypeCode,
                     role: 'team_member'
                 };
             }

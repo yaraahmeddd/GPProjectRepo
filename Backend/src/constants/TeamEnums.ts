@@ -8,29 +8,55 @@
 // ─── Member Type Codes ────────────────────────────────────────────────────────
 
 export enum MemberTypeCode {
-  // Internal member types
+  // ── Internal regular-member types ──────────────────────────────────────────
   WORKING_MEMBER = 'working_member',
   STUDENT = 'student',
   GRADUATE = 'graduate',
   DEPENDENT_OF_WORKING_MEMBER = 'dependent_of_working_member',
 
-  // External member types
+  // ── Internal team-member types ─────────────────────────────────────────────
+  WORKING_TEAM_MEMBER = 'working_team_member',
+  STUDENT_TEAM_MEMBER = 'student_team_member',
+  RETIRED_TEAM_MEMBER = 'retired_team_member',
+  DEPENDENT_OF_WORKING_TEAM_MEMBER = 'dependent_of_working_team_member',
+
+  // ── External regular-member types ──────────────────────────────────────────
   FOREIGNER = 'foreigner',
   VISITOR_MEMBER = 'visitor_member',
   DEPENDENT_OF_VISITOR_MEMBER = 'dependent_of_visitor_member',
+
+  // ── External team-member types ─────────────────────────────────────────────
+  VISITOR_TEAM_MEMBER = 'visitor_team_member',
+  FOREIGNER_TEAM_MEMBER = 'foreigner_team_member',
+  DEPENDENT_OF_VISITOR_TEAM_MEMBER = 'dependent_of_visitor_team_member',
+
+  // ── Retired regular-member types (INTERNAL) ────────────────────────────────
+  RETIRED_MEMBER = 'retired_member',
 }
 
 export const INTERNAL_MEMBER_TYPES: MemberTypeCode[] = [
+  // Regular members
   MemberTypeCode.WORKING_MEMBER,
   MemberTypeCode.STUDENT,
   MemberTypeCode.GRADUATE,
+  MemberTypeCode.RETIRED_MEMBER,
   MemberTypeCode.DEPENDENT_OF_WORKING_MEMBER,
+  // Team members
+  MemberTypeCode.WORKING_TEAM_MEMBER,
+  MemberTypeCode.STUDENT_TEAM_MEMBER,
+  MemberTypeCode.RETIRED_TEAM_MEMBER,
+  MemberTypeCode.DEPENDENT_OF_WORKING_TEAM_MEMBER,
 ];
 
 export const EXTERNAL_MEMBER_TYPES: MemberTypeCode[] = [
+  // Regular members
   MemberTypeCode.FOREIGNER,
   MemberTypeCode.VISITOR_MEMBER,
   MemberTypeCode.DEPENDENT_OF_VISITOR_MEMBER,
+  // Team members
+  MemberTypeCode.VISITOR_TEAM_MEMBER,
+  MemberTypeCode.FOREIGNER_TEAM_MEMBER,
+  MemberTypeCode.DEPENDENT_OF_VISITOR_TEAM_MEMBER,
 ];
 
 // ─── Team Visibility ─────────────────────────────────────────────────────────

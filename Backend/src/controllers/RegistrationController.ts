@@ -42,6 +42,108 @@ export class RegistrationController {
   }
 
   /**
+   * GET /register/member-types
+   * Step 0a: Returns all available member types from DB with their
+   * classification (Internal/External) and the form schema key.
+   * Frontend uses this to render the member-type picker.
+   */
+  async getMemberTypes(req: Request, res: Response) {
+    try {
+      const memberTypes = await RegistrationService.getMemberTypes();
+      return res.status(200).json({
+        success: true,
+        message: 'Member types retrieved successfully',
+        data: memberTypes,
+      });
+    } catch (error: Error | unknown) {
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * POST /register/choose-member-type
+   * Step 0b: Client selects a member type ID and then chooses
+   * "member" or "team_member". Returns the classification,
+   * registration form key, and next steps.
+   *
+   * Body: { member_type_id: number, role: 'member' | 'team_member' }
+   */
+  async chooseMemberType(req: Request, res: Response) {
+    try {
+      const { member_type_id, role } = req.body as { member_type_id?: number; role?: string };
+
+      if (!member_type_id) {
+        return res.status(400).json({ success: false, message: 'member_type_id is required' });
+      }
+      if (!role || (role !== 'member' && role !== 'team_member')) {
+        return res.status(400).json({
+          success: false,
+          message: 'role is required and must be "member" or "team_member"',
+        });
+      }
+
+      // Fetch the selected member type from DB
+      const allTypes = await RegistrationService.getMemberTypes();
+      const selected = allTypes.find((t) => t.id === Number(member_type_id));
+
+      if (!selected) {
+        return res.status(404).json({ success: false, message: 'Member type not found' });
+      }
+
+      const classification = selected.classification;
+
+      // Derive next_step hint based on classification + role
+      let next_step: string;
+      if (role === 'team_member') {
+        next_step = 'basic_info_team_member';
+      } else {
+        switch (selected.code) {
+          case 'WORKING':
+            next_step = 'basic_info_working_member';
+            break;
+          case 'STUDENT':
+            next_step = 'basic_info_student_member';
+            break;
+          case 'GRADUATE':
+            next_step = 'basic_info_graduate_member';
+            break;
+          case 'FOREIGNER':
+            next_step = 'basic_info_foreigner_member';
+            break;
+          case 'VISITOR':
+            next_step = 'basic_info_visitor_member';
+            break;
+          default:
+            next_step = 'basic_info_member';
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Member type selected successfully',
+        data: {
+          member_type_id: selected.id,
+          member_type_code: selected.code,
+          member_type_name_en: selected.name_en,
+          member_type_name_ar: selected.name_ar,
+          classification,
+          role,
+          form_schema_key: selected.form_schema_key,
+          next_step,
+        },
+      });
+    } catch (error: Error | unknown) {
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * STEP 0: Choose Role
    * Route: POST /register/choose-role
    */

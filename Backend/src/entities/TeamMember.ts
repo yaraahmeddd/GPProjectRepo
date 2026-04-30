@@ -6,11 +6,13 @@ import {
   UpdateDateColumn,
   OneToMany,
   OneToOne,
+  ManyToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { Account } from './Account';
 import { TeamMemberTeam } from './TeamMemberTeam';
+import { MemberType } from './MemberType';
 
 @Entity('team_members')
 @Index('idx_team_member_account', ['account_id'])
@@ -70,6 +72,9 @@ export class TeamMember {
   @Column({ type: 'boolean', default: false })
   is_foreign: boolean;
 
+  @Column({ type: 'int', nullable: true })
+  member_type_id: number | null;
+
   @Column({ type: 'varchar', length: 50, default: 'pending' })
   status: string; // pending, approved, rejected, suspended, active
 
@@ -83,6 +88,10 @@ export class TeamMember {
   @OneToOne(() => Account)
   @JoinColumn({ name: 'account_id' })
   account: Account;
+
+  @ManyToOne(() => MemberType, { nullable: true, eager: false })
+  @JoinColumn({ name: 'member_type_id' })
+  member_type: MemberType;
 
   @OneToMany(() => TeamMemberTeam, (team) => team.team_member)
   team_member_teams: TeamMemberTeam[];
