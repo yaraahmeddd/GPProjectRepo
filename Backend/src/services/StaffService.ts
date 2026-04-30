@@ -103,7 +103,19 @@ export class StaffService {
     staff_type_id: number;
     employment_start_date: Date;
     employment_end_date?: Date;
-    created_by_staff_type_id?: number; // Optional: staff_type_id of who is creating this account
+    created_by_staff_type_id?: number;
+    // ── Hiring documents (all optional) ──────────────────────────────────────
+    academic_certificate?: string;
+    national_id_front?: string;
+    national_id_back?: string;
+    military_service_doc?: string;
+    criminal_record?: string;
+    employer_approval_letter?: string;
+    employment_status_statement?: string;
+    good_conduct_certificate?: string;
+    personal_photo?: string;
+    personal_info_form?: string;
+    experience_certificates?: string;
   }) {
     // Check if email already exists
     const existingEmail = await this.accountRepository.findOne({
@@ -136,8 +148,6 @@ export class StaffService {
     const hashedPassword = await bcrypt.hash(staffData.password, 10);
 
     // Determine account status based on who is creating
-    // If created by ADMIN (1) or EXECUTIVE_MANAGER (2): active
-    // Otherwise: pending
     const accountStatus =
       staffData.created_by_staff_type_id === 1 || staffData.created_by_staff_type_id === 2
         ? 'active'
@@ -154,7 +164,7 @@ export class StaffService {
 
     const savedAccount = await this.accountRepository.save(account);
 
-    // Create staff record with matching status
+    // Create staff record with matching status + documents
     const staff = this.staffRepository.create({
       account_id: savedAccount.id,
       staff_type_id: staffData.staff_type_id,
@@ -169,11 +179,22 @@ export class StaffService {
       employment_end_date: staffData.employment_end_date || null,
       status: accountStatus,
       is_active: true,
+      // Documents
+      academic_certificate:        staffData.academic_certificate        ?? null,
+      national_id_front:           staffData.national_id_front           ?? null,
+      national_id_back:            staffData.national_id_back            ?? null,
+      military_service_doc:        staffData.military_service_doc        ?? null,
+      criminal_record:             staffData.criminal_record             ?? null,
+      employer_approval_letter:    staffData.employer_approval_letter    ?? null,
+      employment_status_statement: staffData.employment_status_statement ?? null,
+      good_conduct_certificate:    staffData.good_conduct_certificate    ?? null,
+      personal_photo:              staffData.personal_photo              ?? null,
+      personal_info_form:          staffData.personal_info_form          ?? null,
+      experience_certificates:     staffData.experience_certificates     ?? null,
     });
 
     const savedStaff = await this.staffRepository.save(staff);
 
-    // Log activity (using console since staff_activity_logs table doesn't exist)
     console.log(`[STAFF_CREATED] ${savedStaff.id}: ${staffData.first_name_en} ${staffData.last_name_en} (${staffType.name_en})`);
 
     return {

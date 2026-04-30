@@ -5,6 +5,7 @@ import { AuditLogService } from '../services/AuditLogService';
 import { AuthenticatedRequest } from '../middleware/authorizePrivilege';
 import { socketManager } from '../websocket/SocketManager';
 import { PrivilegeCalculationService } from '../services/PrivilegeCalculationService';
+import { saveToLocalStorage, DocumentType, UserType } from '../utils/localFileStorage';
 
 const staffService = new StaffService();
 const auditLogService = new AuditLogService();
@@ -503,7 +504,23 @@ export class StaffController {
   /**
    * POST /staff/register
    * Register a new staff member
-   * 
+   *
+   * Accepts multipart/form-data so document files can be uploaded in the same request.
+   * All documents are optional — they can be uploaded later via PUT /staff/:id.
+   *
+   * File fields:
+   *   academic_certificate       — Original/copy of academic qualification certificate
+   *   national_id_front          — Front of valid national ID card
+   *   national_id_back           — Back of valid national ID card
+   *   military_service_doc       — Military service status (males)
+   *   criminal_record            — Original criminal record (non-university employees)
+   *   employer_approval_letter   — Employer approval letter
+   *   employment_status_statement— Employment status statement (other-org employees)
+   *   good_conduct_certificate   — Good conduct cert (non-other-org employees)
+   *   personal_photo             — Recent personal photo
+   *   personal_info_form         — Completed personal-information / acquaintance form
+   *   experience_certificates    — Experience / training course certificates
+   *
    * Authorization Rules:
    * - Only ADMIN (staff_type_id = 1) can register EXECUTIVE_MANAGER (staff_type_id = 2)
    * - ADMIN and EXECUTIVE_MANAGER can register other staff
@@ -536,8 +553,7 @@ export class StaffController {
         employment_end_date,
       } = req.body;
 
-      // Validation - email and password are NOT provided by admin/exec manager
-      // They will be set to national_id initially and changed by staff on first login
+      // Validation
       if (!first_name_en || !last_name_en || !national_id || !phone || !staff_type_id || !employment_start_date) {
         res.status(400).json({
           success: false,
@@ -547,7 +563,6 @@ export class StaffController {
       }
 
       // Authorization check: Only ADMIN can register EXECUTIVE_MANAGER
-      // EXEC_MANAGER has staff_type_id = 2
       if (Number(staff_type_id) === 2 && staffTypeId !== 1) {
         res.status(403).json({
           success: false,
@@ -556,7 +571,7 @@ export class StaffController {
         return;
       }
 
-      // Only ADMIN (1), EXECUTIVE_MANAGER (2), or DEPUTY_EXEC_MANAGER (3) can register other staff
+      // Only ADMIN (1), EXECUTIVE_MANAGER (2), or DEPUTY_EXEC_MANAGER (3) can register staff
       if (staffTypeId !== 1 && staffTypeId !== 2 && staffTypeId !== 3) {
         res.status(403).json({
           success: false,
@@ -565,7 +580,55 @@ export class StaffController {
         return;
       }
 
-      // Use national_id as initial password (StaffService will handle hashing)
+      // ── Upload documents ────────────────────────────────────────────────────
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+      const getFile = (field: string): Express.Multer.File | undefined =>
+        files?.[field]?.[0];
+
+      const uploadDoc = async (
+        field: string,
+        docType: DocumentType,
+      ): Promise<string | undefined> => {
+        const file = getFile(field);
+        if (!file) return undefined;
+        return saveToLocalStorage(file.buffer, file.originalname, docType, UserType.STAFF);
+      };
+
+      let academic_certificate: string | undefined;
+      let national_id_front: string | undefined;
+      let national_id_back: string | undefined;
+      let military_service_doc: string | undefined;
+      let criminal_record: string | undefined;
+      let employer_approval_letter: string | undefined;
+      let employment_status_statement: string | undefined;
+      let good_conduct_certificate: string | undefined;
+      let personal_photo: string | undefined;
+      let personal_info_form: string | undefined;
+      let experience_certificates: string | undefined;
+
+      try {
+        academic_certificate        = await uploadDoc('academic_certificate',        DocumentType.OTHER);
+        national_id_front           = await uploadDoc('national_id_front',           DocumentType.NATIONAL_ID);
+        national_id_back            = await uploadDoc('national_id_back',            DocumentType.NATIONAL_ID);
+        military_service_doc        = await uploadDoc('military_service_doc',        DocumentType.OTHER);
+        criminal_record             = await uploadDoc('criminal_record',             DocumentType.OTHER);
+        employer_approval_letter    = await uploadDoc('employer_approval_letter',    DocumentType.OTHER);
+        employment_status_statement = await uploadDoc('employment_status_statement', DocumentType.OTHER);
+        good_conduct_certificate    = await uploadDoc('good_conduct_certificate',    DocumentType.OTHER);
+        personal_photo              = await uploadDoc('personal_photo',              DocumentType.PERSONAL_PHOTO);
+        personal_info_form          = await uploadDoc('personal_info_form',          DocumentType.OTHER);
+        experience_certificates     = await uploadDoc('experience_certificates',     DocumentType.OTHER);
+      } catch (uploadError) {
+        console.error('File upload error during staff registration:', uploadError);
+        res.status(400).json({
+          success: false,
+          message: uploadError instanceof Error ? uploadError.message : 'Failed to upload one or more documents',
+        });
+        return;
+      }
+
+      // ── Build staff data payload ─────────────────────────────────────────────
       const staffData = {
         first_name_en,
         first_name_ar: first_name_ar || first_name_en,
@@ -573,13 +636,25 @@ export class StaffController {
         last_name_ar: last_name_ar || last_name_en,
         national_id,
         email: `staff.${national_id}@helwan-club.local`,
-        password: national_id, // Pass cleartext, service will hash it
+        password: national_id,
         phone,
         address: address || '',
         staff_type_id: Number(staff_type_id),
         employment_start_date: new Date(employment_start_date),
         employment_end_date: employment_end_date ? new Date(employment_end_date) : undefined,
         created_by_staff_type_id: staffTypeId,
+        // Documents
+        academic_certificate,
+        national_id_front,
+        national_id_back,
+        military_service_doc,
+        criminal_record,
+        employer_approval_letter,
+        employment_status_statement,
+        good_conduct_certificate,
+        personal_photo,
+        personal_info_form,
+        experience_certificates,
       };
 
       const result = await staffService.registerStaff(staffData);
@@ -592,7 +667,7 @@ export class StaffController {
       console.error('Registration Error:', error);
       res.status(400).json({
         success: false,
-        message: errorMessage, // Use actual error message here
+        message: errorMessage,
         error: errorMessage,
       });
     }

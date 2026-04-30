@@ -2,6 +2,7 @@ import { Router } from 'express';
 import StaffController from '../controllers/StaffController';
 import { authenticate } from '../middleware/auth';
 import { authorizePrivilege } from '../middleware/authorizePrivilege';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -33,7 +34,24 @@ router.get('/packages/:packageId/privileges', authorizePrivilege('VIEW_PRIVILEGE
 // Only ADMIN can register EXECUTIVE_MANAGER
 // Only ADMIN and EXECUTIVE_MANAGER can register other staff immediately
 // DEPUTY_EXEC_MANAGER registrations require approval
-router.post('/register', authenticate, StaffController.registerStaff);
+router.post(
+  '/register',
+  authenticate,
+  upload.fields([
+    { name: 'academic_certificate',        maxCount: 1 },
+    { name: 'national_id_front',           maxCount: 1 },
+    { name: 'national_id_back',            maxCount: 1 },
+    { name: 'military_service_doc',        maxCount: 1 },
+    { name: 'criminal_record',             maxCount: 1 },
+    { name: 'employer_approval_letter',    maxCount: 1 },
+    { name: 'employment_status_statement', maxCount: 1 },
+    { name: 'good_conduct_certificate',    maxCount: 1 },
+    { name: 'personal_photo',              maxCount: 1 },
+    { name: 'personal_info_form',          maxCount: 1 },
+    { name: 'experience_certificates',     maxCount: 1 },
+  ]),
+  StaffController.registerStaff
+);
 router.get('/', StaffController.getAllStaff);
 
 // Individual Privilege Grants/Revokes (more specific routes first)
