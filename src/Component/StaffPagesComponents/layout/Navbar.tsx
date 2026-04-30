@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
@@ -17,8 +17,29 @@ import { Badge } from "../ui/badge";
 import { resolveFileUrl } from "../../../utils/fileUrl";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { useTranslation } from "react-i18next";
+import api from "../../../api/axios";
 
 const hucLogo = "/assets/HUC_logo.jpeg";
+const DEFAULT_CLUB_NAME_AR = "نادي جامعة حلوان";
+
+const pickPhotoFromSource = (src: any): string | undefined => {
+  if (!src || typeof src !== "object") return undefined;
+  const candidates = [
+    src.photo,
+    src.avatar,
+    src.profile_photo,
+    src.profilePhoto,
+    src.photo_url,
+    src.personal_photo_url,
+    src.documents?.personal_photo_url,
+  ];
+
+  for (const value of candidates) {
+    const url = resolveFileUrl(typeof value === "string" ? value : undefined);
+    if (url) return url;
+  }
+  return undefined;
+};
 
 interface LogoutModalProps {
   isOpen: boolean;
@@ -79,9 +100,11 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const { language } = useLanguage();
   const { t, i18n } = useTranslation(["nav"]);
   const location = useLocation();
+  const [fetchedPhotoUrl, setFetchedPhotoUrl] = useState<string | undefined>(undefined);
 
   if (!user) return null;
 
@@ -92,7 +115,67 @@ export function Navbar() {
     logout();
   };
 
-  const photoUrl = resolveFileUrl(user.photo);
+  const fallbackPhotoCandidates = [
+    user.photo,
+    (user as any)?.avatar,
+    (user as any)?.profile_photo,
+    (user as any)?.profilePhoto,
+    (user as any)?.photo_url,
+    (user as any)?.personal_photo_url,
+    (user as any)?.documents?.personal_photo_url,
+  ];
+  const photoUrl = fallbackPhotoCandidates
+    .map((value) => resolveFileUrl(typeof value === "string" ? value : undefined))
+    .find(Boolean);
+  const effectivePhotoUrl = fetchedPhotoUrl || photoUrl;
+  const clubName = t("navbar.clubName", DEFAULT_CLUB_NAME_AR);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [effectivePhotoUrl, user?.fullName]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadMemberPhoto = async () => {
+      if (!user || user.role !== "MEMBER" || effectivePhotoUrl) return;
+
+      try {
+        const meRes = await api.get("/auth/me");
+        const meRoot = meRes?.data;
+        const meUser = meRoot?.data?.user ?? meRoot?.user ?? meRoot?.data ?? meRoot;
+        let resolved = pickPhotoFromSource(meUser);
+
+        const memberId = Number(
+          meUser?.member_id ??
+          (user as any)?.member_id ??
+          0
+        );
+
+        if (!resolved && Number.isFinite(memberId) && memberId > 0) {
+          try {
+            const memberRes = await api.get(`/members/${memberId}`);
+            const memberRoot = memberRes?.data;
+            const memberData = memberRoot?.data ?? memberRoot;
+            resolved = pickPhotoFromSource(memberData);
+          } catch {
+            // no-op: keep fallback
+          }
+        }
+
+        if (mounted && resolved) {
+          setFetchedPhotoUrl(resolved);
+        }
+      } catch {
+        // no-op: keep fallback icon
+      }
+    };
+
+    void loadMemberPhoto();
+    return () => {
+      mounted = false;
+    };
+  }, [user, effectivePhotoUrl]);
 
   const memberTabs = [
     { title: "member.home", path: "/member/dashboard/home", icon: Home },
@@ -111,13 +194,18 @@ export function Navbar() {
       <header className="fixed top-0 right-0 left-0 z-40 h-16 bg-card border-b border-border">
         <div className="px-4 sm:px-6 h-full">
           <div className="flex flex-row h-full items-center gap-2 sm:gap-4">
-            <div className={`${isMember ? "w-[80px] sm:w-[120px] xl:w-[170px]" : "flex-1"} flex items-center gap-2 sm:gap-3 min-w-0`}>
+            <div className={`${isMember ? "w-[140px] sm:w-[200px] xl:w-[260px]" : "flex-1"} flex items-center gap-2 sm:gap-3 min-w-0`}>
               <img
                 src={hucLogo}
                 alt="HUC"
                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover bg-card"
               />
-              <span className="font-bold text-lg text-foreground hidden xl:block truncate">{t("navbar.clubName")}</span>
+              <span
+                className="font-bold text-sm sm:text-base xl:text-lg text-foreground hidden lg:block leading-tight"
+                title={clubName}
+              >
+                {clubName}
+              </span>
             </div>
 
             {isMember && (
@@ -167,9 +255,14 @@ export function Navbar() {
                     {ROLE_LABELS[user.role]}
                   </Badge>
                 </div>
-                {photoUrl ? (
+                {effectivePhotoUrl && !avatarFailed ? (
                   <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border">
-                    <img src={photoUrl} alt={user.fullName} className="h-full w-full object-cover" />
+                    <img
+                      src={effectivePhotoUrl}
+                      alt={user.fullName}
+                      className="h-full w-full object-cover"
+                      onError={() => setAvatarFailed(true)}
+                    />
                   </div>
                 ) : (
                   <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
