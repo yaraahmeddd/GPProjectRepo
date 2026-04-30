@@ -45,6 +45,22 @@ interface BranchSportOption {
     name_en?: string;
 }
 
+const extractBranchSports = (payload: unknown): BranchSportOption[] => {
+    if (!payload || typeof payload !== 'object') return [];
+    const root = payload as { data?: unknown; sports?: unknown };
+
+    if (Array.isArray(root.data)) return root.data as BranchSportOption[];
+    if (Array.isArray(root.sports)) return root.sports as BranchSportOption[];
+
+    if (root.data && typeof root.data === 'object') {
+        const nested = root.data as { data?: unknown; sports?: unknown };
+        if (Array.isArray(nested.data)) return nested.data as BranchSportOption[];
+        if (Array.isArray(nested.sports)) return nested.sports as BranchSportOption[];
+    }
+
+    return [];
+};
+
 const resolveSportKey = (sport: BranchSportOption): string => {
     const signal = `${sport.code || ''} ${sport.name_en || ''} ${sport.name_ar || ''}`.toLowerCase();
     if (signal.includes('football') || signal.includes('soccer') || signal.includes('قدم')) return 'football';
@@ -60,6 +76,8 @@ const SportDetailedPG: React.FC = () => {
     const [selectedClub, setSelectedClub] = useState<string>('');
     const [branches, setBranches] = useState<BranchOption[]>([]);
     const [branchSports, setBranchSports] = useState<BranchSportOption[]>([]);
+    const [loadingBranchSports, setLoadingBranchSports] = useState(false);
+    const [branchSportsError, setBranchSportsError] = useState<string | null>(null);
     const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
     const [currentFacilityIndex, setCurrentFacilityIndex] = useState(0);
     const [email, setEmail] = useState<string>('');
@@ -237,22 +255,28 @@ const SportDetailedPG: React.FC = () => {
         if (!selectedClub) {
             setBranchSports([]);
             setSelectedSport('');
+            setBranchSportsError(null);
             return;
         }
 
         const fetchSportsByBranch = async () => {
             try {
+                setLoadingBranchSports(true);
+                setBranchSportsError(null);
                 const res = await api.get(`/branches/${selectedClub}/sports`);
-                const list: BranchSportOption[] = Array.isArray(res?.data?.data) ? res.data.data : [];
+                const list = extractBranchSports(res?.data);
                 setBranchSports(list);
                 setSelectedSport(list.length > 0 ? resolveSportKey(list[0]) : '');
             } catch {
                 setBranchSports([]);
                 setSelectedSport('');
+                setBranchSportsError(t("sports.load_failed", "Failed to load sports for this branch"));
+            } finally {
+                setLoadingBranchSports(false);
             }
         };
         void fetchSportsByBranch();
-    }, [selectedClub]);
+    }, [selectedClub, t]);
 
     useEffect(() => {
         setCurrentAchievementIndex(0);
@@ -341,10 +365,14 @@ const SportDetailedPG: React.FC = () => {
                                 <select
                                     value={selectedSport}
                                     onChange={(e) => setSelectedSport(e.target.value)}
-                                    disabled={availableSports.length === 0}
+                                    disabled={loadingBranchSports || availableSports.length === 0}
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
-                                    {availableSports.length === 0 ? (
+                                    {loadingBranchSports ? (
+                                        <option value="">{t("sports.loading", "Loading sports...")}</option>
+                                    ) : branchSportsError ? (
+                                        <option value="">{branchSportsError}</option>
+                                    ) : availableSports.length === 0 ? (
                                         <option value="">{t("sports.no_sports_for_branch", "?? ???? ?????? ????? ?? ??? ?????")}</option>
                                     ) : (
                                         availableSports.map((sport) => (
