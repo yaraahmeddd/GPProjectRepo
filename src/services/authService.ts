@@ -152,6 +152,9 @@ export const AuthService = {
     logout: () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('huc_access_token');
+        localStorage.removeItem('huc_user');
+        localStorage.removeItem('huc_token');
     },
 
     /**

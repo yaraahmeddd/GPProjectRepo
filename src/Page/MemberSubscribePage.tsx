@@ -146,6 +146,13 @@ export default function MemberSubscribePage() {
     const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
     const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
     const [joining, setJoining] = useState(false);
+    const isTeamMemberMode = !user?.member_id && !!user?.team_member_id;
+    const subjectId = Number((isTeamMemberMode ? user?.team_member_id : user?.member_id) || 0);
+    const subscribeEndpoint = isTeamMemberMode ? "/team-member-subscriptions/subscribe" : "/member-subscriptions/subscribe";
+    const cancelEndpoint = (subscriptionId: number) =>
+        isTeamMemberMode
+            ? `/team-member-subscriptions/subscriptions/${subscriptionId}/cancel`
+            : `/member-subscriptions/${subscriptionId}/cancel`;
 
     const isPendingPaymentSubscription = useCallback((subscription?: SubscriptionLookup) => {
         if (!subscription) return false;
@@ -184,9 +191,9 @@ export default function MemberSubscribePage() {
                 teamId: args.slot.teamId || "",
             });
 
-            navigate(`/member/payment?${params.toString()}`);
+            navigate(`${isTeamMemberMode ? "/team-member/payment" : "/member/payment"}?${params.toString()}`);
         },
-        [navigate]
+        [navigate, isTeamMemberMode]
     );
 
     const loadSports = useCallback(async () => {
@@ -228,9 +235,13 @@ export default function MemberSubscribePage() {
             }
 
             const subscriptionMap: Record<string, SubscriptionLookup> = {};
-            if (user?.member_id) {
+            if (subjectId) {
                 try {
-                    const subRes = await api.get(`/member-subscriptions/${user.member_id}/subscriptions`);
+                    const subRes = isTeamMemberMode
+                        ? await api.get(`/team-member-subscriptions/${subjectId}/subscriptions`).catch(() =>
+                            api.get(`/team-members/${subjectId}/subscriptions`)
+                        )
+                        : await api.get(`/member-subscriptions/${subjectId}/subscriptions`);
                     const rawSubscriptions =
                         (Array.isArray(subRes.data?.data?.subscriptions) && subRes.data.data.subscriptions) ||
                         (Array.isArray(subRes.data?.data) && subRes.data.data) ||
@@ -256,7 +267,7 @@ export default function MemberSubscribePage() {
                         };
                     });
                 } catch (error) {
-                    console.warn("Failed to load member subscriptions", error);
+                    console.warn("Failed to load subscriptions", error);
                 }
             }
 
@@ -351,7 +362,7 @@ export default function MemberSubscribePage() {
 
                 return {
                     id: sportFromApi.sportId,
-                    memberId: user?.member_id,
+                    memberId: subjectId,
                     name: isEnglish
                         ? (sportFromApi.nameEn || sportFromApi.nameAr || "Unnamed Sport")
                         : (sportFromApi.nameAr || sportFromApi.nameEn || "رياضة غير مسمى"),
@@ -394,7 +405,7 @@ export default function MemberSubscribePage() {
         } finally {
             setLoading(false);
         }
-    }, [isPendingPaymentSubscription, isEnglish, t, toast, user?.member_id]);
+    }, [isPendingPaymentSubscription, isEnglish, t, toast, isTeamMemberMode, subjectId]);
 
     useEffect(() => {
         loadSports();
@@ -425,17 +436,19 @@ export default function MemberSubscribePage() {
 
         if (hasPendingPayment) {
             if (!actionSlot) return;
-            const isChangingSlot = selectedSlot && selectedSlot.id !== pendingPayment.slotId;
-            if (isChangingSlot && selectedSlot && selectedSlot.teamId) {
-                setJoining(true);
-                try {
-                    try {
-                        await api.patch(`/member-subscriptions/${pendingPayment.subscriptionId}/cancel`);
-                    } catch {}
-                    const response = await api.post("/member-subscriptions/subscribe", {
-                        team_id: selectedSlot.teamId,
-                        member_id: selectedSport.memberId,
-                    });
+                    const isChangingSlot = selectedSlot && selectedSlot.id !== pendingPayment.slotId;
+                    if (isChangingSlot && selectedSlot && selectedSlot.teamId) {
+                        setJoining(true);
+                        try {
+                            try {
+                                await api.patch(cancelEndpoint(pendingPayment.subscriptionId));
+                            } catch {}
+                            const response = await api.post(subscribeEndpoint, {
+                                team_id: selectedSlot.teamId,
+                                ...(isTeamMemberMode
+                                    ? { team_member_id: selectedSport.memberId }
+                                    : { member_id: selectedSport.memberId }),
+                            });
                     const payload = response?.data || {};
                     const subscriptionData = payload.data || {};
                     const paymentData = payload.payment || {};
@@ -449,10 +462,10 @@ export default function MemberSubscribePage() {
                     if (!nextPayment.subscriptionId) {
                         return;
                     }
-                    goToPaymentPage({
-                        sportName: selectedSport.name,
-                        slot: selectedSlot,
-                        subscriptionId: nextPayment.subscriptionId,
+                        goToPaymentPage({
+                            sportName: selectedSport.name,
+                            slot: selectedSlot,
+                            subscriptionId: nextPayment.subscriptionId,
                         paymentReference: nextPayment.paymentReference,
                         amount: nextPayment.amount,
                         currency: nextPayment.currency,
@@ -477,9 +490,11 @@ export default function MemberSubscribePage() {
 
         setJoining(true);
         try {
-            const response = await api.post("/member-subscriptions/subscribe", {
+            const response = await api.post(subscribeEndpoint, {
                 team_id: selectedSlot.teamId,
-                member_id: selectedSport.memberId,
+                ...(isTeamMemberMode
+                    ? { team_member_id: selectedSport.memberId }
+                    : { member_id: selectedSport.memberId }),
             });
 
             const payload = response?.data || {};

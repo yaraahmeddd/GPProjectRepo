@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback, lazy, Suspense, memo } from "react";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 const hucLogo = "/assets/HUC logo.jpeg";
 import { useAuth } from "../context/AuthContext";
 import { AuthService } from "../services/authService";
 import api from "../api/axios";
 import { LanguageSwitcher } from "../Component/LanguageSwitcher";
+import { ChevronDown } from "lucide-react";
 
 // ─── Dashboard Features ──────────────────────────────────────
 // ─── Dashboard Features ──────────────────────────────────────
 import type { ToastType, EnrolledSport } from "../features/dashboard/types";
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
-const SportsExplorePage = lazy(() => import("../features/dashboard/pages/SportsExplorePage"));
 const CourtRentalPage = lazy(() => import("../features/dashboard/pages/CourtRentalPage"));
+const MemberSubscribePage = lazy(() => import("./MemberSubscribePage"));
 const NotificationPanelLazy = lazy(() => import("../features/dashboard/NotificationPanel").then(m => ({ default: m.NotificationPanel })));
 import { Toast } from "../features/dashboard/Toast";
 import SportCard from "../features/dashboard/SportCard";
@@ -263,108 +265,207 @@ const Sidebar = memo(({ activeNav, setActiveNav, setActiveTab, onLogout, isOpen,
 // ─── Navbar ──────────────────────────────────────────────────
 interface NavbarProps {
     member: Member;
+    activeNav: string;
+    onNavigate: (key: string) => void;
     onLogout: () => void;
     notifications: any[];
     onToggleNotifications: () => void;
     showNotifs: boolean;
-    onOpenSidebar: () => void;
     onMarkAllRead: () => void;
     onMarkRead: (id: number) => void;
     dir?: string;
 }
 
-const Navbar = memo(({ member, onLogout, notifications, onToggleNotifications, showNotifs, onOpenSidebar, onMarkAllRead, onMarkRead, dir = 'rtl' }: NavbarProps) => {
-    const { t } = useTranslation("team");
+const Navbar = memo(({ member, activeNav, onNavigate, onLogout, notifications, onToggleNotifications, showNotifs, onMarkAllRead, onMarkRead, dir = 'rtl' }: NavbarProps) => {
+    const { t, i18n } = useTranslation("team");
+    const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+    const language = (i18n.resolvedLanguage ?? i18n.language).startsWith("ar") ? "ar" : "en";
+    const memberTabs = [
+        { key: "dashboard", label: t("sidebar.dashboard"), icon: icons.home },
+        { key: "profile", label: t("sidebar.profile"), icon: icons.profile },
+        { key: "sports", label: t("sidebar.my_sports"), icon: icons.sports },
+        { key: "available-sports", label: t("sidebar.explore_sports"), icon: icons.explore },
+        { key: "courts", label: t("sidebar.court_booking"), icon: icons.court },
+    ];
+
     return (
-        <header
-            dir={dir}
-            role="banner"
-            className="fixed top-0 z-40 flex items-center justify-between px-3 sm:px-10 h-16 bg-white border-b border-[#E5E7EB] shadow-sm"
-            style={{ insetInlineStart: 0, insetInlineEnd: 0 }}
-        >
-            {/* Start: Club brand */}
-            <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-white ring-1 ring-ds-border/50">
-                    <img src={hucLogo} alt="HUC Logo" loading="eager" fetchPriority="high" width={40} height={40} decoding="async" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                    <p className="font-extrabold text-[15px] sm:text-[17px] text-ds-text-primary tracking-tight">{t("navbar.brand")}</p>
-                </div>
-            </div>
-
-            {/* End: Member info & Actions */}
-            <div className="flex items-center gap-2 sm:gap-6">
-                {/* Language Switcher */}
-                <div className="hidden md:block">
-                    <LanguageSwitcher />
-                </div>
-
-                {/* Notification Bell */}
-                <div className="relative">
-                    <button
-                        onClick={onToggleNotifications}
-                        aria-label={t("navbar.notifications")}
-                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${showNotifs ? 'bg-ds-primary-light text-ds-primary shadow-inner' : 'bg-gray-100 text-[#6B7280] hover:bg-gray-200'}`}
-                    >
-                        <Icon d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" size={20} />
-                        {notifications.some(n => !n.read) && (
-                            <span className="absolute top-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" style={{ insetInlineEnd: 6 }}></span>
-                        )}
-                    </button>
-                    {showNotifs && (
-                        <Suspense fallback={null}>
-                            <NotificationPanelLazy
-                                onClose={onToggleNotifications}
-                                notifications={notifications}
-                                onMarkAllRead={onMarkAllRead}
-                                onMarkRead={onMarkRead}
-                            />
-                        </Suspense>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`${dir === 'rtl' ? 'text-right' : 'text-left'} hidden sm:block`}>
-                        <p className="font-bold text-[13px] text-ds-text-primary leading-tight">{member.firstName} {member.lastName}</p>
-                        <span className="text-[10px] px-3 py-0.5 rounded-full text-white font-black bg-ds-orange shadow-sm">
-                            {t("navbar.role")}
+        <>
+            <header
+                dir={dir}
+                role="banner"
+                className="fixed top-0 right-0 left-0 z-40 h-16 bg-card border-b border-border"
+                style={{ insetInlineStart: 0, insetInlineEnd: 0 }}
+            >
+                <div className="px-4 sm:px-6 h-full">
+                    <div className="flex flex-row h-full items-center gap-2 sm:gap-4">
+                    <div className="w-[140px] sm:w-[200px] xl:w-[260px] flex items-center gap-2 sm:gap-3 min-w-0">
+                        <img
+                            src={hucLogo}
+                            alt="HUC"
+                            className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover bg-card"
+                        />
+                        <span className="font-bold text-sm sm:text-base xl:text-lg text-foreground hidden lg:block leading-tight">
+                            {t("navbar.brand")}
                         </span>
                     </div>
-                    {/* Avatar (User Icon) */}
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 text-gray-400 border border-ds-border overflow-hidden ring-2 ring-ds-border/20">
-                        {member.avatar ? (
-                            <img
-                                src={getFullUrl(member.avatar) || ""}
-                                alt="Avatar"
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <Icon d={icons.profile} size={22} />
-                        )}
+
+                    <div className="flex-1 min-w-0 hidden md:flex justify-center px-1">
+                        <nav className="w-full max-w-[1020px] rounded-2xl bg-[#e8f2fb] p-1 sm:p-1.5 flex items-center gap-1">
+                            {memberTabs.map((tab) => {
+                                const active = activeNav === tab.key;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => onNavigate(tab.key)}
+                                        title={tab.label}
+                                        className="relative flex-1 min-w-0 h-8 sm:h-9 px-1.5 rounded-xl text-[11px] sm:text-xs xl:text-sm flex items-center justify-center gap-1"
+                                    >
+                                        {active && (
+                                            <motion.span
+                                                layoutId="team-member-tab-active-pill"
+                                                className="absolute inset-0 rounded-xl bg-[#cfe5f8]"
+                                                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                                            />
+                                        )}
+                                        <Icon
+                                            d={tab.icon}
+                                            size={16}
+                                        />
+                                        <span className={`relative z-10 transition-colors duration-200 hidden xl:inline ${active ? "text-[#0f3f6d] font-semibold" : "text-[#2f5f8a]"}`}>
+                                            {tab.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
+
+                    <div className="w-[110px] sm:w-[170px] xl:w-[250px] flex items-center justify-end gap-2 sm:gap-4 min-w-0">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 text-gray-400 border border-ds-border overflow-hidden ring-2 ring-ds-border/20">
+                                {member.avatar ? (
+                                    <img
+                                        src={getFullUrl(member.avatar) || ""}
+                                        alt="Avatar"
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <Icon d={icons.profile} size={22} />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="relative hidden md:block">
+                            <button
+                                onClick={() => setLangDropdownOpen((v) => !v)}
+                                className="h-9 px-2 sm:px-3 rounded-lg hover:bg-muted flex flex-row items-center justify-center transition-colors shadow-sm border border-border bg-card hover:border-primary/20 gap-1.5"
+                                title={t("navbar.language")}
+                            >
+                                {language === "ar" ? (
+                                    <img src="https://flagcdn.com/w20/eg.png" alt="AR" className="w-5 rounded-sm shadow-sm" />
+                                ) : (
+                                    <img src="https://flagcdn.com/w20/gb.png" alt="EN" className="w-5 rounded-sm shadow-sm" />
+                                )}
+                                <span className="hidden sm:block text-xs font-bold text-primary leading-none">
+                                    {language === "ar" ? "AR" : "EN"}
+                                </span>
+                                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${langDropdownOpen ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {langDropdownOpen && (
+                                <div
+                                    className="absolute top-11 end-0 w-36 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in"
+                                    onMouseLeave={() => setLangDropdownOpen(false)}
+                                >
+                                    <button
+                                        onClick={() => { void i18n.changeLanguage("ar"); setLangDropdownOpen(false); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 text-start text-sm font-semibold transition-colors ${i18n.language.startsWith("ar") ? "bg-blue-50 text-[#2596be]" : "text-[#0e1c38] hover:bg-gray-50"}`}
+                                    >
+                                        <img src="https://flagcdn.com/w20/eg.png" alt="AR" className="w-5 rounded-sm shadow-sm" />
+                                        {"\u0627\u0644\u0639\u0631\u0628\u064A\u0629"}
+                                    </button>
+                                    <button
+                                        onClick={() => { void i18n.changeLanguage("en"); setLangDropdownOpen(false); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 text-start text-sm font-semibold transition-colors ${i18n.language.startsWith("en") ? "bg-blue-50 text-[#2596be]" : "text-[#0e1c38] hover:bg-gray-50"}`}
+                                    >
+                                        <img src="https://flagcdn.com/w20/gb.png" alt="EN" className="w-5 rounded-sm shadow-sm" />
+                                        English
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="relative">
+                            <button
+                                onClick={onToggleNotifications}
+                                aria-label={t("navbar.notifications")}
+                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${showNotifs ? 'bg-ds-primary-light text-ds-primary shadow-inner' : 'bg-gray-100 text-[#6B7280] hover:bg-gray-200'}`}
+                            >
+                                <Icon d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" size={20} />
+                                {notifications.some(n => !n.read) && (
+                                    <span className="absolute top-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" style={{ insetInlineEnd: 6 }}></span>
+                                )}
+                            </button>
+                            {showNotifs && (
+                                <Suspense fallback={null}>
+                                    <NotificationPanelLazy
+                                        onClose={onToggleNotifications}
+                                        notifications={notifications}
+                                        onMarkAllRead={onMarkAllRead}
+                                        onMarkRead={onMarkRead}
+                                    />
+                                </Suspense>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={onLogout}
+                            aria-label={t("sidebar.logout")}
+                            className="h-9 w-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
+                            title={t("sidebar.logout")}
+                        >
+                            <Icon d={icons.logout} size={18} />
+                        </button>
+
+                    </div>
                     </div>
                 </div>
+            </header>
 
-                {/* Logout Action */}
-                <button
-                    onClick={onLogout}
-                    aria-label={t("sidebar.logout")}
-                    className="text-gray-400 hover:text-ds-error transition-all duration-200 p-1 hover:scale-110"
-                    title={t("sidebar.logout")}
-                >
-                    <Icon d={icons.logout} size={18} />
-                </button>
-                <button
-                    onClick={onOpenSidebar}
-                    aria-label={t("navbar.menu")}
-                    className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 text-[#6B7280] hover:bg-gray-200 transition-all duration-200"
-                    title={t("navbar.menu")}
-                >
-                    <Icon d={icons.menu} size={18} />
-                </button>
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)]">
+                <nav className="flex items-center justify-around px-1 h-16 bg-[#e8f2fb]/30 backdrop-blur-md">
+                    {memberTabs.map((tab) => {
+                        const active = activeNav === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => onNavigate(tab.key)}
+                                title={tab.label}
+                                className="relative flex flex-col items-center justify-center w-full h-full gap-1"
+                            >
+                                {active && (
+                                    <motion.span
+                                        layoutId="team-member-tab-active-pill-mobile"
+                                        className="absolute inset-x-1 top-1 bottom-1 rounded-xl bg-[#cfe5f8] -z-10"
+                                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                                    />
+                                )}
+                                <Icon d={tab.icon} size={18} />
+                                <span
+                                    className={`relative z-10 text-[9px] text-center leading-none transition-colors duration-200 ${
+                                        active ? "text-[#0f3f6d] font-bold" : "text-[#2f5f8a] font-medium"
+                                    }`}
+                                >
+                                    {tab.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </nav>
             </div>
-        </header>
+        </>
     );
 });
 
@@ -963,7 +1064,7 @@ const SportsTab = memo(({ sports, availableSports, onJoin, onNavigateTo, dir = '
 
 // ─── Root App ─────────────────────────────────────────────────
 export default function TeamMemberDashboard() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { t, i18n } = useTranslation("team");
     const [member, setMember] = useState<Member | null>(null);
     const [sports, setSports] = useState<EnrolledSport[]>([]);
@@ -974,7 +1075,6 @@ export default function TeamMemberDashboard() {
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
     const [showNotifs, setShowNotifs] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null);
     const [dashboardStats, setDashboardStats] = useState<{
         enrolledSports: EnrolledSport[];
@@ -1504,9 +1604,8 @@ export default function TeamMemberDashboard() {
     }, [user, refreshKey, t]);
 
     const handleLogoutConfirm = () => {
-        AuthService.logout();
         setShowLogoutModal(false);
-        window.location.href = "/login";
+        logout();
     };
 
     const isArabicName = (value: string) => /^[\u0600-\u06FF\s]+$/.test(value.trim());
@@ -1724,7 +1823,7 @@ export default function TeamMemberDashboard() {
                             dir={dirAttr}
                         />
                     )}
-                    {activeTab === "available-sports" && <SportsExplorePage showToast={showToast} onJoined={() => setRefreshKey(prev => prev + 1)} />}
+                    {activeTab === "available-sports" && <MemberSubscribePage />}
                     {activeTab === "courts" && <CourtRentalPage showToast={showToast} />}
                 </Suspense>
             </div>
@@ -1733,43 +1832,25 @@ export default function TeamMemberDashboard() {
 
     return (
         <div className="min-h-screen bg-[#F4F6F9] font-[Cairo]" dir={dirAttr}>
-            <Sidebar
-                activeNav={activeNav}
-                setActiveNav={setActiveNav}
-                setActiveTab={setActiveTab}
-                onLogout={() => {
-                    setIsSidebarOpen(false);
-                    setShowLogoutModal(true);
-                }}
-                isOpen={isSidebarOpen}
-                onClose={() => setIsSidebarOpen(false)}
-                dir={dirAttr}
-            />
             <Navbar
                 member={member}
+                activeNav={activeNav}
+                onNavigate={(key) => {
+                    setActiveNav(key);
+                    setActiveTab(key);
+                }}
                 onLogout={() => setShowLogoutModal(true)}
                 notifications={notifications}
                 onToggleNotifications={() => setShowNotifs(!showNotifs)}
                 showNotifs={showNotifs}
-                onOpenSidebar={() => setIsSidebarOpen(true)}
                 onMarkAllRead={handleMarkAllRead}
                 onMarkRead={handleMarkRead}
                 dir={dirAttr}
             />
 
-            {isSidebarOpen && (
-                <button
-                    type="button"
-                    aria-label={t("navbar.menu")}
-                    className="fixed inset-0 top-16 bg-black/35 z-40 lg:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                />
-            )}
-
-            {/* Main content offset for fixed sidebar and navbar */}
             <main
                 role="main"
-                className={`px-6 sm:px-10 py-6 pt-[80px] ${dirAttr === 'rtl' ? 'lg:pr-[300px] lg:pl-10' : 'lg:pl-[300px] lg:pr-10'}`}
+                className="px-6 sm:px-10 py-6 pt-[80px] pb-24 md:pb-6"
             >
                 {renderContent()}
             </main>
