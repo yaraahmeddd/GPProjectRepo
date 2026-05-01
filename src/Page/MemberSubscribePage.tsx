@@ -5,6 +5,7 @@ import { Btn } from "../features/dashboard/DashboardComponents";
 import { useToast } from "../Component/StaffPagesComponents/ui/use-toast";
 import type { ExploreSport, TimeSlotOption } from "../features/dashboard/types";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&q=80";
 
@@ -63,23 +64,32 @@ interface SportScheduleApi {
     };
 }
 
-interface TeamApi {
-    id: string;
+interface AvailableTeamApi {
+    id?: number | string;
+    team_id?: number | string;
     name_ar?: string;
     name_en?: string;
-    subscription_price?: number | string;
-    max_participants?: number;
-}
-
-interface SportApi {
-    id: number;
-    name_ar?: string;
-    name_en?: string;
-    sport_image?: string | null;
-    price?: number | string;
-    training_fee?: number | string;
+    team_name_ar?: string;
+    team_name_en?: string;
+    sport_id?: number | string;
+    sport_name_ar?: string;
+    sport_name_en?: string;
+    sport?: {
+        id?: number | string;
+        name_ar?: string;
+        name_en?: string;
+        sport_image?: string | null;
+    };
     training_schedules?: SportScheduleApi[];
-    teams?: TeamApi[];
+    schedules?: SportScheduleApi[];
+    for_type?: string;
+    team_type?: string;
+    audience?: string;
+    internal_price?: number | string;
+    external_price?: number | string;
+    subscription_price?: number | string;
+    training_fee?: number | string;
+    price?: number | string;
 }
 
 const FALLBACK_IMAGES: Record<string, string> = {
@@ -108,10 +118,28 @@ const getIconForSport = (name: string): string => {
     return "🏆";
 };
 
+const normalizeAudienceType = (value?: string | null): "internal" | "external" | null => {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw) return null;
+    if (raw.includes("internal") || raw.includes("داخل")) return "internal";
+    if (raw.includes("external") || raw.includes("خارج")) return "external";
+    return null;
+};
+
+const audienceLabel = (type: "internal" | "external" | null, isEnglish: boolean): string => {
+    if (type === "internal") return isEnglish ? "Internal" : "داخلي";
+    if (type === "external") return isEnglish ? "External" : "خارجي";
+    return isEnglish ? "Not specified" : "غير محدد";
+};
+
 export default function MemberSubscribePage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { t, i18n } = useTranslation();
+    const isEnglish = i18n.language?.startsWith("en");
+    const locale = isEnglish ? "en-US" : "ar-EG";
+    const tm = (key: string, options?: Record<string, unknown>) => t(key, { ns: "member", ...(options || {}) });
 
     const [sports, setSports] = useState<ExploreSport[]>([]);
     const [loading, setLoading] = useState(true);
@@ -164,19 +192,37 @@ export default function MemberSubscribePage() {
     const loadSports = useCallback(async () => {
         try {
             setLoading(true);
-            
-            // Try the new endpoint first, fallback to old one
-            let response;
+            const sportImageMap: Record<number, string | null> = {};
+
             try {
-                response = await api.get("/sports/public");
-            } catch {
-                console.log("Trying fallback endpoint...");
-                response = await api.get("/public/sports");
+                const sportsRes = await api.get("/sports");
+                const sportsSource = sportsRes?.data;
+                const sportsList =
+                    (Array.isArray(sportsSource?.data) && sportsSource.data) ||
+                    (Array.isArray(sportsSource?.sports) && sportsSource.sports) ||
+                    (Array.isArray(sportsSource) && sportsSource) ||
+                    [];
+
+                sportsList.forEach((s: any) => {
+                    const sid = Number(s?.id || 0);
+                    if (!sid) return;
+                    const img = s?.sport_image || s?.image_url || s?.image || null;
+                    sportImageMap[sid] = img ? String(img) : null;
+                });
+            } catch (error) {
+                console.warn("Failed to load sports images from /sports", error);
             }
             
-            const data = response.data.data || response.data;
+            const response = await api.get("/teams/available/for-me");
+            const source = response?.data;
+            const availableTeamsRaw =
+                (Array.isArray(source?.data?.teams) && source.data.teams) ||
+                (Array.isArray(source?.data) && source.data) ||
+                (Array.isArray(source?.teams) && source.teams) ||
+                (Array.isArray(source) && source) ||
+                [];
 
-            if (!Array.isArray(data)) {
+            if (!Array.isArray(availableTeamsRaw) || availableTeamsRaw.length === 0) {
                 setSports([]);
                 return;
             }
@@ -214,28 +260,75 @@ export default function MemberSubscribePage() {
                 }
             }
 
-            const mapped: ExploreSport[] = data.map((rawSport) => {
-                const sportFromApi = rawSport as SportApi;
-                const schedules = Array.isArray(sportFromApi.training_schedules) ? sportFromApi.training_schedules : [];
-                const teams = Array.isArray(sportFromApi.teams) ? sportFromApi.teams : [];
+            const groupedBySport = new Map<string, {
+                sportId: number;
+                nameAr: string;
+                nameEn: string;
+                image: string | null;
+                slots: TimeSlotOption[];
+                defaultPrice: number;
+            }>();
 
-                const sportPrice = pickPositiveAmount(
-                    sportFromApi.price,
-                    sportFromApi.training_fee,
-                    ...teams.map(t => t.subscription_price)
+            availableTeamsRaw.forEach((rawTeam: unknown) => {
+                const team = rawTeam as AvailableTeamApi;
+                const sportId = Number(team.sport_id || team.sport?.id || 0);
+                if (!sportId) return;
+
+                const sportNameAr = String(team.sport_name_ar || team.sport?.name_ar || (isEnglish ? "Unnamed Sport" : "رياضة غير مسمى"));
+                const sportNameEn = String(team.sport_name_en || team.sport?.name_en || "");
+                const sportImage = sportImageMap[sportId] || team.sport?.sport_image || null;
+                const teamId = String(team.id || team.team_id || "");
+                const audienceType = normalizeAudienceType(team.for_type || team.team_type || team.audience);
+                const teamBasePrice = pickPositiveAmount(
+                    audienceType === "internal" ? team.internal_price : null,
+                    audienceType === "external" ? team.external_price : null,
+                    team.subscription_price,
+                    team.training_fee,
+                    team.price
                 );
 
-                const slots: TimeSlotOption[] = schedules.length > 0
-                    ? schedules.map((schedule) => ({
-                        id: schedule.id,
-                        teamId: schedule.team_id,
+                const schedules = (Array.isArray(team.training_schedules) ? team.training_schedules : [])
+                    .concat(Array.isArray(team.schedules) ? team.schedules : []);
+
+                const slotsFromTeam: TimeSlotOption[] = schedules.length > 0
+                    ? schedules.map((schedule, idx) => ({
+                        id: String(schedule.id || `${teamId}-schedule-${idx}`),
+                        teamId: String(schedule.team_id || teamId || ""),
                         time: `${(schedule.start_time || "").slice(0, 5)} - ${(schedule.end_time || "").slice(0, 5)}`,
                         days: schedule.days_ar || schedule.days_en || "-",
-                        court: schedule.field?.name_ar || schedule.field?.name_en || "ملعب خارجي",
-                        price: pickPositiveAmount(schedule.training_fee, schedule.price, sportPrice),
+                        court: `${schedule.field?.name_ar || schedule.field?.name_en || (team.name_ar || team.team_name_ar || team.name_en || team.team_name_en || (isEnglish ? "Team" : "فريق"))} • ${audienceLabel(audienceType, isEnglish)}`,
+                        price: pickPositiveAmount(schedule.training_fee, schedule.price, teamBasePrice),
                         spots: 10,
                     }))
-                    : [];
+                    : [{
+                        id: `${teamId}-no-schedule`,
+                        teamId: teamId || null,
+                        time: "—",
+                        days: "—",
+                        court: `${team.name_ar || team.team_name_ar || team.name_en || team.team_name_en || (isEnglish ? "Team" : "فريق")} • ${audienceLabel(audienceType, isEnglish)}`,
+                        price: teamBasePrice,
+                        spots: 10,
+                    }];
+
+                const existing = groupedBySport.get(String(sportId));
+                if (existing) {
+                    existing.slots.push(...slotsFromTeam);
+                    existing.defaultPrice = pickPositiveAmount(existing.defaultPrice, teamBasePrice);
+                } else {
+                    groupedBySport.set(String(sportId), {
+                        sportId,
+                        nameAr: sportNameAr,
+                        nameEn: sportNameEn,
+                        image: sportImage,
+                        slots: slotsFromTeam,
+                        defaultPrice: teamBasePrice,
+                    });
+                }
+            });
+
+            const mapped: ExploreSport[] = Array.from(groupedBySport.values()).map((sportFromApi) => {
+                const slots = sportFromApi.slots;
+                const sportPrice = sportFromApi.defaultPrice;
 
                 const joinedSlot = slots.find((slot) => {
                     if (!slot.teamId) return false;
@@ -257,15 +350,17 @@ export default function MemberSubscribePage() {
                 const joinedSubscription = joinedSlot?.teamId ? subscriptionMap[joinedSlot.teamId] : undefined;
 
                 return {
-                    id: sportFromApi.id,
+                    id: sportFromApi.sportId,
                     memberId: user?.member_id,
-                    name: sportFromApi.name_ar || sportFromApi.name_en || "رياضة غير مسمى",
-                    nameEn: sportFromApi.name_en || "",
-                    icon: getIconForSport(sportFromApi.name_ar || sportFromApi.name_en || ""),
+                    name: isEnglish
+                        ? (sportFromApi.nameEn || sportFromApi.nameAr || "Unnamed Sport")
+                        : (sportFromApi.nameAr || sportFromApi.nameEn || "رياضة غير مسمى"),
+                    nameEn: sportFromApi.nameEn || "",
+                    icon: getIconForSport(sportFromApi.nameAr || sportFromApi.nameEn || ""),
                     img:
-                        getFullUrl(sportFromApi.sport_image) ||
-                        FALLBACK_IMAGES[sportFromApi.name_ar || ""] ||
-                        FALLBACK_IMAGES[sportFromApi.name_en || ""] ||
+                        getFullUrl(sportFromApi.image) ||
+                        FALLBACK_IMAGES[sportFromApi.nameAr || ""] ||
+                        FALLBACK_IMAGES[sportFromApi.nameEn || ""] ||
                         DEFAULT_IMAGE,
                     slots,
                     defaultPrice: sportPrice,
@@ -280,7 +375,7 @@ export default function MemberSubscribePage() {
                                 amount: pickPositiveAmount(
                                     pendingSubscription.price,
                                     pendingPaymentSlot?.price,
-                                    sportFromApi.price
+                                    sportPrice
                                 ),
                                 currency: "EGP",
                                 slotId: pendingPaymentSlot?.id,
@@ -295,11 +390,11 @@ export default function MemberSubscribePage() {
             }
         } catch (error) {
             console.error("Failed to load sports from backend:", error);
-            toast({ title: "خطأ", description: "فشل في تحميل الرياضات من الخادم", variant: "destructive" });
+            toast({ title: tm("subscribePage.errorTitle"), description: tm("subscribePage.loadError"), variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [isPendingPaymentSubscription, toast, user?.member_id]);
+    }, [isPendingPaymentSubscription, isEnglish, t, toast, user?.member_id]);
 
     useEffect(() => {
         loadSports();
@@ -417,10 +512,10 @@ export default function MemberSubscribePage() {
             const axiosError = error as { response?: { data?: { message?: string }; status?: number } };
             const errorMessage = axiosError?.response?.data?.message || "";
             if (errorMessage.includes("already subscribed") || axiosError?.response?.status === 409) {
-                toast({ title: "تنبيه", description: "أنت مشترك بالفعل في هذا الفريق", variant: "default" });
+                toast({ title: tm("subscribePage.warningTitle"), description: tm("subscribePage.alreadyJoined"), variant: "default" });
                 loadSports(); // Reload to get actual joined status
             } else {
-                toast({ title: "خطأ", description: "فشل في الانضمام للرياضة", variant: "destructive" });
+                toast({ title: tm("subscribePage.errorTitle"), description: tm("subscribePage.joinError"), variant: "destructive" });
             }
         } finally {
             setJoining(false);
@@ -431,7 +526,7 @@ export default function MemberSubscribePage() {
         return (
             <div className="flex flex-col items-center justify-center py-24 gap-4 h-[calc(100vh-120px)]">
                 <div className="w-12 h-12 border-4 border-ds-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-ds-text-secondary font-bold">جارٍ تحميل الرياضات...</p>
+                <p className="text-ds-text-secondary font-bold">{tm("subscribePage.loadingSports")}</p>
             </div>
         );
     }
@@ -441,18 +536,18 @@ export default function MemberSubscribePage() {
     const isPendingReview = joinedStatus === "pending" || joinedStatus === "pending_admin_approval";
 
     return (
-        <div className="animate-fade-up min-h-[calc(100vh-140px)] lg:h-[calc(100vh-140px)] flex flex-col mt-4 px-4 sm:pl-6 sm:pr-2 mb-6" dir="rtl">
+        <div className="animate-fade-up min-h-[calc(100vh-140px)] lg:h-[calc(100vh-140px)] flex flex-col mt-4 px-4 sm:pl-6 sm:pr-2 mb-6" dir={isEnglish ? "ltr" : "rtl"}>
             <div className="mb-5 flex-shrink-0 flex items-center gap-2">
                 <span className="text-ds-primary text-[32px]">🏅</span>
-                <h1 className="text-[24px] font-black text-ds-primary tracking-tight">اشترك في رياضة جديدة</h1>
+                <h1 className="text-[24px] font-black text-ds-primary tracking-tight">{tm("subscribePage.title")}</h1>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px]">
                 {/* Right side: Sports List */}
                 <div className="w-full lg:w-[380px] h-[320px] lg:h-auto bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col flex-shrink-0">
                     <div className="p-5 border-b border-gray-100 bg-gradient-to-l from-gray-50/80 to-transparent rounded-t-2xl">
-                        <h2 className="text-[17px] font-extrabold text-ds-primary">الرياضات المتاحة</h2>
-                        <p className="text-[12px] text-ds-text-secondary mt-1">اختر رياضة لعرض فرقها ومواعيد تدريبها</p>
+                        <h2 className="text-[17px] font-extrabold text-ds-primary">{tm("subscribePage.availableSports")}</h2>
+                        <p className="text-[12px] text-ds-text-secondary mt-1">{tm("subscribePage.availableSportsHint")}</p>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar bg-white rounded-b-2xl">
                         {sports.map(sport => {
@@ -470,10 +565,15 @@ export default function MemberSubscribePage() {
                                 >
                                     {isSelected && <div className="absolute inset-0 bg-gradient-to-r from-ds-primary to-ds-primary-dark opacity-100 z-0"></div>}
                                     
-                                    <div className="flex items-center gap-4 w-full relative z-10">
+                                    <div className="flex items-center gap-3 w-full relative z-10">
+                                        <img
+                                            src={sport.img || DEFAULT_IMAGE}
+                                            alt={sport.name}
+                                            className="w-11 h-11 rounded-lg object-cover border border-white/30 shadow-sm shrink-0"
+                                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE; }}
+                                        />
                                         <div className="text-right flex-1">
                                             <h3 className={`font-bold text-[14px] transition-colors ${isSelected ? "text-white" : "text-ds-text-primary"}`}>{sport.name}</h3>
-                                            <p className={`text-[11px] mt-0.5 transition-colors ${isSelected ? "text-white/80" : "text-ds-text-secondary"}`}>{sport.nameEn || "Sport"}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -481,7 +581,7 @@ export default function MemberSubscribePage() {
                         })}
                         {sports.length === 0 && (
                             <div className="p-8 text-center text-ds-text-muted text-sm italic">
-                                لا توجد رياضات متاحة
+                                {tm("subscribePage.noSports")}
                             </div>
                         )}
                     </div>
@@ -497,16 +597,19 @@ export default function MemberSubscribePage() {
                             <div className="p-7 border-b border-gray-100 bg-white/50 backdrop-blur-sm rounded-t-2xl flex justify-between items-start relative z-10">
                                 <div className="text-right">
                                     <h2 className="text-[26px] font-black text-ds-primary tracking-tight">{selectedSport.name}</h2>
-                                    <p className="text-[14px] text-ds-text-secondary mt-1">دوري {selectedSport.name} الداخلية</p>
+                                    <p className="text-[14px] text-ds-text-secondary mt-1">{tm("subscribePage.sportSubtitle", { sport: selectedSport.name })}</p>
                                 </div>
-                                <div className="text-gray-300 font-medium text-sm mt-1">
-                                    {selectedSport.nameEn || "Basketball"}
-                                </div>
+                                <img
+                                    src={selectedSport.img || DEFAULT_IMAGE}
+                                    alt={selectedSport.name}
+                                    className="w-16 h-16 rounded-xl object-cover border border-gray-100 shadow-sm"
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE; }}
+                                />
                             </div>
                             
                             <div className="px-7 py-5">
-                                <h3 className="text-[17px] font-bold text-ds-text-primary mb-1">الخطوة ١ — اختر الفريق</h3>
-                                <p className="text-[13px] text-ds-text-secondary">كل فريق له مواعيد تدريب خاصة به</p>
+                                <h3 className="text-[17px] font-bold text-ds-text-primary mb-1">{tm("subscribePage.stepChooseTeam")}</h3>
+                                <p className="text-[13px] text-ds-text-secondary">{tm("subscribePage.stepChooseTeamHint")}</p>
                             </div>
 
                             <div className="flex-1 overflow-y-auto px-7 pb-6 space-y-3 custom-scrollbar relative z-10">
@@ -547,7 +650,7 @@ export default function MemberSubscribePage() {
                                                         </span>
                                                     </div>
                                                     <div className={`rounded-xl px-3.5 py-1.5 text-[13px] font-black transition-colors ${isSel ? "bg-ds-primary text-white" : isJoinedSlot ? "bg-ds-success text-white" : "bg-gray-50 text-gray-700 border border-gray-100"}`}>
-                                                        <span className="text-[14px]">{slot.price.toLocaleString("ar-EG")}</span> ج.م
+                                                        <span className="text-[14px]">{slot.price.toLocaleString(locale)}</span> {tm("subscribePage.currency")}
                                                     </div>
                                                 </div>
                                                 <div className={`flex gap-5 text-[13px] text-gray-500 ${selectedSport.joined ? "" : "pr-9"}`}>
@@ -560,7 +663,7 @@ export default function MemberSubscribePage() {
                                 ) : (
                                     <div className="py-12 px-6 flex flex-col items-center justify-center text-center text-ds-text-muted text-sm italic border-[1.5px] border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
                                         <span className="text-3xl mb-3 opacity-30 grayscale">🏀</span>
-                                        <p>لا توجد فرق متاحة لهذه الرياضة حالياً</p>
+                                        <p>{tm("subscribePage.noTeams")}</p>
                                     </div>
                                 )}
                             </div>
@@ -575,24 +678,24 @@ export default function MemberSubscribePage() {
                                         className="py-3.5 text-[14px] rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
                                     >
                                         {joining
-                                            ? "⏳ جاري..."
+                                            ? tm("subscribePage.joining")
                                             : selectedSport.pendingPayment
-                                                ? "💳 الدفع"
+                                                ? tm("subscribePage.pay")
                                                 : selectedSport.joined && isPendingReview
-                                                    ? "⏳ قيد المراجعة"
+                                                    ? tm("subscribePage.pendingReview")
                                                     : selectedSport.joined
-                                                        ? "✓ مشترك"
-                                                        : "تقديم طلب الاشتراك"}
+                                                        ? tm("subscribePage.joined")
+                                                        : tm("subscribePage.submit")}
                                     </Btn>
                                 </div>
                                 
                                 <div className="flex flex-col items-end">
-                                    <span className="text-[12px] text-ds-text-secondary mb-1 font-medium">قيمة الاشتراك</span>
+                                    <span className="text-[12px] text-ds-text-secondary mb-1 font-medium">{tm("subscribePage.subscriptionFee")}</span>
                                     {actionSlot ? (
                                         <div className="flex items-baseline gap-1.5">
-                                            <span className="text-[13px] text-gray-400 font-bold">ج.م</span>
+                                            <span className="text-[13px] text-gray-400 font-bold">{tm("subscribePage.currency")}</span>
                                             <span className="text-[28px] font-black text-ds-primary tracking-tight">
-                                                {actionSlot.price.toLocaleString("ar-EG")}
+                                                {actionSlot.price.toLocaleString(locale)}
                                             </span>
                                         </div>
                                     ) : (
@@ -606,7 +709,7 @@ export default function MemberSubscribePage() {
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-ds-text-muted p-8">
                             <span className="text-5xl mb-5 opacity-40 grayscale">🏆</span>
-                            <p className="font-medium text-[15px]">اختر رياضة من القائمة لعرض التفاصيل</p>
+                            <p className="font-medium text-[15px]">{tm("subscribePage.pickSport")}</p>
                         </div>
                     )}
                 </div>
@@ -614,3 +717,4 @@ export default function MemberSubscribePage() {
         </div>
     );
 }
+

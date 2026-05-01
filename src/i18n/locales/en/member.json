@@ -1,5 +1,84 @@
 {
   "dashboard": {
     "title": "Member dashboard"
+  },
+  "common": {
+    "na": "—",
+    "loading": "Loading..."
+  },
+  "status": {
+    "active": "Active",
+    "pending": "Pending review",
+    "suspended": "Suspended",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "cancelled": "Cancelled",
+    "confirmed": "Confirmed",
+    "completed": "Completed"
+  },
+  "home": {
+    "sportsSubscriptions": "My Sports Subscriptions",
+    "bookings": "Court Bookings",
+    "notifications": "Notifications",
+    "noSubscriptions": "No sports subscriptions",
+    "noBookings": "No bookings yet",
+    "noNotifications": "No notifications currently"
+  },
+  "profilePage": {
+    "edit": "Edit profile",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "personalInfo": "Personal Information",
+    "membershipInfo": "Membership Information",
+    "documents": "Documents",
+    "firstNameAr": "First Name (Arabic)",
+    "lastNameAr": "Last Name (Arabic)",
+    "firstNameEn": "First Name (English)",
+    "lastNameEn": "Last Name (English)",
+    "email": "Email",
+    "phone": "Phone Number",
+    "birthdate": "Birth Date",
+    "address": "Address",
+    "nationalId": "National ID",
+    "memberId": "Member ID",
+    "joinDate": "Join Date",
+    "state": "Status",
+    "memberType": "Member Type"
+  },
+  "membershipPage": {
+    "currentPlan": "Current Membership Plan",
+    "usageDuration": "Used subscription period",
+    "renewMembership": "Renew Membership",
+    "registrationDate": "Registration Date",
+    "expiryDate": "Expiry / Renewal Date",
+    "planFee": "Plan Fee",
+    "nextRenewalFee": "Next Renewal Fee",
+    "noMembershipData": "No membership data linked to this account."
+  },
+  "subscribePage": {
+    "title": "Subscribe to a New Sport",
+    "availableSports": "Available Sports",
+    "availableSportsHint": "Select a sport to view teams and training schedules",
+    "sportFallback": "Sport",
+    "noSports": "No sports available",
+    "sportSubtitle": "Internal league - {{sport}}",
+    "stepChooseTeam": "Step 1 - Choose Team",
+    "stepChooseTeamHint": "Each team has its own training schedule",
+    "noTeams": "No teams available for this sport right now",
+    "joining": "⏳ Processing...",
+    "pay": "💳 Pay",
+    "pendingReview": "⏳ Pending review",
+    "joined": "✓ Subscribed",
+    "submit": "Submit Subscription Request",
+    "subscriptionFee": "Subscription fee",
+    "currency": "EGP",
+    "pickSport": "Choose a sport from the list to view details",
+    "loadingSports": "Loading sports...",
+    "loadError": "Failed to load sports from server",
+    "joinError": "Failed to subscribe to sport",
+    "alreadyJoined": "You are already subscribed to this team",
+    "warningTitle": "Warning",
+    "errorTitle": "Error"
   }
 }

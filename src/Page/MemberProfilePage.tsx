@@ -18,6 +18,7 @@ import { Badge } from "../Component/StaffPagesComponents/ui/badge";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { resolveFileUrl } from "../utils/fileUrl";
+import { useTranslation } from "react-i18next";
 
 interface MemberProfile {
     id: number;
@@ -53,24 +54,6 @@ const statusStyle = (status: string) => {
     return "bg-gray-100 text-gray-600";
 };
 
-const statusLabel = (status: string) => {
-    const s = (status ?? "").toLowerCase();
-    if (s === "active") return "نشط";
-    if (s === "pending") return "قيد المراجعة";
-    if (s === "suspended") return "معلق";
-    if (s === "rejected") return "مرفوض";
-    return status || "—";
-};
-
-const formatDate = (dateStr: string | null | undefined): string => {
-    if (!dateStr) return "—";
-    try {
-        return new Date(dateStr).toLocaleDateString("ar-EG");
-    } catch {
-        return dateStr;
-    }
-};
-
 interface FieldRowProps {
     label: string;
     value: string;
@@ -79,12 +62,15 @@ interface FieldRowProps {
     name: keyof MemberProfile;
     type?: string;
     readOnly?: boolean;
+    locale?: string;
     onChange: (name: keyof MemberProfile, value: string) => void;
     error?: string;
 }
 
-function FieldRow({ label, value, icon: Icon, editing, name, type = "text", readOnly = false, onChange, error }: FieldRowProps) {
-    const displayValue = type === "date" && !editing ? formatDate(value) : (value || "—");
+function FieldRow({ label, value, icon: Icon, editing, name, type = "text", readOnly = false, locale = "ar-EG", onChange, error }: FieldRowProps) {
+    const displayValue = type === "date" && !editing
+        ? (value ? new Date(value).toLocaleDateString(locale) : "—")
+        : (value || "—");
 
     return (
         <div className="flex flex-col gap-1">
@@ -182,6 +168,7 @@ function validateForm(form: MemberProfile): ValidationErrors {
 }
 
 export default function MemberProfilePage() {
+    const { t, i18n } = useTranslation();
     const { user, logout } = useAuth();
     const [profile, setProfile] = useState<MemberProfile | null>(null);
     const [form, setForm] = useState<MemberProfile | null>(null);
@@ -355,6 +342,8 @@ export default function MemberProfilePage() {
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
+    const locale = i18n.language?.startsWith("en") ? "en-US" : "ar-EG";
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-24">
@@ -375,6 +364,15 @@ export default function MemberProfilePage() {
     }
 
     if (!profile || !form) return null;
+
+    const tStatus = (status: string) => {
+        const s = (status ?? "").toLowerCase();
+        if (s === "active") return t("member.status.active");
+        if (s === "pending") return t("member.status.pending");
+        if (s === "suspended") return t("member.status.suspended");
+        if (s === "rejected") return t("member.status.rejected");
+        return status || t("member.common.na");
+    };
 
     const rawPhoto = photoPreview || form.photo || profile.photo;
     const currentPhoto = resolveFileUrl(rawPhoto);
@@ -450,7 +448,7 @@ export default function MemberProfilePage() {
                             <p className="text-sm text-muted-foreground truncate w-full">{profile.firstNameEn} {profile.lastNameEn}</p>
                             <div className="mt-2 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                                 <Badge className={statusStyle(profile.status)}>
-                                    {statusLabel(profile.status)}
+                                    {tStatus(profile.status)}
                                 </Badge>
                                 {profile.memberType && (
                                     <span className="text-xs text-[#2EA7C9] bg-[#2EA7C9]/10 border border-[#2EA7C9]/20 rounded-full px-2.5 py-0.5 font-medium">
@@ -466,7 +464,7 @@ export default function MemberProfilePage() {
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={handleCancel} className="gap-1.5 border-[#1F3A5F]/30 text-[#1F3A5F] hover:bg-[#1F3A5F]/5">
                                     <X className="h-4 w-4" />
-                                    إلغاء
+                                    {t("member.profilePage.cancel")}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -475,7 +473,7 @@ export default function MemberProfilePage() {
                                     className="gap-1.5 bg-[#1F3A5F] text-white hover:bg-[#162d4a]"
                                 >
                                     <Save className="h-4 w-4" />
-                                    {saving ? "جارٍ الحفظ..." : "حفظ التعديلات"}
+                                    {saving ? t("member.profilePage.saving") : t("member.profilePage.save")}
                                 </Button>
                             </div>
                         ) : (
@@ -485,7 +483,7 @@ export default function MemberProfilePage() {
                                 className="gap-1.5 bg-white border border-[#1F3A5F]/25 text-[#1F3A5F] hover:bg-[#F0F4FA] shadow-sm"
                             >
                                 <Edit3 className="h-4 w-4" />
-                                تعديل البيانات
+                                {t("member.profilePage.edit")}
                             </Button>
                         )}
                     </div>
@@ -515,10 +513,10 @@ export default function MemberProfilePage() {
                 transition={{ delay: 0.08 }}
                 className="rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
-                <h2 className="text-base font-semibold text-[#214474] mb-4">البيانات الشخصية</h2>
+                <h2 className="text-base font-semibold text-[#214474] mb-4">{t("member.profilePage.personalInfo")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FieldRow
-                        label="الاسم الأول (عربي)"
+                        label={t("member.profilePage.firstNameAr")}
                         value={form.firstNameAr}
                         icon={User}
                         editing={editing}
@@ -527,7 +525,7 @@ export default function MemberProfilePage() {
                         error={validationErrors.firstNameAr}
                     />
                     <FieldRow
-                        label="الاسم الأخير (عربي)"
+                        label={t("member.profilePage.lastNameAr")}
                         value={form.lastNameAr}
                         icon={User}
                         editing={editing}
@@ -536,7 +534,7 @@ export default function MemberProfilePage() {
                         error={validationErrors.lastNameAr}
                     />
                     <FieldRow
-                        label="الاسم الأول (إنجليزي)"
+                        label={t("member.profilePage.firstNameEn")}
                         value={form.firstNameEn}
                         icon={User}
                         editing={editing}
@@ -545,7 +543,7 @@ export default function MemberProfilePage() {
                         error={validationErrors.firstNameEn}
                     />
                     <FieldRow
-                        label="الاسم الأخير (إنجليزي)"
+                        label={t("member.profilePage.lastNameEn")}
                         value={form.lastNameEn}
                         icon={User}
                         editing={editing}
@@ -554,7 +552,7 @@ export default function MemberProfilePage() {
                         error={validationErrors.lastNameEn}
                     />
                     <FieldRow
-                        label="البريد الإلكتروني"
+                        label={t("member.profilePage.email")}
                         value={form.email}
                         icon={Mail}
                         editing={false}
@@ -563,7 +561,7 @@ export default function MemberProfilePage() {
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="رقم الهاتف"
+                        label={t("member.profilePage.phone")}
                         value={form.phone}
                         icon={Phone}
                         editing={editing}
@@ -572,16 +570,17 @@ export default function MemberProfilePage() {
                         error={validationErrors.phone}
                     />
                     <FieldRow
-                        label="تاريخ الميلاد"
+                        label={t("member.profilePage.birthdate")}
                         value={form.birthdate}
                         icon={Calendar}
                         type="date"
+                        locale={locale}
                         editing={editing}
                         name="birthdate"
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="العنوان"
+                        label={t("member.profilePage.address")}
                         value={form.address}
                         icon={MapPin}
                         editing={editing}
@@ -598,10 +597,10 @@ export default function MemberProfilePage() {
                 transition={{ delay: 0.14 }}
                 className="rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
-                <h2 className="text-base font-semibold text-[#214474] mb-4">بيانات العضوية</h2>
+                <h2 className="text-base font-semibold text-[#214474] mb-4">{t("member.profilePage.membershipInfo")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FieldRow
-                        label="رقم الهوية الوطنية"
+                        label={t("member.profilePage.nationalId")}
                         value={profile.nationalId || "—"}
                         icon={CreditCard}
                         editing={false}
@@ -610,7 +609,7 @@ export default function MemberProfilePage() {
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="رقم العضوية"
+                        label={t("member.profilePage.memberId")}
                         value={String(profile.id || "—")}
                         icon={Shield}
                         editing={false}
@@ -619,18 +618,19 @@ export default function MemberProfilePage() {
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="تاريخ الانضمام"
+                        label={t("member.profilePage.joinDate")}
                         value={profile.joinDate}
                         icon={Calendar}
                         type="date"
+                        locale={locale}
                         editing={false}
                         readOnly
                         name="joinDate"
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="الحالة"
-                        value={statusLabel(profile.status)}
+                        label={t("member.profilePage.state")}
+                        value={tStatus(profile.status)}
                         icon={Shield}
                         editing={false}
                         readOnly
@@ -638,7 +638,7 @@ export default function MemberProfilePage() {
                         onChange={handleChange}
                     />
                     <FieldRow
-                        label="نوع العضوية"
+                        label={t("member.profilePage.memberType")}
                         value={profile.memberType || "—"}
                         icon={CreditCard}
                         editing={false}
@@ -656,7 +656,7 @@ export default function MemberProfilePage() {
                 transition={{ delay: 0.2 }}
                 className="rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
-                <h2 className="text-base font-semibold text-[#214474] mb-4">الوثائق والمستندات</h2>
+                <h2 className="text-base font-semibold text-[#214474] mb-4">{t("member.profilePage.documents")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {documentsConfig.map((doc) => {
                         const currentVal = form[doc.key as keyof MemberProfile] as string | undefined | null;

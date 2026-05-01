@@ -24,6 +24,7 @@ import api from "../api/axios";
 import { AuthService } from "../services/authService";
 import { toast, Toaster } from "sonner";
 import { resolveFileUrl } from "../utils/fileUrl";
+import { useTranslation } from "react-i18next";
 
 /* ─── helpers ─────────────────────────────────────────────────────── */
 function SportIcon({ name }: { name: string }) {
@@ -40,12 +41,11 @@ function SportIcon({ name }: { name: string }) {
 const WEEKDAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const MONTHS_AR = ["يناير", "فبراير", "مارس", "إبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
-function formatDateAr(d: Date) {
-    return `${WEEKDAYS_AR[d.getDay()]}، ${d.getDate()} ${MONTHS_AR[d.getMonth()]} ${d.getFullYear()}`;
+function formatDateLocalized(d: Date, locale: string) {
+    return d.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
-function formatTimeAr(d: Date) {
-    const h = d.getHours(), m = String(d.getMinutes()).padStart(2, "0"), s = String(d.getSeconds()).padStart(2, "0");
-    return `${h % 12 || 12}:${m}:${s} ${h >= 12 ? "م" : "ص"}`;
+function formatTimeLocalized(d: Date, locale: string) {
+    return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 const statusBadge = (s: string) => {
@@ -132,6 +132,7 @@ function Card({
 
 /* ─── Page ─────────────────────────────────────────────────────────── */
 export default function MemberHomePage() {
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [now, setNow] = useState(new Date());
     const [info, setInfo] = useState<MemberInfo | null>(null);
@@ -171,6 +172,8 @@ export default function MemberHomePage() {
 
     const [loading, setLoading] = useState(true);
     const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const isEnglish = i18n.language?.startsWith("en");
+    const locale = isEnglish ? "en-US" : "ar-EG";
 
     useEffect(() => {
         tickRef.current = setInterval(() => setNow(new Date()), 1000);
@@ -408,11 +411,11 @@ export default function MemberHomePage() {
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2 text-muted-foreground text-xs">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    <span>{formatDateAr(now)}</span>
+                    <span>{formatDateLocalized(now, locale)}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[#214474] font-semibold tabular-nums text-sm">
                     <Clock className="h-3.5 w-3.5" />
-                    <span>{formatTimeAr(now)}</span>
+                    <span>{formatTimeLocalized(now, locale)}</span>
                 </div>
             </div>
 
@@ -469,7 +472,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 2: Sports subscriptions — list with name + next day + time ─ */}
-                    <Card title="اشتراكاتي الرياضية" icon={Trophy} accent="#2EA7C9" delay={0.06}>
+                    <Card title={t("member.home.sportsSubscriptions")} icon={Trophy} accent="#2EA7C9" delay={0.06}>
                         {sports.length > 0 ? (
                             <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
                                 {sports.map((sport, idx) => {
@@ -532,7 +535,7 @@ export default function MemberHomePage() {
                                 >
                                     <Trophy className="h-8 w-8 text-[#2EA7C9]" />
                                 </div>
-                                <p className="text-sm font-medium text-foreground">لا توجد اشتراكات رياضية</p>
+                                <p className="text-sm font-medium text-foreground">{t("member.home.noSubscriptions")}</p>
                                 <p className="text-xs text-muted-foreground">
                                     يمكنك الاشتراك في الأنشطة الرياضية للنادي من خلال مكتب التسجيل
                                 </p>
@@ -541,7 +544,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 3: Court Reservations ───────────────────── */}
-                    <Card title="حجوزات الملاعب" icon={CalendarDays} accent="#F4A623" delay={0.1}>
+                    <Card title={t("member.home.bookings")} icon={CalendarDays} accent="#F4A623" delay={0.1}>
                         {reservations.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-6 gap-3 text-center">
                                 <div
@@ -550,7 +553,7 @@ export default function MemberHomePage() {
                                 >
                                     <Volleyball className="h-8 w-8 text-[#F4A623]" />
                                 </div>
-                                <p className="text-sm font-medium text-foreground">لا توجد حجوزات حالياً</p>
+                                <p className="text-sm font-medium text-foreground">{t("member.home.noBookings")}</p>
                                 <p className="text-xs text-muted-foreground">
                                     ستظهر هنا حجوزاتك القادمة للملاعب والمرافق الرياضية
                                 </p>
@@ -571,7 +574,7 @@ export default function MemberHomePage() {
                                             <p className="text-xs text-muted-foreground mt-0.5">
                                                 {formatBookingTime(r.timeFrom)}
                                                 {r.timeTo && r.timeTo !== r.timeFrom && (
-                                                    <> — {new Date(r.timeTo).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}</>
+                                                    <> — {new Date(r.timeTo).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</>
                                                 )}
                                             </p>
                                             {r.price > 0 && (
@@ -592,7 +595,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 4: Notifications ───────────────────────── */}
-                    <Card title="الإشعارات" icon={Bell} accent="#1F3A5F" delay={0.14}>
+                    <Card title={t("member.home.notifications")} icon={Bell} accent="#1F3A5F" delay={0.14}>
                         <div className="space-y-3">
                             {notifications.length > 0 && notifications.some(n => !readNotifs.includes(n.id)) && (
                                 <div className="flex justify-between items-center pb-2 pt-1 mb-2">
@@ -658,7 +661,7 @@ export default function MemberHomePage() {
                                 })
                             ) : (
                                 <div className="p-4 text-center text-muted-foreground text-sm">
-                                    لا توجد إشعارات حالياً
+                                    {t("member.home.noNotifications")}
                                 </div>
                             )}
 

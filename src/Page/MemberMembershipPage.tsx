@@ -18,6 +18,7 @@ import {
     DialogFooter,
 } from "../Component/StaffPagesComponents/ui/dialog";
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
 
 interface MembershipPlan {
     planName: string;
@@ -51,9 +52,9 @@ const statusStyle = (status: string) => {
 
 const statusLabel = (status: string) => {
     const s = status?.toLowerCase();
-    if (s === "active") return "نشط";
-    if (s === "expired") return "منتهي";
-    if (s === "pending") return "قيد المراجعة";
+    if (s === "active") return "active";
+    if (s === "expired") return "expired";
+    if (s === "pending") return "pending";
     return status || "—";
 };
 
@@ -64,6 +65,7 @@ function daysBetween(dateA: string, dateB: string): number {
 }
 
 export default function MemberMembershipPage() {
+    const { t, i18n } = useTranslation();
     const [plan, setPlan] = useState<MembershipPlan | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -190,6 +192,9 @@ export default function MemberMembershipPage() {
         }
     };
 
+    const locale = i18n.language?.startsWith("en") ? "en-US" : "ar-EG";
+    const tStatus = (status: string) => t(`member.status.${statusLabel(status)}`, { defaultValue: status || t("member.common.na") });
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-24">
@@ -211,7 +216,7 @@ export default function MemberMembershipPage() {
         return (
             <div className="rounded-2xl border border-border bg-card p-10 text-center" dir="rtl">
                 <CreditCard className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
-                <p className="text-muted-foreground text-sm">لا توجد بيانات عضوية مرتبطة بهذا الحساب.</p>
+                <p className="text-muted-foreground text-sm">{t("member.membershipPage.noMembershipData")}</p>
             </div>
         );
     }
@@ -237,7 +242,7 @@ export default function MemberMembershipPage() {
                                 <CreditCard className="h-7 w-7 text-[#2EA7C9]" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground mb-1">خطة العضوية الحالية</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t("member.membershipPage.currentPlan")}</p>
                                 <h2 className="text-xl font-bold text-[#214474]">{plan.planName}</h2>
                                 {plan.planCode && (
                                     <span className="text-xs text-muted-foreground font-mono ml-2">{plan.planCode}</span>
@@ -248,13 +253,13 @@ export default function MemberMembershipPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Badge className={statusStyle(plan.status)}>{statusLabel(plan.status)}</Badge>
+                            <Badge className={statusStyle(plan.status)}>{tStatus(plan.status)}</Badge>
                             <Button
                                 className="gap-2 bg-[#F4A623] hover:bg-[#d98f1a] text-white"
                                 onClick={() => setRenewOpen(true)}
                             >
                                 <RefreshCw className="h-4 w-4" />
-                                تجديد العضوية
+                                {t("member.membershipPage.renewMembership")}
                             </Button>
                         </div>
                     </div>
@@ -262,7 +267,7 @@ export default function MemberMembershipPage() {
                     {/* Progress bar */}
                     <div className="mt-5">
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                            <span>مدة الاشتراك المستخدمة</span>
+                            <span>{t("member.membershipPage.usageDuration")}</span>
                             <span>{progressPct}% · {daysLeft} يوم متبقٍ</span>
                         </div>
                         <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
@@ -281,27 +286,27 @@ export default function MemberMembershipPage() {
                         <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Calendar className="h-3.5 w-3.5" />
-                                تاريخ التسجيل
+                                {t("member.membershipPage.registrationDate")}
                             </div>
                             <p className="text-sm font-semibold text-foreground">
-                                {plan.registrationDate ? new Date(plan.registrationDate).toLocaleDateString("ar-EG") : "—"}
+                                {plan.registrationDate ? new Date(plan.registrationDate).toLocaleDateString(locale) : "—"}
                             </p>
                         </div>
 
                         <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Calendar className="h-3.5 w-3.5" />
-                                تاريخ الانتهاء / التجديد
+                                {t("member.membershipPage.expiryDate")}
                             </div>
                             <p className="text-sm font-semibold text-foreground">
-                                {plan.expiryDate ? new Date(plan.expiryDate).toLocaleDateString("ar-EG") : "—"}
+                                {plan.expiryDate ? new Date(plan.expiryDate).toLocaleDateString(locale) : "—"}
                             </p>
                         </div>
 
                         <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Tag className="h-3.5 w-3.5" />
-                                رسوم الخطة
+                                {t("member.membershipPage.planFee")}
                             </div>
                             <p className="text-sm font-semibold text-foreground">
                                 {currencyFmt.format(plan.originalFee)}
@@ -311,7 +316,7 @@ export default function MemberMembershipPage() {
                         <div className="rounded-xl border border-[#F4A623]/30 bg-[#FFF8EC] p-4 flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-[#d98f1a]">
                                 <RefreshCw className="h-3.5 w-3.5" />
-                                رسوم التجديد القادم
+                                {t("member.membershipPage.nextRenewalFee")}
                             </div>
                             <p className="text-lg font-bold text-[#1F3A5F]">
                                 {currencyFmt.format(plan.renewalFee)}
@@ -353,7 +358,7 @@ export default function MemberMembershipPage() {
             <Dialog open={renewOpen} onOpenChange={setRenewOpen}>
                 <DialogContent dir="rtl" className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-[#214474]">تجديد العضوية</DialogTitle>
+                        <DialogTitle className="text-[#214474]">{t("member.membershipPage.renewMembership")}</DialogTitle>
                     </DialogHeader>
 
                     {renewSuccess ? (
@@ -371,7 +376,7 @@ export default function MemberMembershipPage() {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">تاريخ الانتهاء الحالي</span>
-                                        <span className="font-medium">{plan.expiryDate ? new Date(plan.expiryDate).toLocaleDateString("ar-EG") : "—"}</span>
+                                        <span className="font-medium">{plan.expiryDate ? new Date(plan.expiryDate).toLocaleDateString(locale) : "—"}</span>
                                     </div>
                                     <div className="flex justify-between border-t border-border pt-2 mt-2">
                                         <span className="text-muted-foreground font-medium">رسوم التجديد</span>

@@ -56,12 +56,22 @@ const MemberSportPaymentPage: React.FC = () => {
         };
     }, [searchParams]);
 
-    const handleBack = () => {
+    const handleBack = async () => {
         if (paymentData.isBooking) {
             navigate("/member/dashboard?tab=courts");
-        } else {
-            navigate("/member/dashboard/subscribe");
+            return;
         }
+
+        // If user leaves payment before paying, cancel the pending subscription draft.
+        if (paymentData.subscriptionId > 0) {
+            try {
+                await api.patch(`/member-subscriptions/${paymentData.subscriptionId}/cancel`);
+            } catch {
+                // Best-effort only; navigation should not be blocked.
+            }
+        }
+
+        navigate("/member/dashboard/subscribe");
     };
 
     const handleCopyLink = () => {

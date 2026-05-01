@@ -315,6 +315,57 @@ export default function MemberSportsPage() {
                 return;
             }
 
+            // Gate "My Sports" by real member-subscriptions state to avoid showing unpaid drafts.
+            let allowedSportIds = new Set<string>();
+            let allowedSportNames = new Set<string>();
+            try {
+                const subRes = await api.get(`/member-subscriptions/${memberId}/subscriptions`);
+                const rawSubs =
+                    (Array.isArray(subRes.data?.data?.subscriptions) && subRes.data.data.subscriptions) ||
+                    (Array.isArray(subRes.data?.data) && subRes.data.data) ||
+                    (Array.isArray(subRes.data?.subscriptions) && subRes.data.subscriptions) ||
+                    [];
+
+                rawSubs.forEach((sub: any) => {
+                    const status = String(sub?.status || "").toLowerCase();
+                    const subscriptionStatus = String(sub?.subscription_status || sub?.subscriptionStatus || "").toLowerCase();
+                    const hasConfirmedPayment = Boolean(sub?.payment_completed_at || sub?.paymentCompletedAt);
+                    const isCancelledLike =
+                        status === "cancelled" ||
+                        status === "declined" ||
+                        subscriptionStatus === "cancelled" ||
+                        subscriptionStatus === "declined";
+                    const isPendingPayment =
+                        status === "pending_payment" ||
+                        subscriptionStatus === "pending_payment" ||
+                        status === "awaiting_payment" ||
+                        subscriptionStatus === "awaiting_payment";
+
+                    const isAllowed = !isCancelledLike && !isPendingPayment && (
+                        hasConfirmedPayment ||
+                        status === "active" ||
+                        status === "approved" ||
+                        subscriptionStatus === "active" ||
+                        subscriptionStatus === "approved" ||
+                        subscriptionStatus === "pending_admin_approval"
+                    );
+
+                    if (!isAllowed) return;
+
+                    const sportId = sub?.team?.sport_id ?? sub?.sport_id ?? sub?.sport?.id;
+                    if (sportId != null) allowedSportIds.add(String(sportId));
+
+                    const sportNameAr = sub?.team?.sport?.name_ar ?? sub?.sport?.name_ar ?? sub?.sport_name_ar;
+                    const sportNameEn = sub?.team?.sport?.name_en ?? sub?.sport?.name_en ?? sub?.sport_name_en;
+                    if (sportNameAr) allowedSportNames.add(String(sportNameAr).trim());
+                    if (sportNameEn) allowedSportNames.add(String(sportNameEn).trim());
+                });
+            } catch {
+                // If this endpoint fails, keep existing behavior instead of blocking page.
+                allowedSportIds = new Set<string>();
+                allowedSportNames = new Set<string>();
+            }
+
             // 1. Fetch Attendance and Joined Sports Stats
             const statsRes = await AuthService.getMemberAttendanceStats(memberId);
             let approvedList: SportSubscription[] = [];
@@ -332,7 +383,37 @@ export default function MemberSportsPage() {
                     "Saturday": 6, "السبت": 6
                 };
 
-                approvedList = backendSports.map((s: any, idx: number) => {
+                approvedList = backendSports.reduce((acc: SportSubscription[], s: any, idx: number) => {
+                    const rawStatus = String(s.status || "").toLowerCase();
+                    const rawSubscriptionStatus = String(s.subscription_status || s.subscriptionStatus || "").toLowerCase();
+                    const hasConfirmedPayment = Boolean(
+                        s.payment_completed_at ||
+                        s.paymentCompletedAt ||
+                        s.confirmed_payment_at ||
+                        s.confirmedPaymentAt
+                    );
+                    const isPendingPayment =
+                        rawStatus === "pending_payment" ||
+                        rawSubscriptionStatus === "pending_payment" ||
+                        rawStatus === "awaiting_payment" ||
+                        rawSubscriptionStatus === "awaiting_payment" ||
+                        (!hasConfirmedPayment && (rawStatus === "pending_payment" || rawSubscriptionStatus === "pending_payment"));
+
+                    // Do not show unpaid subscriptions in "My Sports" (e.g. user pressed Back on payment page).
+                    if (isPendingPayment) return acc;
+
+                    const sportIdRaw = s.sport_id ?? s.id;
+                    const sportNameAr = s.sport_name_ar || s.name_ar || s.sport_name || s.name || "رياضة";
+                    const sportNameEn = s.sport_name || s.name_en || "";
+                    const matchesAllowedSubscription =
+                        allowedSportIds.size === 0
+                            ? true
+                            : allowedSportIds.has(String(sportIdRaw)) ||
+                              allowedSportNames.has(String(sportNameAr).trim()) ||
+                              (sportNameEn ? allowedSportNames.has(String(sportNameEn).trim()) : false);
+
+                    if (!matchesAllowedSubscription) return acc;
+
                     const firstSched = s.schedules?.[0];
                     const weekdaysSet = new Set<number>();
                     (s.schedules || []).forEach((sched: any) => {
@@ -346,17 +427,21 @@ export default function MemberSportsPage() {
                     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                     const remainingThisMonth = Math.max(0, endOfMonth.getDate() - today.getDate());
 
-                    return {
+                    acc.push({
                         id: String(s.id || idx + 1),
-                        sportId: String(s.id || idx + 1),
-                        name: s.sport_name_ar || s.name_ar || s.sport_name || s.name || "رياضة",
-                        nameAr: s.sport_name_ar || s.name_ar || s.sport_name || s.name || "رياضة",
-                        nameEn: s.sport_name || s.name_en || "",
+                        sportId: String(sportIdRaw || idx + 1),
+                        name: sportNameAr,
+                        nameAr: sportNameAr,
+                        nameEn: sportNameEn,
                         icon: getSportIconFromName(s.sport_name_ar || s.sport_name || s.name || ""),
                         img: s.sport_image || s.sportImage || null,
-                        status: s.status === "approved" || s.status === "active"
+                        status:
+                            s.status === "approved" ||
+                            s.status === "active" ||
+                            rawSubscriptionStatus === "approved" ||
+                            rawSubscriptionStatus === "active"
                             ? "نشط"
-                            : (s.status === "pending" || !s.status)
+                            : ((s.status === "pending" || rawSubscriptionStatus === "pending" || !s.status) && hasConfirmedPayment)
                                 ? "قيد الانتظار"
                                 : "قادم",
                         nextDay: firstSched?.days_ar || "قريباً",
@@ -373,8 +458,10 @@ export default function MemberSportsPage() {
                         endDate: s.end_date || s.endDate || "",
                         price: s.price || 0,
                         createdAt: s.created_at
-                    } as SportSubscription;
-                });
+                    } as SportSubscription);
+
+                    return acc;
+                }, []);
             }
 
             setApprovedSports(approvedList);
