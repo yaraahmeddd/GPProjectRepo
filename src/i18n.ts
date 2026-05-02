@@ -21,6 +21,8 @@ import arLanding from './i18n/locales/ar/landing.json';
 import arTeam from './i18n/locales/ar/team.json';
 import arMember from './i18n/locales/ar/member.json';
 import arMemberManagementPage from './i18n/locales/ar/MemberManagementPage.json';
+import arManageInvitationsPage from './i18n/locales/ar/ManageInvitationsPage.json';
+import arSportsPage from './i18n/locales/ar/SportsPage.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './i18n/locales/en/common.json';
@@ -41,6 +43,8 @@ import enLanding from './i18n/locales/en/landing.json';
 import enTeam from './i18n/locales/en/team.json';
 import enMember from './i18n/locales/en/member.json';
 import enMemberManagementPage from './i18n/locales/en/MemberManagementPage.json';
+import enManageInvitationsPage from './i18n/locales/en/ManageInvitationsPage.json';
+import enSportsPage from './i18n/locales/en/SportsPage.json';
 
 const RTL_LANGUAGES = new Set(['ar']);
 
@@ -79,6 +83,8 @@ void i18n
         team: arTeam,
         member: arMember,
         MemberManagementPage: arMemberManagementPage,
+        ManageInvitationsPage: arManageInvitationsPage,
+        SportsPage: arSportsPage,
       },
       en: {
         common: enCommon,
@@ -99,6 +105,8 @@ void i18n
         team: enTeam,
         member: enMember,
         MemberManagementPage: enMemberManagementPage,
+        ManageInvitationsPage: enManageInvitationsPage,
+        SportsPage: enSportsPage,
       },
     },
 
@@ -112,7 +120,7 @@ void i18n
       'members', 'sports', 'finance', 'registrations',
       'RegistrationManagementPage', 'faculties', 'branches',
       'professions', 'media', 'admin', 'landing', 'team', 'member',
-      'MemberManagementPage'
+      'MemberManagementPage', 'ManageInvitationsPage', 'SportsPage'
     ],
 
     interpolation: { escapeValue: false },

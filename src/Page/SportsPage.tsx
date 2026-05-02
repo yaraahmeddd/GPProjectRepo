@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../Component/StaffPages
 import { Pencil, Trash2, Eye, Plus, Loader2, UploadCloud, ImageOff, X, Clock, AlertCircle } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -135,9 +136,10 @@ const TimeSlotPicker = ({
   placeholder: string;
   lockedValue?: string;
 }) => {
+  const { t, i18n } = useTranslation('SportsPage');
   const [open, setOpen] = useState(false);
   const selected = TIME_SLOTS.find((s) => s.value === value);
-  const title = placeholder === "من" ? "وقت البداية" : "وقت النهاية";
+  const title = placeholder === t('form.from') ? t('form.startTimeTitle') : t('form.endTimeTitle');
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={true}>
@@ -159,7 +161,7 @@ const TimeSlotPicker = ({
         className="w-[17rem] p-4 rounded-2xl bg-popover border border-border"
         align="start"
         side="bottom"
-        dir="ltr"
+        dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
       >
         {/* Divider title */}
         <div className="flex items-center gap-3 mb-4">
@@ -183,7 +185,7 @@ const TimeSlotPicker = ({
                 type="button"
                 disabled={isLocked}
                 onClick={() => { if (!isLocked) { onChange(slot.value); setOpen(false); } }}
-                title={isLocked ? "هذا الوقت محجوز" : undefined}
+                title={isLocked ? t('form.slotLockedTooltip') : undefined}
                 className={`py-2.5 px-2 rounded-xl border text-xs font-bold transition-all duration-200
                   ${isLocked
                     ? "border-border bg-muted text-muted-foreground opacity-40 cursor-not-allowed line-through"
@@ -296,7 +298,9 @@ const ImageUploadBox = ({
   preview: string | null;
   onSelect: (dataUrl: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
-}) => (
+}) => {
+  const { t } = useTranslation('SportsPage');
+  return (
   <div
     onClick={() => inputRef.current?.click()}
     className={`relative border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition-all duration-200 group
@@ -319,23 +323,24 @@ const ImageUploadBox = ({
       }}
     />
     {preview ? (
-      <img src={preview} alt="معاينة" className="w-full h-full object-cover" style={{ minHeight: 160 }} />
+      <img src={preview} alt="Preview" className="w-full h-full object-cover" style={{ minHeight: 160 }} />
     ) : (
       <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground group-hover:text-primary transition-colors">
         <UploadCloud className="w-10 h-10" />
-        <p className="text-sm font-medium">اضغط لاختيار صورة</p>
+        <p className="text-sm font-medium">{t('form.uploadClick')}</p>
         <p className="text-xs opacity-60">PNG, JPG, WEBP</p>
       </div>
     )}
     {preview && (
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
         <span className="text-white text-sm font-semibold flex items-center gap-2">
-          <UploadCloud className="w-4 h-4" /> تغيير الصورة
+          <UploadCloud className="w-4 h-4" /> {t('form.uploadChange')}
         </span>
       </div>
     )}
   </div>
 );
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const isValidTimeRange = (from: string, to: string) => {
@@ -343,22 +348,25 @@ const isValidTimeRange = (from: string, to: string) => {
   return from < to;
 };
 
-const getSportStatus = (sport: Sport) => {
+const getSportStatus = (sport: Sport, t: any) => {
   // A sport is considered "ready" if it has at least one team OR at least one direct schedule
   const hasSchedules = (sport.schedules && sport.schedules.length > 0) || sport.hasTeams === true;
 
   if (sport.is_active === false) {
-    return { label: "معطّلة", className: "bg-red-100 text-red-700 border-red-200", isDraft: false };
+    return { label: t('status.inactive'), className: "bg-red-100 text-red-700 border-red-200", isDraft: false };
   }
   if (!hasSchedules) {
-    return { label: "Draft — بدون مواعيد", className: "bg-gray-100 text-gray-600 border-gray-200", isDraft: true };
+    return { label: t('status.draft'), className: "bg-gray-100 text-gray-600 border-gray-200", isDraft: true };
   }
-  return { label: "مفعّلة", className: "bg-emerald-100 text-emerald-700 border-emerald-200", isDraft: false };
+  return { label: t('status.active'), className: "bg-emerald-100 text-emerald-700 border-emerald-200", isDraft: false };
 };
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SportsPage() {
+  const { t, i18n } = useTranslation('SportsPage');
+  const isRTL = i18n.language === 'ar';
+
   const [sports, setSports] = useState<Sport[]>([]);
   const [editSport, setEditSport] = useState<Sport | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -419,8 +427,7 @@ export default function SportsPage() {
       }
     } catch (err) {
       setSports(fallbackSports);
-      const message = err instanceof Error ? err.message : "تعذر تحميل الرياضات";
-      toast({ title: "تعذر تحميل الرياضات", description: message, variant: "destructive" });
+      toast({ title: t('toast.loadError'), description: t('toast.loadError'), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -463,54 +470,55 @@ export default function SportsPage() {
 
     // ─── Mandatory field validation ───
     if (!form.nameAr.trim()) {
-      toast({ title: 'حقل مطلوب', description: 'يرجى إدخال اسم الرياضة بالعربي.', variant: 'destructive' });
+      toast({ title: t('toast.requiredFieldTitle'), description: t('toast.requiredNameAr'), variant: 'destructive' });
       return;
     }
     if (!form.nameEn.trim()) {
-      toast({ title: 'حقل مطلوب', description: 'يرجى إدخال اسم الرياضة بالإنجليزي.', variant: 'destructive' });
+      toast({ title: t('toast.requiredFieldTitle'), description: t('toast.requiredNameEn'), variant: 'destructive' });
       return;
     }
     if (!imagePreview) {
-      toast({ title: 'حقل مطلوب', description: 'يرجى رفع صورة للرياضة.', variant: 'destructive' });
+      toast({ title: t('toast.requiredFieldTitle'), description: t('toast.requiredPhoto'), variant: 'destructive' });
       return;
     }
     if (!form.branchId) {
-      toast({ title: 'حقل مطلوب', description: 'يرجى اختيار الفرع.', variant: 'destructive' });
+      toast({ title: t('toast.requiredFieldTitle'), description: t('toast.requiredBranch'), variant: 'destructive' });
       return;
     }
 
     // ─── Team validation (only when teams have been added) ───
     if (teams.length > 0) {
       for (const t of teams) {
+        const teamName = t.nameAr || t.nameEn;
         if (!t.nameAr.trim() || !t.nameEn.trim()) {
-          setTeamsError('اسم الفريق بالعربي والإنجليزي مطلوبان لكل فريق.');
+          setTeamsError(t('toast.teamsErrorName'));
           return;
         }
         const maxP = Number(t.maxParticipants);
         if (!t.maxParticipants || isNaN(maxP) || maxP <= 0) {
-          setTeamsError('يرجى تحديد عدد المشاركين الأقصى لكل فريق (أكبر من صفر).');
+          setTeamsError(t('toast.teamsErrorMax'));
           return;
         }
         const tr = t.training;
         if (!tr.startTime || !tr.endTime) {
-          setTeamsError(`يرجى تحديد وقت بداية ونهاية التدريب لفريق "${t.nameAr || t.nameEn}".`);
+          setTeamsError(t('toast.teamsErrorTime', { name: teamName }));
           return;
         }
         if (!isValidTimeRange(tr.startTime, tr.endTime)) {
-          setTeamsError(`وقت النهاية يجب أن يكون بعد وقت البداية لفريق "${t.nameAr || t.nameEn}".`);
+          setTeamsError(t('toast.teamsErrorTimeRange', { name: teamName }));
           return;
         }
         if (tr.selectedDays.length === 0) {
-          setTeamsError(`يرجى اختيار يوم تدريب واحد على الأقل لفريق "${t.nameAr || t.nameEn}".`);
+          setTeamsError(t('toast.teamsErrorDays', { name: teamName }));
           return;
         }
         if (!tr.fieldId) {
-          setTeamsError(`يرجى اختيار الملعب لفريق "${t.nameAr || t.nameEn}".`);
+          setTeamsError(t('toast.teamsErrorField', { name: teamName }));
           return;
         }
         const fee = Number(tr.trainingFee);
         if (tr.trainingFee === "" || isNaN(fee) || fee < 0) {
-          setTeamsError(`يرجى تحديد رسوم التدريب لفريق "${t.nameAr || t.nameEn}".`);
+          setTeamsError(t('toast.teamsErrorFee', { name: teamName }));
           return;
         }
       }
@@ -576,7 +584,7 @@ export default function SportsPage() {
           await api.post('/teams', teamBody);
         }
 
-        toast({ title: 'تم التحديث', description: 'تم تحديث الرياضة والفرق بنجاح' });
+        toast({ title: t('toast.updateTitle'), description: t('toast.updateSuccess') });
       } else {
         const body: Record<string, unknown> = {
           name_ar: form.nameAr,
@@ -590,7 +598,7 @@ export default function SportsPage() {
         console.log('[SportsPage][handleSave] POST /api/sports', JSON.stringify(body, null, 2));
         const res = await api.post<{ message: string; data: unknown }>('/sports', body);
         console.log('[SportsPage][handleSave] POST نجح:', res?.data);
-        toast({ title: 'تمت الإضافة', description: res?.data?.message || 'تم إضافة الرياضة بنجاح' });
+        toast({ title: t('toast.addSuccessTitle'), description: res?.data?.message || t('toast.addSuccessDesc') });
       }
 
       setEditSport(null);
@@ -605,7 +613,7 @@ export default function SportsPage() {
       const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
       const message = e?.responseData?.error || e?.responseData?.message || e?.message || 'حدث خطأ غير متوقع';
       console.error('[SportsPage][handleSave] خطأ:', { status: e?.status, message, raw: err });
-      toast({ title: 'فشل الحفظ', description: message, variant: 'destructive' });
+      toast({ title: t('toast.saveErrorTitle'), description: message, variant: 'destructive' });
     } finally {
       setSaveLoading(false);
     }
@@ -618,13 +626,13 @@ export default function SportsPage() {
     try {
       const res = await api.delete<{ message: string }>(`/sports/${deleteId}`);
       console.log('[SportsPage][handleDelete] تم الحذف:', res?.data);
-      toast({ title: 'تم الحذف', description: res?.data?.message || 'تم حذف الرياضة بنجاح' });
+      toast({ title: t('toast.deleteSuccessTitle'), description: res?.data?.message || t('toast.deleteSuccessDesc') });
       setDeleteId(null);
       await fetchSports();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
       console.error('[SportsPage][handleDelete] خطأ:', err);
-      toast({ title: 'فشل الحذف', description: message, variant: 'destructive' });
+      toast({ title: t('toast.deleteErrorTitle'), description: message, variant: 'destructive' });
     } finally {
       setDeleteLoading(false);
     }
@@ -724,8 +732,8 @@ export default function SportsPage() {
       setForm({ ...form, nameAr: value });
     } else {
       toast({
-        title: "رسالة تنبيه",
-        description: "لا يمكن إدخال أحرف إنجليزية في حقل الاسم العربي",
+        title: t('toast.arOnlyTitle'),
+        description: t('toast.arOnlyDesc'),
         variant: "destructive",
       });
     }
@@ -741,8 +749,8 @@ export default function SportsPage() {
       setForm({ ...form, nameEn: value });
     } else {
       toast({
-        title: "رسالة تنبيه",
-        description: "لا يمكن إدخال أحرف عربية في حقل الاسم الإنجليزي",
+        title: t('toast.enOnlyTitle'),
+        description: t('toast.enOnlyDesc'),
         variant: "destructive",
       });
     }
@@ -758,13 +766,13 @@ export default function SportsPage() {
   });
 
   return (
-    <div className="h-full overflow-y-auto p-6 pb-8 space-y-6">
+    <div className="h-full overflow-y-auto p-6 pb-8 space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">إدارة الرياضات</h1>
+        <h1 className="text-2xl font-bold">{t('header.title')}</h1>
         <RoleGuard privilege="CREATE_SPORT">
           <Button onClick={openAdd} className="gap-2">
             <Plus className="h-4 w-4" />
-            إضافة رياضة
+            {t('header.addButton')}
           </Button>
         </RoleGuard>
       </div>
@@ -776,10 +784,10 @@ export default function SportsPage() {
       */}
       <div className="flex items-center gap-2 mb-4 bg-muted/30 p-1 rounded-lg w-fit border border-border">
         {(["all", "active", "draft", "inactive"] as const).map(tab => {
-          let label = "الكل";
-          if (tab === "active") label = "مفعّلة";
-          if (tab === "draft") label = "Draft";
-          if (tab === "inactive") label = "معطّلة";
+          let label = t('filter.all');
+          if (tab === "active") label = t('filter.active');
+          if (tab === "draft") label = t('filter.draft');
+          if (tab === "inactive") label = t('filter.inactive');
           return (
             <button
               key={tab}
@@ -797,11 +805,11 @@ export default function SportsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-14"></TableHead>
-              <TableHead>اسم الرياضة</TableHead>
-              <TableHead className="whitespace-nowrap">الحالة</TableHead>
-              <TableHead>عدد الأعضاء</TableHead>
-              <TableHead>السعر (ج.م)</TableHead>
-              <TableHead className="w-[260px] text-center">الإجراءات</TableHead>
+              <TableHead>{t('table.name')}</TableHead>
+              <TableHead className="whitespace-nowrap">{t('table.status')}</TableHead>
+              <TableHead>{t('table.membersCount')}</TableHead>
+              <TableHead>{t('table.price')}</TableHead>
+              <TableHead className="w-[260px] text-center">{t('table.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -811,7 +819,7 @@ export default function SportsPage() {
                   <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>جاري التحميل...</span>
+                      <span>{t('loading')}</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -820,13 +828,13 @@ export default function SportsPage() {
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-8 h-8 opacity-30" />
-                      <span>لا توجد رياضات مضافة حالياً</span>
+                      <span>{t('empty')}</span>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredSports.map((sport) => {
-                  const status = getSportStatus(sport);
+                  const status = getSportStatus(sport, t);
                   return (
                     <motion.tr
                       key={sport.id}
@@ -847,7 +855,7 @@ export default function SportsPage() {
                       <TableCell className="font-medium">{sportDisplayName(sport)}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span
-                          title={status.isDraft ? "هذه الرياضة غير مرئية للأعضاء حتى تتم إضافة مواعيد لها" : undefined}
+                          title={status.isDraft ? t('status.draftTooltip') : undefined}
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.className}`}
                         >
                           {status.label}
@@ -859,12 +867,12 @@ export default function SportsPage() {
                         <div className="flex items-center justify-center gap-2">
                           <RoleGuard privilege="UPDATE_SPORT">
                             <Button size="sm" variant="outline" onClick={() => void openEdit(sport)} className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground">
-                              <Pencil className="h-3 w-3" /> تعديل
+                              <Pencil className="h-3 w-3" /> {t('actions.edit')}
                             </Button>
                           </RoleGuard>
                           <RoleGuard privilege="DELETE_SPORT">
                             <Button size="sm" variant="outline" onClick={() => setDeleteId(sport.id)} className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground">
-                            <Trash2 className="h-3 w-3" /> حذف
+                            <Trash2 className="h-3 w-3" /> {t('actions.delete')}
                           </Button>
                         </RoleGuard>
 
@@ -881,15 +889,15 @@ export default function SportsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddOpen} onOpenChange={(open) => { if (!open) { setIsAddOpen(false); setImagePreview(null); } }}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] p-0 flex flex-col overflow-hidden" dir="rtl">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] p-0 flex flex-col overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex min-h-0 flex-1 flex-col p-6 overflow-hidden">            <DialogHeader className="shrink-0">
-            <DialogTitle>{editSport ? "تعديل رياضة" : "إضافة رياضة جديدة"}</DialogTitle>
-            <DialogDescription>{editSport ? "قم بتعديل بيانات الرياضة" : "أدخل بيانات الرياضة الجديدة"}</DialogDescription>
+            <DialogTitle>{editSport ? t('dialog.editTitle') : t('dialog.addTitle')}</DialogTitle>
+            <DialogDescription>{editSport ? t('dialog.editDesc') : t('dialog.addDesc')}</DialogDescription>
           </DialogHeader>
-            <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+            <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pe-1">
               {/* Photo upload */}
               <div>
-                <Label className="mb-2 block">صورة الرياضة</Label>
+                <Label className="mb-2 block">{t('form.photoLabel')}</Label>
                 <ImageUploadBox
                   preview={imagePreview}
                   onSelect={setImagePreview}
@@ -901,7 +909,7 @@ export default function SportsPage() {
                     onClick={() => { setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = ""; }}
                     className="mt-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
                   >
-                    × حذف الصورة
+                    {t('form.removePhoto')}
                   </button>
                 )}
               </div>
@@ -909,27 +917,27 @@ export default function SportsPage() {
               {/* Status + Branch row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="mb-1 block">الحالة</Label>
+                  <Label className="mb-1 block">{t('form.status')}</Label>
                   <Select
                     value={form.isActive ? "active" : "inactive"}
                     onValueChange={v => setForm(f => ({ ...f, isActive: v === "active" }))}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="inactive">غير نشط</SelectItem>
+                      <SelectItem value="active">{t('form.active')}</SelectItem>
+                      <SelectItem value="inactive">{t('form.inactive')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="mb-1 block">الفرع</Label>
+                  <Label className="mb-1 block">{t('form.branch')}</Label>
                   <Select
                     value={form.branchId || "none"}
                     onValueChange={v => setForm(f => ({ ...f, branchId: v === "none" ? "" : v }))}
                   >
-                    <SelectTrigger><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('form.branchPlaceholder')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-muted-foreground">بدون فرع</SelectItem>
+                      <SelectItem value="none" className="text-muted-foreground">{t('form.noBranch')}</SelectItem>
                       {branches.map(b => (
                         <SelectItem key={b.id} value={String(b.id)}>
                           {b.name_ar}{b.name_en ? ` (${b.name_en})` : ""}
@@ -941,22 +949,22 @@ export default function SportsPage() {
               </div>
 
               <div>
-                <Label>اسم الرياضة (AR)</Label>
+                <Label>{t('form.nameArLabel')}</Label>
                 <Input
                   value={form.nameAr}
                   onChange={(e) => handleNameArChange(e.target.value)}
-                  placeholder="أدخل الاسم العربي فقط"
+                  placeholder={t('form.nameArPlaceholder')}
                   maxLength={100}
                 />
               </div>
               <div>
-                <Label>اسم الرياضة (EN)</Label>
+                <Label>{t('form.nameEnLabel')}</Label>
                 <Input
                   value={form.nameEn}
                   onChange={(e) => handleNameEnChange(e.target.value)}
                   dir="ltr"
-                  className="text-left"
-                  placeholder="Enter English name only"
+                  className="text-start"
+                  placeholder={t('form.nameEnPlaceholder')}
                   maxLength={100}
                 />
               </div>
@@ -965,18 +973,18 @@ export default function SportsPage() {
               {/* ─── Teams Section ─── */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">الفرق</Label>
+                  <Label className="text-base font-semibold">{t('form.teamsLabel')}</Label>
                   <Button
                     type="button" size="sm" variant="outline" className="gap-1.5 text-xs"
                     onClick={() => {
-                      const t = emptyTeam();
-                      console.log('[SportsPage][addTeam] new team:', t.id);
-                      setTeams(prev => [...prev, t]);
+                      const tNew = emptyTeam();
+                      console.log('[SportsPage][addTeam] new team:', tNew.id);
+                      setTeams(prev => [...prev, tNew]);
                       setTeamsError("");
                     }}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    إضافة فريق
+                    {t('form.addTeam')}
                   </Button>
                 </div>
 
@@ -1006,7 +1014,7 @@ export default function SportsPage() {
                       >
                         {/* Header */}
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-primary">فريق {teamIdx + 1}</span>
+                          <span className="text-sm font-semibold text-primary">{t('form.teamTitle', { n: teamIdx + 1 })}</span>
                           {teams.length > 1 && (
                             <button type="button"
                               onClick={() => { console.log('[SportsPage][removeTeam]', team.id); setTeams(prev => prev.filter(t => t.id !== team.id)); }}
@@ -1019,10 +1027,10 @@ export default function SportsPage() {
                         {/* Bilingual names */}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <Label className="text-xs mb-1 block">اسم الفريق (AR) <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1 block">{t('form.teamNameArLabel')} <span className="text-destructive">*</span></Label>
                             <input type="text" value={team.nameAr}
                               onChange={e => { upd({ nameAr: e.target.value }); if (teamsError) setTeamsError(""); }}
-                              placeholder="مثال: فريق تحت 18 سنة"
+                              placeholder={t('form.teamNameArPlaceholder')}
                               className="w-full h-8 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                           </div>
                           <div>
@@ -1030,21 +1038,21 @@ export default function SportsPage() {
                             <input type="text" dir="ltr" value={team.nameEn}
                               onChange={e => { upd({ nameEn: e.target.value }); if (teamsError) setTeamsError(""); }}
                               placeholder="e.g. Under 18 Team"
-                              className="w-full h-8 rounded-md border border-border bg-background px-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-ring" />
+                              className="w-full h-8 rounded-md border border-border bg-background px-3 text-sm text-start focus:outline-none focus:ring-2 focus:ring-ring" />
                           </div>
                         </div>
 
                         {/* Max participants + Subscription price */}
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap shrink-0">الحد الأقصى <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs whitespace-nowrap shrink-0">{t('form.maxParticipants')} <span className="text-destructive">*</span></Label>
                             <input type="number" min={1} value={team.maxParticipants}
                               onChange={e => { upd({ maxParticipants: e.target.value }); if (teamsError) setTeamsError(""); }}
                               placeholder="20"
                               className="w-20 h-8 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                           </div>
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap shrink-0">سعر الاشتراك (ج.م)</Label>
+                            <Label className="text-xs whitespace-nowrap shrink-0">{t('form.subscriptionPrice')}</Label>
                             <input type="number" min={0} value={team.subscriptionPrice}
                               onChange={e => upd({ subscriptionPrice: e.target.value })}
                               placeholder="0"
@@ -1054,11 +1062,11 @@ export default function SportsPage() {
 
                         {/* Training block */}
                         <div className="space-y-2 rounded-md border border-border/60 bg-background p-2.5">
-                          <span className="text-xs font-semibold text-muted-foreground">مواعيد التدريب</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{t('form.trainingLabel')}</span>
 
                           {/* Day chips */}
                           <div>
-                            <Label className="text-xs mb-1.5 block">أيام التدريب <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1.5 block">{t('form.trainingDays')} <span className="text-destructive">*</span></Label>
                             <div className="flex flex-wrap gap-1.5">
                               {DAYS.map(day => {
                                 const on = team.training.selectedDays.includes(day.ar);
@@ -1067,7 +1075,7 @@ export default function SportsPage() {
                                     className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-150
                                       ${on ? "bg-primary text-primary-foreground border-primary"
                                         : "bg-background text-foreground border-border hover:border-primary/60"}`}>
-                                    {day.ar}
+                                    {isRTL ? day.ar : day.en}
                                   </button>
                                 );
                               })}
@@ -1076,21 +1084,21 @@ export default function SportsPage() {
 
                           {/* Time pickers */}
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Label className="text-xs text-muted-foreground whitespace-nowrap">من</Label>
-                            <TimeSlotPicker value={team.training.startTime} placeholder="من"
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">{t('form.from')}</Label>
+                            <TimeSlotPicker value={team.training.startTime} placeholder={t('form.from')}
                               lockedValue={team.training.endTime} onChange={v => updTr({ startTime: v })} />
-                            <Label className="text-xs text-muted-foreground whitespace-nowrap">إلى</Label>
-                            <TimeSlotPicker value={team.training.endTime} placeholder="إلى"
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">{t('form.to')}</Label>
+                            <TimeSlotPicker value={team.training.endTime} placeholder={t('form.to')}
                               lockedValue={team.training.startTime} onChange={v => updTr({ endTime: v })} />
                           </div>
-                          {timeErr && <p className="text-[11px] text-destructive">وقت النهاية يجب أن يكون بعد وقت البداية</p>}
+                          {timeErr && <p className="text-[11px] text-destructive">{t('form.timeError')}</p>}
 
                           {/* Field selector — GET /api/fields */}
                           <div>
-                            <Label className="text-xs mb-1 block">الملعب <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1 block">{t('form.field')} <span className="text-destructive">*</span></Label>
                             {fields.length === 0 ? (
                               <p className="text-xs text-amber-600 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-md px-3 py-2">
-                                لا توجد ملاعب محملة من API — تأكد من اتصال الخادم
+                                {t('form.noFields')}
                               </p>
                             ) : (
                               <Select
@@ -1100,12 +1108,12 @@ export default function SportsPage() {
                                   updTr({ fieldId: val === "none" ? "" : val });
                                 }}
                               >
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="اختر ملعب" /></SelectTrigger>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('form.fieldPlaceholder')} /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none" className="text-xs text-muted-foreground">اختر ملعب</SelectItem>
+                                  <SelectItem value="none" className="text-xs text-muted-foreground">{t('form.fieldPlaceholder')}</SelectItem>
                                   {fields.map(f => (
                                     <SelectItem key={f.id} value={f.id} className="text-xs">
-                                      {f.name_ar}{f.name_en ? ` (${f.name_en})` : ""}
+                                      {isRTL ? f.name_ar : (f.name_en || f.name_ar)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1115,7 +1123,7 @@ export default function SportsPage() {
 
                           {/* Training fee */}
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap shrink-0">رسوم التدريب (ج.م) <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs whitespace-nowrap shrink-0">{t('form.trainingFee')} <span className="text-destructive">*</span></Label>
                             <input type="number" min={0} value={team.training.trainingFee}
                               onChange={e => updTr({ trainingFee: e.target.value })}
                               placeholder="200"
@@ -1133,10 +1141,10 @@ export default function SportsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <Label htmlFor="requires-booking" className="cursor-pointer font-medium text-sm">
-                      يحتاج حجز ملاعب
+                      {t('form.requiresBooking')}
                     </Label>
                     <span className="text-xs text-muted-foreground">
-                      فعّل للرياضات التي تتطلب حجز ملعب مسبقاً كالبادل
+                      {t('form.requiresBookingHint')}
                     </span>
                   </div>
                   <Switch
@@ -1153,17 +1161,17 @@ export default function SportsPage() {
                   <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 p-2.5 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <p className="text-xs leading-relaxed font-medium">
-                      تنبيه: لم يتم إضافة أي ملاعب. يرجى إضافة ملعب واحد على الأقل من إدارة الملاعب
+                      {t('form.bookingWarning')}
                     </p>
                   </div>
                 )}
               </div>
             </div>
             <DialogFooter className="mt-4 border-t pt-4">
-              <Button variant="outline" onClick={() => { setIsAddOpen(false); setImagePreview(null); }}>إلغاء</Button>
+              <Button variant="outline" onClick={() => { setIsAddOpen(false); setImagePreview(null); }}>{t('form.cancel')}</Button>
               <Button onClick={() => void handleSave()} disabled={saveLoading} className={requiresBooking ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}>
-                {saveLoading ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : requiresBooking && <AlertCircle className="w-4 h-4 ml-1.5 opacity-80" />}
-                {saveLoading ? "جارٍ الحفظ..." : "حفظ"}
+                {saveLoading ? <Loader2 className="w-4 h-4 animate-spin ms-1" /> : requiresBooking && <AlertCircle className="w-4 h-4 ms-1.5 opacity-80" />}
+                {saveLoading ? t('form.saving') : t('form.save')}
               </Button>
             </DialogFooter>
           </div>
@@ -1172,15 +1180,15 @@ export default function SportsPage() {
 
       {/* Delete Confirmation */}
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
+        <DialogContent dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader>
-            <DialogTitle>تأكيد الحذف</DialogTitle>
-            <DialogDescription>هل أنت متأكد من حذف هذه الرياضة؟ لا يمكن التراجع عن هذا الإجراء.</DialogDescription>
+            <DialogTitle>{t('deleteDialog.title')}</DialogTitle>
+            <DialogDescription>{t('deleteDialog.description')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>{t('deleteDialog.cancel')}</Button>
             <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
-              {deleteLoading ? "جارٍ الحذف..." : "حذف"}
+              {deleteLoading ? t('deleteDialog.deleting') : t('deleteDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1188,7 +1196,7 @@ export default function SportsPage() {
 
       {/* Sport Members Dialog */}
       <Dialog open={membersSport !== null} onOpenChange={() => { setMembersSport(null); setDialogMembers([]); }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" dir="rtl">          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" dir={isRTL ? 'rtl' : 'ltr'}>          <DialogHeader>
           {/* Sport hero banner */}
           {membersSport?.imageUrl && (
             <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 -mt-1">
@@ -1199,49 +1207,49 @@ export default function SportsPage() {
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <h2 className="absolute bottom-3 right-4 text-white text-xl font-bold drop-shadow">
+              <h2 className="absolute bottom-3 end-4 text-white text-xl font-bold drop-shadow">
                 {membersSport ? sportDisplayName(membersSport) : ""}
               </h2>
             </div>
           )}
           <DialogTitle className={membersSport?.imageUrl ? "sr-only" : ""}>
-            أعضاء {membersSport ? sportDisplayName(membersSport) : ""}
+            {membersSport ? t('membersDialog.title', { name: sportDisplayName(membersSport) }) : ""}
             {!membersLoading && (
-              <span className="mr-2 text-sm font-normal text-muted-foreground">({dialogMembers.length} عضو)</span>
+              <span className="me-2 text-sm font-normal text-muted-foreground">{t('membersDialog.count', { n: dialogMembers.length })}</span>
             )}
           </DialogTitle>
           {!membersSport?.imageUrl && (
-            <DialogDescription>قائمة الأعضاء المسجلين في هذه الرياضة</DialogDescription>
+            <DialogDescription>{t('membersDialog.description')}</DialogDescription>
           )}
         </DialogHeader>
 
           {membersSport?.imageUrl && !membersLoading && (
             <p className="text-sm text-muted-foreground -mt-1 mb-1">
-              {dialogMembers.length} عضو مسجل
+              {t('membersDialog.countSubtitle', { n: dialogMembers.length })}
             </p>
           )}
 
           {membersLoading ? (
             <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm">جارٍ تحميل الأعضاء...</span>
+              <span className="text-sm">{t('membersDialog.loading')}</span>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead>الرقم القومي</TableHead>
-                  <TableHead>رقم الهاتف</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>تاريخ التسجيل</TableHead>
+                  <TableHead>{t('membersTable.name')}</TableHead>
+                  <TableHead>{t('membersTable.nationalId')}</TableHead>
+                  <TableHead>{t('membersTable.phone')}</TableHead>
+                  <TableHead>{t('membersTable.status')}</TableHead>
+                  <TableHead>{t('membersTable.registrationDate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dialogMembers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      لا يوجد أعضاء لهذه الرياضة حالياً
+                      {t('membersDialog.empty')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1254,9 +1262,9 @@ export default function SportsPage() {
                           ? "border-amber-200 bg-amber-50 text-amber-800"
                           : "border-rose-200 bg-rose-50 text-rose-700";
                     const statusLabel =
-                      m.status === "active" || m.status === "approved" ? "نشط"
-                        : m.status === "pending" ? "قيد الانتظار"
-                          : m.status === "suspended" ? "موقوف" : "غير نشط";
+                      m.status === "active" || m.status === "approved" ? t('memberStatus.active')
+                        : m.status === "pending" ? t('memberStatus.pending')
+                          : m.status === "suspended" ? t('memberStatus.suspended') : t('memberStatus.inactive');
                     return (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{nameAr}</TableCell>
@@ -1277,7 +1285,7 @@ export default function SportsPage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setMembersSport(null); setDialogMembers([]); }}>إغلاق</Button>
+            <Button variant="outline" onClick={() => { setMembersSport(null); setDialogMembers([]); }}>{t('membersDialog.close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

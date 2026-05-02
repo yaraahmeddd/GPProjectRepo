@@ -16,6 +16,7 @@ import {
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
+import { useTranslation } from "react-i18next";
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 
 import { useToast } from "../hooks/use-toast";
@@ -104,17 +105,18 @@ type Pagination = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: Invitation["status"] }) {
+  const { t } = useTranslation("ManageInvitationsPage");
   switch (status) {
     case "confirmed":
     case "payment_completed":
     case "completed":
-      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">مؤكد / مكتمل</Badge>;
+      return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{t('status.confirmed')}</Badge>;
     case "pending_payment":
-      return <Badge className="bg-amber-100 text-amber-700 border-amber-200">قيد الدفع</Badge>;
+      return <Badge className="bg-amber-100 text-amber-700 border-amber-200">{t('status.pending_payment')}</Badge>;
     case "cancelled":
-      return <Badge variant="outline" className="text-muted-foreground w-fit">ملغي</Badge>;
+      return <Badge variant="outline" className="text-muted-foreground w-fit">{t('status.cancelled')}</Badge>;
     case "in_progress":
-      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">جارٍ</Badge>;
+      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">{t('status.in_progress')}</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -140,6 +142,7 @@ function formatTime(timeStr: string) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function ManageInvitationsPage() {
+  const { t, i18n } = useTranslation("ManageInvitationsPage");
   const { toast } = useToast();
 
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -176,8 +179,8 @@ export default function ManageInvitationsPage() {
       }
     } catch (error) {
       toast({
-        title: "خطأ",
-        description: "فشل تحميل الدعوات المتاحة.",
+        title: t('toast.loadFailed'),
+        description: t('toast.loadFailedDesc'),
         variant: "destructive",
       });
     } finally {
@@ -193,9 +196,24 @@ export default function ManageInvitationsPage() {
   }, [search, statusFilter, fetchData]);
 
   // Actions
+  const formatShareUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith('http')) {
+      try {
+        const urlObj = new URL(url);
+        const newPath = urlObj.pathname.replace('/bookings/join/', '/bookings/share/');
+        return `${window.location.origin}${newPath}${urlObj.search}${urlObj.hash}`;
+      } catch {
+        return url;
+      }
+    }
+    const safeUrl = url.replace('/bookings/join/', '/bookings/share/');
+    return `${window.location.origin}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "تم النسخ", description: "تم نسخ الرابط بنجاح." });
+    toast({ title: t('toast.copied'), description: t('toast.copiedDesc') });
   };
 
   const handleCancelBooking = async () => {
@@ -203,37 +221,37 @@ export default function ManageInvitationsPage() {
     setIsDeleting(true);
     try {
       await api.delete(`/bookings/${cancelDialog.booking_id}`);
-      toast({ title: "تم", description: "تم إلغاء الحجز بنجاح." });
+      toast({ title: t('toast.cancelSuccess'), description: t('toast.cancelSuccessDesc') });
       setCancelDialog(null);
       fetchData(pagination.page);
       if (selectedInv?.booking_id === cancelDialog.booking_id) {
         setSelectedInv(null);
       }
     } catch (error) {
-      toast({ title: "خطأ", description: "حدث خطأ أثناء إلغاء الحجز.", variant: "destructive" });
+      toast({ title: t('toast.cancelFailed'), description: t('toast.cancelFailedDesc'), variant: "destructive" });
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <div className="flex-1 space-y-6 p-6 min-h-screen relative" dir="rtl">
+    <div className="flex-1 space-y-6 p-6 min-h-screen relative" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-[#1a365d] flex items-center gap-2">
             <Link2 className="h-6 w-6 text-primary" />
-            إدارة الدعوات
+            {t('header.title')}
           </h2>
           <p className="text-muted-foreground mt-1">
-            مشاهدة وإدارة روابط الدعوات لحجوزات الملاعب والمشاركين.
+            {t('header.subtitle')}
           </p>
         </div>
         
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={() => fetchData(pagination.page)} disabled={loading} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            تحديث
+            {t('header.refresh')}
           </Button>
         </div>
       </div>
@@ -242,32 +260,32 @@ export default function ManageInvitationsPage() {
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row gap-3 items-center w-full xl:w-auto">
           <div className="relative w-full sm:w-[320px]">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
-              placeholder="بحث بالاسم أو رقم الحجز..." 
-              className="pl-3 pr-9 w-full rounded-lg bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              placeholder={t('filters.searchPlaceholder')} 
+              className="ps-3 pe-9 w-full rounded-lg bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[180px] rounded-lg bg-slate-50 border-slate-200 font-medium focus:ring-2 focus:ring-primary/20">
-              <SelectValue placeholder="تصفية حسب الحالة" />
+              <SelectValue placeholder={t('filters.statusPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">كل الحالات</SelectItem>
-              <SelectItem value="confirmed">مؤكد</SelectItem>
-              <SelectItem value="pending_payment">قيد الدفع</SelectItem>
-              <SelectItem value="cancelled">ملغي</SelectItem>
+              <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
+              <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+              <SelectItem value="pending_payment">{t('status.pending_payment')}</SelectItem>
+              <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Top-Left Pagination */}
         {pagination.pages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center gap-3 xl:mr-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-3 xl:me-auto">
             <span className="text-sm font-medium text-slate-500">
-              صفحة {pagination.page} من {pagination.pages}
+              {t('pagination.page', { page: pagination.page, pages: pagination.pages })}
             </span>
             <div className="flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
               <Button
@@ -277,7 +295,7 @@ export default function ManageInvitationsPage() {
                 disabled={pagination.page <= 1}
                 onClick={() => fetchData(pagination.page - 1)}
               >
-                السابق
+                {t('pagination.previous')}
               </Button>
               
               <div className="hidden sm:flex items-center gap-1 mx-1">
@@ -316,7 +334,7 @@ export default function ManageInvitationsPage() {
                 disabled={pagination.page >= pagination.pages}
                 onClick={() => fetchData(pagination.page + 1)}
               >
-                التالي
+                {t('pagination.next')}
               </Button>
             </div>
           </div>
@@ -329,13 +347,13 @@ export default function ManageInvitationsPage() {
           <Table>
             <TableHeader className="bg-slate-50/80 border-b border-slate-200">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="font-bold text-slate-700 px-5 py-4 w-[200px]">صاحب الحجز</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4 w-[140px]">رقم الهاتف</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4 w-[180px]">تاريخ ووقت الحجز</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4">الملعب / الرياضة</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4 text-center w-[120px]">المشاركون</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4 w-[140px]">الحالة</TableHead>
-                <TableHead className="font-bold text-slate-700 py-4 text-center w-[140px]">إجراءات</TableHead>
+                <TableHead className="font-bold text-slate-700 px-5 py-4 w-[200px]">{t('table.booker')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4 w-[140px]">{t('table.phone')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4 w-[180px]">{t('table.dateTime')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4">{t('table.fieldSport')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4 text-center w-[120px]">{t('table.participants')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4 w-[140px]">{t('table.status')}</TableHead>
+                <TableHead className="font-bold text-slate-700 py-4 text-center w-[140px]">{t('table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -343,7 +361,7 @@ export default function ManageInvitationsPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin mb-3 text-primary/60" />
-                    <p className="font-medium text-slate-500">جاري تحميل الدعوات...</p>
+                    <p className="font-medium text-slate-500">{t('loading')}</p>
                   </TableCell>
                 </TableRow>
               ) : invitations.length === 0 ? (
@@ -352,8 +370,8 @@ export default function ManageInvitationsPage() {
                     <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Search className="h-6 w-6 text-slate-400" />
                     </div>
-                    <p className="font-medium text-slate-500 text-lg">لا توجد دعوات مسجلة</p>
-                    <p className="text-sm text-slate-400 mt-1">لم يتم العثور على نتائج تطابق بحثك الحالي.</p>
+                    <p className="font-medium text-slate-500 text-lg">{t('empty.title')}</p>
+                    <p className="text-sm text-slate-400 mt-1">{t('empty.subtitle')}</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -361,10 +379,10 @@ export default function ManageInvitationsPage() {
                   <TableRow key={inv.booking_id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-0 group">
                     <TableCell className="px-5 py-4 align-top">
                       <div className="flex flex-col gap-1.5 items-start">
-                        <span className="text-[15px] font-bold text-slate-800 leading-none">{inv.booker?.name || "غير محدد"}</span>
+                        <span className="text-[15px] font-bold text-slate-800 leading-none">{inv.booker?.name || t('cell.unknown')}</span>
                         {inv.booker?.type && (
                           <Badge variant="secondary" className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 border-blue-200/60 shadow-sm px-2 py-0.5">
-                            {inv.booker.type === "member" ? "عضو نادي" : "لاعب فريق"}
+                            {inv.booker.type === "member" ? t('bookerType.member') : t('bookerType.teamPlayer')}
                           </Badge>
                         )}
                       </div>
@@ -377,7 +395,7 @@ export default function ManageInvitationsPage() {
                           <span className="text-sm tracking-wide" dir="ltr">{inv.booker.phone}</span>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground bg-slate-50 px-2 py-1 rounded-md w-fit inline-block">لا يوجد رقم</span>
+                        <span className="text-xs text-muted-foreground bg-slate-50 px-2 py-1 rounded-md w-fit inline-block">{t('cell.noPhone')}</span>
                       )}
                     </TableCell>
                     
@@ -398,8 +416,8 @@ export default function ManageInvitationsPage() {
 
                     <TableCell className="py-4 align-top">
                       <div className="flex flex-col gap-1">
-                        <span className="font-bold text-sm text-[#1a365d]">{inv.field?.name_ar || inv.field?.name_en || "ملعب غير محدد"}</span>
-                        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md w-fit">{inv.sport?.name_ar || inv.sport?.name_en || "رياضة غير محددة"}</span>
+                        <span className="font-bold text-sm text-[#1a365d]">{inv.field?.name_ar || inv.field?.name_en || t('cell.noField')}</span>
+                        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md w-fit">{inv.sport?.name_ar || inv.sport?.name_en || t('cell.noSport')}</span>
                       </div>
                     </TableCell>
 
@@ -421,17 +439,17 @@ export default function ManageInvitationsPage() {
                           size="sm"
                           className="h-8 shadow-sm text-primary border-primary/20 hover:bg-primary hover:text-white transition-colors"
                           onClick={() => setSelectedInv(inv)}
-                          title="عرض التفاصيل"
+                          title={t('actions.viewDetails')}
                         >
-                          <span className="hidden sm:inline-block ml-1.5">التفاصيل</span>
+                          <span className="hidden sm:inline-block ms-1.5">{t('actions.details')}</span>
                           <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-slate-400 hover:text-primary hover:bg-primary/10 hover:shadow-sm border border-transparent hover:border-primary/20 transition-all rounded-md"
-                          onClick={() => copyToClipboard(inv.share_url)}
-                          title="نسخ الرابط"
+                          onClick={() => copyToClipboard(formatShareUrl(inv.share_url))}
+                          title={t('actions.copyLink')}
                         >
                           <Link2 className="h-4 w-4" />
                         </Button>
@@ -463,8 +481,8 @@ export default function ManageInvitationsPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "-100%", opacity: 0.5 }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed top-0 bottom-0 left-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-r"
-              dir="rtl"
+              className="fixed top-0 bottom-0 start-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-e"
+              dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b bg-slate-50/80">
@@ -473,7 +491,7 @@ export default function ManageInvitationsPage() {
                     <Link2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#1a365d]">تفاصيل الدعوة</h3>
+                    <h3 className="font-bold text-[#1a365d]">{t('panel.title')}</h3>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">{truncate(selectedInv.booking_id, 12)}</p>
                   </div>
                 </div>
@@ -490,16 +508,16 @@ export default function ManageInvitationsPage() {
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                     <div className="flex items-center gap-1.5 text-slate-500 mb-1">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">التاريخ</span>
+                      <span className="text-xs font-medium">{t('panel.date')}</span>
                     </div>
                     <div className="font-semibold text-sm">
-                      {selectedInv.booking_date ? format(new Date(selectedInv.booking_date), "d MMM yyyy", { locale: ar }) : "—"}
+                      {selectedInv.booking_date ? format(new Date(selectedInv.booking_date), "d MMM yyyy", { locale: i18n.language === 'en' ? undefined : ar }) : "—"}
                     </div>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                     <div className="flex items-center gap-1.5 text-slate-500 mb-1">
                       <CalendarCheck className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">الوقت</span>
+                      <span className="text-xs font-medium">{t('panel.time')}</span>
                     </div>
                     <div className="font-semibold text-sm">
                       {formatTime(selectedInv.booking_time?.start)} - {formatTime(selectedInv.booking_time?.end)}
@@ -509,43 +527,43 @@ export default function ManageInvitationsPage() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <h4 className="font-semibold text-sm border-b pb-1">معلومات الحجز</h4>
+                    <h4 className="font-semibold text-sm border-b pb-1">{t('panel.bookingInfo')}</h4>
                     <StatusBadge status={selectedInv.status} />
                   </div>
                   
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">الملعب:</span>
-                      <span className="font-medium text-left">{selectedInv.field?.name_ar || "—"}</span>
+                      <span className="text-muted-foreground">{t('panel.field')}</span>
+                      <span className="font-medium text-start">{selectedInv.field?.name_ar || "—"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">الرياضة:</span>
-                      <span className="font-medium text-left">{selectedInv.sport?.name_ar || "—"}</span>
+                      <span className="text-muted-foreground">{t('panel.sport')}</span>
+                      <span className="font-medium text-start">{selectedInv.sport?.name_ar || "—"}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">رابط المشاركة:</span>
-                      <Button variant="outline" size="sm" className="h-7 text-xs px-2 gap-1.5" onClick={() => copyToClipboard(selectedInv.share_url)}>
-                        <Link2 className="h-3 w-3" />نسخ الرابط
+                      <span className="text-muted-foreground">{t('panel.shareLink')}</span>
+                      <Button variant="outline" size="sm" className="h-7 text-xs px-2 gap-1.5" onClick={() => copyToClipboard(formatShareUrl(selectedInv.share_url))}>
+                        <Link2 className="h-3 w-3" />{t('cell.copyLink')}
                       </Button>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4 mt-6">
-                  <h4 className="font-semibold text-sm border-b pb-1">صاحب الحجز</h4>
+                  <h4 className="font-semibold text-sm border-b pb-1">{t('panel.booker')}</h4>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground text-xs py-0.5">الاسم:</span>
+                      <span className="text-muted-foreground text-xs py-0.5">{t('panel.name')}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{selectedInv.booker?.name || "—"}</span>
                         {selectedInv.booker?.type && (
-                          <Badge variant="secondary" className="text-[10px] h-5">{selectedInv.booker.type === "member" ? "عضو" : "لاعب"}</Badge>
+                          <Badge variant="secondary" className="text-[10px] h-5">{selectedInv.booker.type === "member" ? t('bookerType.memberShort') : t('bookerType.teamPlayerShort')}</Badge>
                         )}
                       </div>
                     </div>
                     {selectedInv.booker?.phone && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground text-xs py-0.5">الهاتف:</span>
+                        <span className="text-muted-foreground text-xs py-0.5">{t('panel.phone')}</span>
                         <div className="flex gap-2">
                           <span className="font-medium" dir="ltr">{selectedInv.booker.phone}</span>
                           <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyToClipboard(selectedInv.booker?.phone || "")}>
@@ -559,22 +577,22 @@ export default function ManageInvitationsPage() {
 
                 <div className="space-y-4 mt-6">
                   <div className="flex justify-between items-center border-b pb-1">
-                    <h4 className="font-semibold text-sm">قائمة المشاركين</h4>
+                    <h4 className="font-semibold text-sm">{t('panel.participants')}</h4>
                     <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-full font-medium">
-                      {selectedInv.stats?.registered_count} / {selectedInv.stats?.expected_participants} مسجل
+                      {selectedInv.stats?.registered_count} / {selectedInv.stats?.expected_participants} {t('panel.registered')}
                     </span>
                   </div>
                   
                   {(!selectedInv.participants || selectedInv.participants.length === 0) ? (
                     <div className="text-center py-6 text-sm text-muted-foreground bg-slate-50 rounded-lg border border-dashed">
-                      لم ينضم أي مشارك حتى الآن.
+                      {t('panel.noParticipants')}
                     </div>
                   ) : (
                     <div className="space-y-3 mt-3">
                       {selectedInv.participants.map((p, i) => (
                         <div key={p.id || i} className="flex flex-col gap-1 p-3 rounded-lg border border-slate-100 bg-white shadow-sm relative overflow-hidden">
                           {p.is_creator && (
-                            <div className="absolute top-0 right-0 w-1 bg-primary h-full rounded-r-lg"></div>
+                            <div className="absolute top-0 end-0 w-1 bg-primary h-full rounded-e-lg"></div>
                           )}
                           <div className="flex justify-between items-start">
                             <span className="font-medium text-sm text-[#1a365d] flex items-center gap-1.5">
@@ -582,7 +600,7 @@ export default function ManageInvitationsPage() {
                               {p.full_name}
                             </span>
                             {p.is_creator && (
-                              <Badge variant="outline" className="text-[10px] h-4 leading-none py-0 px-1 border-primary/30 text-primary">منشئ الحجز</Badge>
+                              <Badge variant="outline" className="text-[10px] h-4 leading-none py-0 px-1 border-primary/30 text-primary">{t('panel.bookingCreator')}</Badge>
                             )}
                           </div>
                           
@@ -610,7 +628,7 @@ export default function ManageInvitationsPage() {
                       onClick={() => setCancelDialog(selectedInv)}
                     >
                       <ShieldAlert className="h-4 w-4" />
-                      إلغاء الحجز والدعوة نهائياً
+                      {t('panel.cancelButton')}
                     </Button>
                   </RoleGuard>
                 )}
@@ -622,29 +640,28 @@ export default function ManageInvitationsPage() {
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={!!cancelDialog} onOpenChange={(open) => !open && setCancelDialog(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
               <ShieldAlert className="h-5 w-5" />
-              تأكيد إلغاء الحجز
+              {t('cancelDialog.title')}
             </DialogTitle>
             <DialogDescription className="pt-2">
-              هل أنت متأكد من رغبتك في إلغاء هذا الحجز؟
-              سيتم إبطال رابط الدعوة ولن يتمكن المشاركون من التسجيل أو الحضور.
+              {t('cancelDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
-            <p className="text-sm font-semibold border-r-2 border-border pr-2 bg-slate-50 py-1 rounded-sm">
-              الحجز: {cancelDialog?.field?.name_ar} يوم {cancelDialog?.booking_date ? format(new Date(cancelDialog.booking_date), "d MMM yyyy", { locale: ar }) : ""}
+            <p className="text-sm font-semibold border-s-2 border-border ps-2 bg-slate-50 py-1 rounded-sm">
+              {t('cancelDialog.booking')} {cancelDialog?.field?.name_ar} {t('cancelDialog.day')} {cancelDialog?.booking_date ? format(new Date(cancelDialog.booking_date), "d MMM yyyy", { locale: i18n.language === 'en' ? undefined : ar }) : ""}
             </p>
           </div>
           <DialogFooter className="flex gap-2 sm:justify-start">
             <Button variant="outline" onClick={() => setCancelDialog(null)} disabled={isDeleting}>
-              تراجع
+              {t('cancelDialog.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleCancelBooking} disabled={isDeleting}>
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
-              نعم، ألغ الحجز
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin ms-2" /> : null}
+              {t('cancelDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
