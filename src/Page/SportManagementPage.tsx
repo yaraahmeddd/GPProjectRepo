@@ -296,37 +296,44 @@ export default function SportManagementPage() {
         <div className="h-full flex flex-col overflow-hidden" dir="rtl">
 
             {/* ── Page Header ── */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
+            <div
                 className="shrink-0 px-6 py-4 border-b border-border bg-background"
             >
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#214474]/10 shrink-0">
-                            <Trophy className="h-5 w-5 text-[#214474]" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight text-foreground">
-                                الأعضاء بالرياضة
-                            </h1>
-                            <p className="mt-0.5 text-xs text-muted-foreground flex items-center gap-1">
-                                إجمالي: <strong className="text-foreground">{processed.length}</strong> عضو
-                                {membersLoading && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                            <Trophy className="w-6 h-6 text-primary" />
+                            الأعضاء بالرياضة
+                        </h1>
+                        <div className="flex items-center gap-4 mt-1">
+                            <p className="text-sm text-muted-foreground">
+                                إجمالي: <strong>{processed.length}</strong> عضو
+                                {membersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
                             </p>
+                            {selectedSport && (
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                                    <Trophy className="w-3 h-3" />
+                                    {selectedSport.nameAr}
+                                </span>
+                            )}
+                            {!selectedSport && (
+                                <span className="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
+                                    <Users className="w-3 h-3" />
+                                    كل الرياضات: {sports.length}
+                                </span>
+                            )}
                         </div>
                     </div>
                     <button
                         onClick={() => { void fetchSports(); void fetchMembers(selectedSport); }}
                         disabled={membersLoading || sportsLoading}
-                        className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                        className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
                     >
-                        <RefreshCw className={`h-3.5 w-3.5 ${(membersLoading || sportsLoading) ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`h-4 w-4 ${(membersLoading || sportsLoading) ? "animate-spin" : ""}`} />
                         تحديث
                     </button>
                 </div>
-            </motion.div>
+            </div>
 
             {/* ── Body: two-panel ── */}
             <div className="flex flex-1 overflow-hidden">
@@ -364,14 +371,14 @@ export default function SportManagementPage() {
                 <main className="flex flex-1 flex-col overflow-hidden">
 
                     {/* Toolbar */}
-                    <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-border bg-muted/20">
+                    <div className="shrink-0 flex items-center gap-3 px-6 py-3 border-b border-border bg-muted/20">
                         <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="بحث بالاسم أو الهاتف أو الرقم القومي..."
-                                className="pr-9 h-9 text-sm"
+                                className="pr-9 h-9"
                             />
                         </div>
                         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -386,6 +393,9 @@ export default function SportManagementPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-xs text-muted-foreground">
+                            {processed.length} نتيجة
+                        </span>
                     </div>
 
                     {/* Table */}

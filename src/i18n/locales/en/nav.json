@@ -6,6 +6,8 @@
     "sports": "Sports Management",
     "finance": "Finance & Services",
     "staff": "Staff",
+    "packages": "Packages & Privileges",
+    "media": "Media Center",
     "system": "System"
   },
   "nav": {
@@ -29,6 +31,7 @@
     "branches": "Manage Branches",
     "faculties": "Manage Faculties",
     "professions": "Manage Professions",
+    "managePackages": "Manage Packages",
     "privilegePackages": "Privilege Packages",
     "assignPrivileges": "Assign Privileges",
     "revokePrivileges": "Revoke Privileges",

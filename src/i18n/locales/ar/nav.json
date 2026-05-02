@@ -6,6 +6,8 @@
     "sports": "إدارة الرياضات",
     "finance": "المالية والخدمات",
     "staff": "الموظفون",
+    "packages": "الباقات والصلاحيات",
+    "media": "المركز الإعلامي",
     "system": "النظام"
   },
   "nav": {
@@ -29,6 +31,7 @@
     "branches": "إدارة الفروع",
     "faculties": "إدارة الكليات",
     "professions": "إدارة المهن",
+    "managePackages": "إدارة الباقات",
     "privilegePackages": "باقات الصلاحيات",
     "assignPrivileges": "تعيين الصلاحيات",
     "revokePrivileges": "سحب الصلاحيات",

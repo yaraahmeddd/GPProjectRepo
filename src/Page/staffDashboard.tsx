@@ -79,7 +79,7 @@ function SmartIndexRedirect() {
   const target = FALLBACK_PAGES.find(
     (p) => !p.privilege || hasPrivilege(p.privilege)
   );
-
+ 
   return <Navigate to={target?.path ?? "/staff/dashboard/profile"} replace />;
 }
 

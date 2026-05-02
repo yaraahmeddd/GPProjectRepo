@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Printer, Search, Eye, FileText, UserX, Loader2, RefreshCw, Filter, Users, Award } from "lucide-react";
+import { Check, Printer, Search, Eye, FileText, UserX, Loader2, RefreshCw, Filter, Users, Award, Globe } from "lucide-react";
 import { Button } from "../Component/StaffPagesComponents/ui/button";
 import { Input } from "../Component/StaffPagesComponents/ui/input";
 import { Badge } from "../Component/StaffPagesComponents/ui/badge";
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useToast } from "../hooks/use-toast";
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 // ─── Unified record type ────────────────────────────────────────────────────
 interface RegistrationRecord {
@@ -20,7 +22,7 @@ interface RegistrationRecord {
     phone: string;
     national_id: string;
     birthdate?: string | null;
-    birth_date?: string | null;  // fallback alias
+    birth_date?: string | null;
     gender: 'male' | 'female';
     address: string;
     social_status: string;
@@ -32,17 +34,18 @@ interface RegistrationRecord {
     national_id_back?: string;
     medical_report?: string;
     memberType: 'member' | 'team_member';
-    teams?: string[];        // For team members only
+    teams?: string[];
 }
 
 export default function RegistrationManagementPage() {
+    const { t } = useTranslation(["RegistrationManagementPage", "common"]);
     const { toast } = useToast();
     const [records, setRecords] = useState<RegistrationRecord[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState<'all' | 'member' | 'team_member'>('all');
 
-    const [approvingId, setApprovingId] = useState<string | null>(null);   // "member-{id}" | "team-{id}"
+    const [approvingId, setApprovingId] = useState<string | null>(null);
     const [approvedKey, setApprovedKey] = useState<string | null>(null);
     const [isAddingMember, setIsAddingMember] = useState(false);
 
@@ -65,16 +68,25 @@ export default function RegistrationManagementPage() {
         children_count: 0
     });
 
+    const isRTL = i18n.language === 'ar';
+    const locale = isRTL ? 'ar-EG' : 'en-US';
+
+    const toggleLanguage = () => {
+        const newLang = isRTL ? 'en' : 'ar';
+        i18n.changeLanguage(newLang);
+        document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = newLang;
+    };
+
     // ── Fetch both regular members and team members ──────────────────────────
     const fetchRecords = async () => {
         setIsLoading(true);
         try {
             const [membersRes, teamMembersRes] = await Promise.allSettled([
-                api.get('/members', { params: { status: 'pending', limit: 50 } }), // Reduced from 200 to 50
+                api.get('/members', { params: { status: 'pending', limit: 50 } }),
                 api.get('/team-members/pending'),
             ]);
 
-            // Process regular members
             let regularMembers: RegistrationRecord[] = [];
             if (membersRes.status === 'fulfilled') {
                 const data = Array.isArray(membersRes.value.data)
@@ -83,22 +95,20 @@ export default function RegistrationManagementPage() {
                 regularMembers = data.map((m: any) => ({ ...m, memberType: 'member' as const }));
             }
 
-            // Process team members
             let teamMembers: RegistrationRecord[] = [];
             if (teamMembersRes.status === 'fulfilled') {
                 const raw = teamMembersRes.value.data;
                 const data = Array.isArray(raw) ? raw : (raw?.data || []);
-                teamMembers = data; // already has memberType: 'team_member' from backend
+                teamMembers = data;
             }
 
-            // Combine and sort by created_at desc
             const combined = [...regularMembers, ...teamMembers].sort(
                 (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             setRecords(combined);
         } catch (error) {
             console.error('Failed to fetch registrations:', error);
-            toast({ title: "خطأ", description: "فشل تحميل طلبات التسجيل", variant: "destructive" });
+            toast({ title: t('toast.error'), description: t('toast.loadFailed'), variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -143,8 +153,8 @@ export default function RegistrationManagementPage() {
             ));
             setApprovedKey(key);
 
-            const typeLabel = record.memberType === 'team_member' ? 'عضو الفريق' : 'العضو';
-            toast({ title: "تم الاعتماد", description: `تم تفعيل ${typeLabel} بنجاح` });
+            const typeLabel = record.memberType === 'team_member' ? t('memberTypes.teamMember') : t('memberTypes.member');
+            toast({ title: t('toast.approved'), description: t('toast.activated', { type: typeLabel }) });
 
             setTimeout(() => {
                 setRecords(prev => prev.filter(r => !(r.id === record.id && r.memberType === record.memberType)));
@@ -152,7 +162,7 @@ export default function RegistrationManagementPage() {
                 void fetchRecords();
             }, 600);
         } catch (error) {
-            toast({ title: "خطأ", description: "فشل اعتماد الطلب. حاول مرة أخرى.", variant: "destructive" });
+            toast({ title: t('toast.error'), description: t('toast.approveFailed'), variant: "destructive" });
         } finally {
             setApprovingId(null);
         }
@@ -178,12 +188,12 @@ export default function RegistrationManagementPage() {
                 nationality: "Egyptian"
             };
             await api.post('/members', payload);
-            toast({ title: "تم الإضافة", description: "تم إضافة العضو الجديد بنجاح" });
+            toast({ title: t('toast.added'), description: t('toast.memberAdded') });
             setAddDialogOpen(false);
             void fetchRecords();
             setNewMember({ name_ar: "", name_en: "", national_id: "", phone: "", birth_date: "", gender: "", address: "", social_status: "", job: "", children_count: 0 });
         } catch (error) {
-            toast({ title: "خطأ", description: "فشل إضافة العضو", variant: "destructive" });
+            toast({ title: t('toast.error'), description: t('toast.addMemberFailed'), variant: "destructive" });
         } finally {
             setIsAddingMember(false);
         }
@@ -197,8 +207,6 @@ export default function RegistrationManagementPage() {
         if (!filename) return "/placeholder-image.png";
         if (filename.startsWith("data:")) return filename;
 
-        // Rewrite absolute /uploads URLs to localhost so everything starts with:
-        // http://localhost:3000/uploads/...
         if (filename.startsWith("http://") || filename.startsWith("https://")) {
             try {
                 const u = new URL(filename);
@@ -225,8 +233,26 @@ export default function RegistrationManagementPage() {
         return `${fileBase}/uploads${clean}`;
     };
 
+    const getSocialStatusLabel = (status?: string) => {
+        switch (status) {
+            case 'single': return t('socialStatus.single');
+            case 'married': return t('socialStatus.married');
+            case 'widowed': return t('socialStatus.widowed');
+            case 'divorced': return t('socialStatus.divorced');
+            default: return status || t('common.notAvailable');
+        }
+    };
+
+    const getGenderLabel = (gender?: string) => {
+        switch (gender) {
+            case 'male': return t('gender.male');
+            case 'female': return t('gender.female');
+            default: return t('common.notAvailable');
+        }
+    };
+
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col" dir="rtl">
+        <div className="h-[calc(100vh-4rem)] flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
 
             {/* ── Header ── */}
             <div className="px-6 py-4 border-b border-border bg-background shrink-0">
@@ -234,28 +260,35 @@ export default function RegistrationManagementPage() {
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                             <FileText className="w-6 h-6 text-primary" />
-                            طلبات التسجيل
+                            {t('registration.title')}
                         </h1>
                         <div className="flex items-center gap-4 mt-1">
                             <p className="text-sm text-muted-foreground">
-                                قيد الانتظار: <strong>{records.length}</strong> طلب
+                                {t('registration.pending')}: <strong>{records.length}</strong> {records.length === 1 ? t('registration.request_one') : t('registration.request_other')}
                             </p>
                             <span className="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
-                                <Users className="w-3 h-3" /> أعضاء: {memberCount}
+                                <Users className="w-3 h-3" /> {t('registration.members')}: {memberCount}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
-                                <Award className="w-3 h-3" /> أعضاء فريق: {teamMemberCount}
+                                <Award className="w-3 h-3" /> {t('registration.teamMembers')}: {teamMemberCount}
                             </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleLanguage}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm text-muted-foreground"
+                        >
+                            <Globe className="w-4 h-4" />
+                            {isRTL ? 'English' : 'العربية'}
+                        </button>
                         <button
                             onClick={() => void fetchRecords()}
                             disabled={isLoading}
                             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm text-muted-foreground disabled:opacity-40"
                         >
                             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                            تحديث
+                            {t('registration.refresh')}
                         </button>
                     </div>
                 </div>
@@ -264,22 +297,22 @@ export default function RegistrationManagementPage() {
             {/* ── Toolbar ── */}
             <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-muted/20 shrink-0">
                 <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none ${isRTL ? 'right-3' : 'left-3'}`} />
                     <Input
-                        placeholder="بحث بالاسم، الرقم القومي، أو الهاتف..."
+                        placeholder={t('registration.searchPlaceholder')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pr-9 h-9"
+                        className={isRTL ? 'pr-9 h-9' : 'pl-9 h-9'}
                     />
                 </div>
 
                 {/* Type filter tabs */}
                 <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
                     {([
-                        { value: 'all', label: 'الكل' },
-                        { value: 'member', label: 'أعضاء' },
-                        { value: 'team_member', label: 'أعضاء فريق' },
-                    ] as const).map(tab => (
+                        { value: 'all' as const, label: t('registration.all') },
+                        { value: 'member' as const, label: t('registration.members') },
+                        { value: 'team_member' as const, label: t('registration.teamMembers') },
+                    ]).map(tab => (
                         <button
                             key={tab.value}
                             onClick={() => setTypeFilter(tab.value)}
@@ -295,7 +328,7 @@ export default function RegistrationManagementPage() {
 
                 <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
                 <Badge variant="outline" className="text-xs text-muted-foreground">
-                    {filteredRecords.length} نتيجة
+                    {filteredRecords.length} {t('registration.results')}
                 </Badge>
             </div>
 
@@ -304,30 +337,30 @@ export default function RegistrationManagementPage() {
                 {isLoading ? (
                     <div className="py-20 text-center text-muted-foreground">
                         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-3" />
-                        <p className="text-sm">جارٍ التحميل...</p>
+                        <p className="text-sm">{t('registration.loading')}</p>
                     </div>
                 ) : filteredRecords.length === 0 ? (
                     <div className="py-20 text-center text-muted-foreground">
                         <div className="rounded-full bg-muted/30 p-6 mb-4 w-fit mx-auto">
                             <UserX className="h-12 w-12 text-muted-foreground/50" />
                         </div>
-                        <h3 className="text-base font-semibold text-foreground mb-1">لا يوجد طلبات حالياً</h3>
+                        <h3 className="text-base font-semibold text-foreground mb-1">{t('registration.noRequests')}</h3>
                         <p className="text-sm">
-                            {search ? `لا توجد نتائج مطابقة لـ "${search}"` : "لم يتم العثور على طلبات تسجيل جديدة قيد الانتظار"}
+                            {search ? `${t('registration.noResults')} "${search}"` : t('registration.noPendingRequests')}
                         </p>
                     </div>
                 ) : (
                     <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-muted/70 backdrop-blur border-b border-border z-10">
                             <tr>
-                                <th className="text-right px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle w-10">#</th>
-                                <th className="text-right pr-4 pl-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الاسم</th>
-                                <th className="text-right px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">رقم الهاتف</th>
-                                <th className="text-right px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الرقم القومي</th>
-                                <th className="text-right px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">تاريخ التسجيل</th>
-                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">النوع</th>
-                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الحالة</th>
-                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الإجراءات</th>
+                                <th className={`px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle w-10 ${isRTL ? 'text-right' : 'text-left'}`}>{t('table.index')}</th>
+                                <th className={`px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle ${isRTL ? 'text-right' : 'text-left'}`}>{t('table.name')}</th>
+                                <th className={`px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle ${isRTL ? 'text-right' : 'text-left'}`}>{t('table.phone')}</th>
+                                <th className={`px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle ${isRTL ? 'text-right' : 'text-left'}`}>{t('table.nationalId')}</th>
+                                <th className={`px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle ${isRTL ? 'text-right' : 'text-left'}`}>{t('table.registrationDate')}</th>
+                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t('table.type')}</th>
+                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t('table.status')}</th>
+                                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t('table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -354,16 +387,16 @@ export default function RegistrationManagementPage() {
                                             )}
                                         </td>
 
-                                        <td className="px-4 py-3 tabular-nums text-sm text-right align-middle">
+                                        <td className={`px-4 py-3 tabular-nums text-sm align-middle ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span dir="ltr">{record.phone}</span>
                                         </td>
 
-                                        <td className="px-4 py-3 font-mono text-xs text-right align-middle">
+                                        <td className={`px-4 py-3 font-mono text-xs align-middle ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span dir="ltr">{record.national_id}</span>
                                         </td>
 
                                         <td className="px-4 py-3 text-sm text-muted-foreground tabular-nums align-middle">
-                                            {new Date(record.created_at).toLocaleDateString('ar-EG')}
+                                            {new Date(record.created_at).toLocaleDateString(locale)}
                                         </td>
 
                                         {/* Member type badge */}
@@ -371,12 +404,12 @@ export default function RegistrationManagementPage() {
                                             {isTeamMember ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">
                                                     <Award className="w-3 h-3" />
-                                                    عضو فريق
+                                                    {t('memberTypes.teamMember')}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800">
                                                     <Users className="w-3 h-3" />
-                                                    عضو
+                                                    {t('memberTypes.member')}
                                                 </span>
                                             )}
                                         </td>
@@ -387,7 +420,7 @@ export default function RegistrationManagementPage() {
                                                 ? 'bg-emerald-100 text-emerald-700'
                                                 : 'bg-amber-100 text-amber-800'
                                                 }`}>
-                                                {isActive ? 'نشط' : 'قيد الانتظار'}
+                                                {isActive ? t('status.active') : t('status.pending')}
                                             </span>
                                         </td>
 
@@ -402,7 +435,7 @@ export default function RegistrationManagementPage() {
                                                         onClick={() => openReview(record)}
                                                     >
                                                         <Eye className="h-3.5 w-3.5" />
-                                                        مراجعة
+                                                        {t('actions.review')}
                                                     </Button>
                                                 </RoleGuard>
 
@@ -418,7 +451,7 @@ export default function RegistrationManagementPage() {
                                                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                             : <Check className="h-3.5 w-3.5" />
                                                         }
-                                                        {isApproving ? 'جارٍ...' : 'اعتماد'}
+                                                        {isApproving ? t('actions.processing') : t('actions.approve')}
                                                     </Button>
                                                 </RoleGuard>
 
@@ -429,7 +462,7 @@ export default function RegistrationManagementPage() {
                                                     onClick={() => openPrint(record)}
                                                 >
                                                     <Printer className="h-3.5 w-3.5" />
-                                                    طباعة
+                                                    {t('actions.print')}
                                                 </Button>
                                             </div>
                                         </td>
@@ -443,96 +476,96 @@ export default function RegistrationManagementPage() {
 
             {/* Add New Member Dialog */}
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                <DialogContent className="max-w-3xl" dir="rtl">
+                <DialogContent className="max-w-3xl" dir={isRTL ? 'rtl' : 'ltr'}>
                     <DialogHeader>
-                        <DialogTitle>إضافة عضو جديد</DialogTitle>
-                        <DialogDescription>أدخل بيانات العضو الجديد للتسجيل</DialogDescription>
+                        <DialogTitle>{t('addMember.title')}</DialogTitle>
+                        <DialogDescription>{t('addMember.description')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                         <div className="space-y-2">
-                            <Label>الاسم (عربي)</Label>
-                            <Input value={newMember.name_ar} onChange={e => setNewMember({ ...newMember, name_ar: e.target.value })} placeholder="الاسم رباعي" />
+                            <Label>{t('addMember.nameAr')}</Label>
+                            <Input value={newMember.name_ar} onChange={e => setNewMember({ ...newMember, name_ar: e.target.value })} placeholder={t('addMember.nameArPlaceholder')} />
                         </div>
                         <div className="space-y-2">
-                            <Label>الاسم (English)</Label>
-                            <Input value={newMember.name_en} onChange={e => setNewMember({ ...newMember, name_en: e.target.value })} placeholder="Full Name" className="text-left" dir="ltr" />
+                            <Label>{t('addMember.nameEn')}</Label>
+                            <Input value={newMember.name_en} onChange={e => setNewMember({ ...newMember, name_en: e.target.value })} placeholder={t('addMember.nameEnPlaceholder')} className="text-left" dir="ltr" />
                         </div>
                         <div className="space-y-2">
-                            <Label>الرقم القومي</Label>
-                            <Input value={newMember.national_id} onChange={e => setNewMember({ ...newMember, national_id: e.target.value })} placeholder="14 رقم" type="number" />
+                            <Label>{t('addMember.nationalId')}</Label>
+                            <Input value={newMember.national_id} onChange={e => setNewMember({ ...newMember, national_id: e.target.value })} placeholder={t('addMember.nationalIdPlaceholder')} type="number" />
                         </div>
                         <div className="space-y-2">
-                            <Label>رقم الهاتف (واتساب)</Label>
-                            <Input value={newMember.phone} onChange={e => setNewMember({ ...newMember, phone: e.target.value })} placeholder="01xxxxxxxxx" type="tel" className="text-left" dir="ltr" />
+                            <Label>{t('addMember.phone')}</Label>
+                            <Input value={newMember.phone} onChange={e => setNewMember({ ...newMember, phone: e.target.value })} placeholder={t('addMember.phonePlaceholder')} type="tel" className="text-left" dir="ltr" />
                         </div>
                         <div className="space-y-2">
-                            <Label>تاريخ الميلاد</Label>
+                            <Label>{t('addMember.birthDate')}</Label>
                             <Input value={newMember.birth_date} onChange={e => setNewMember({ ...newMember, birth_date: e.target.value })} type="date" />
                         </div>
                         <div className="space-y-2">
-                            <Label>النوع</Label>
+                            <Label>{t('addMember.gender')}</Label>
                             <Select onValueChange={v => setNewMember({ ...newMember, gender: v })}>
-                                <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t('addMember.selectGender')} /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="male">ذكر</SelectItem>
-                                    <SelectItem value="female">أنثى</SelectItem>
+                                    <SelectItem value="male">{t('addMember.male')}</SelectItem>
+                                    <SelectItem value="female">{t('addMember.female')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label>العنوان</Label>
-                            <Input value={newMember.address} onChange={e => setNewMember({ ...newMember, address: e.target.value })} placeholder="العنوان بالتفصيل" />
+                            <Label>{t('addMember.address')}</Label>
+                            <Input value={newMember.address} onChange={e => setNewMember({ ...newMember, address: e.target.value })} placeholder={t('addMember.addressPlaceholder')} />
                         </div>
                         <div className="space-y-2">
-                            <Label>الحالة الاجتماعية</Label>
+                            <Label>{t('addMember.socialStatus')}</Label>
                             <Select onValueChange={v => setNewMember({ ...newMember, social_status: v })}>
-                                <SelectTrigger><SelectValue placeholder="اختر الحالة" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t('addMember.selectStatus')} /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="single">أعزب</SelectItem>
-                                    <SelectItem value="married">متزوج</SelectItem>
-                                    <SelectItem value="widowed">أرمل</SelectItem>
-                                    <SelectItem value="divorced">مطلق</SelectItem>
+                                    <SelectItem value="single">{t('addMember.single')}</SelectItem>
+                                    <SelectItem value="married">{t('addMember.married')}</SelectItem>
+                                    <SelectItem value="widowed">{t('addMember.widowed')}</SelectItem>
+                                    <SelectItem value="divorced">{t('addMember.divorced')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>الوظيفة</Label>
-                            <Input value={newMember.job} onChange={e => setNewMember({ ...newMember, job: e.target.value })} placeholder="المهنة / الوظيفة" />
+                            <Label>{t('addMember.job')}</Label>
+                            <Input value={newMember.job} onChange={e => setNewMember({ ...newMember, job: e.target.value })} placeholder={t('addMember.jobPlaceholder')} />
                         </div>
                         <div className="space-y-2">
-                            <Label>عدد الأبناء</Label>
+                            <Label>{t('addMember.childrenCount')}</Label>
                             <Input value={newMember.children_count} onChange={e => setNewMember({ ...newMember, children_count: parseInt(e.target.value) || 0 })} type="number" min={0} />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className={isRTL ? 'flex-row-reverse' : ''}>
                         <Button onClick={handleAddMember} disabled={isAddingMember} className="bg-[#1b71bc] hover:bg-[#1b71bc]/90">
                             {isAddingMember && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-                            {isAddingMember ? 'جارٍ الحفظ...' : 'حفظ'}
+                            {isAddingMember ? t('addMember.saving') : t('actions.save')}
                         </Button>
-                        <Button variant="outline" onClick={() => setAddDialogOpen(false)} disabled={isAddingMember}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setAddDialogOpen(false)} disabled={isAddingMember}>{t('actions.cancel')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Print Form Dialog */}
             <Dialog open={printDialogOpen} onOpenChange={setPrintDialogOpen}>
-                <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto print:max-w-none print:h-auto print:overflow-visible">
+                <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto print:max-w-none print:h-auto print:overflow-visible" dir={isRTL ? 'rtl' : 'ltr'}>
                     <div id="printable-form" className="p-8 bg-white text-black print:p-0">
-                        <div className="flex justify-between items-start mb-8 border-b pb-4">
-                            <div className="text-right">
+                        <div className={`flex justify-between items-start mb-8 border-b pb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            <div className={isRTL ? 'text-right' : 'text-left'}>
                                 {selectedRecord?.memberType === 'team_member' ? (
-                                    <div className="text-sm font-bold mb-1 text-amber-700">عضو فريق</div>
+                                    <div className="text-sm font-bold mb-1 text-amber-700">{t('memberTypes.teamMember')}</div>
                                 ) : (
-                                    <div className="text-sm font-bold mb-1">قيمة الإستمارة (٢٥٠ ج)</div>
+                                    <div className="text-sm font-bold mb-1">{t('print.formFee')}</div>
                                 )}
                             </div>
                             <div className="text-center">
                                 <h2 className="text-2xl font-bold mb-2">
-                                    {selectedRecord?.memberType === 'team_member' ? 'استمارة عضوية فريق' : 'استمارة عضوية'}
+                                    {selectedRecord?.memberType === 'team_member' ? t('print.teamMembershipForm') : t('print.membershipForm')}
                                 </h2>
                                 <div className="text-primary font-bold">HUC</div>
-                                <div className="text-xs">نادي جامعة حلوان</div>
-                                <div className="text-xs">Helwan Univ. Club</div>
+                                <div className="text-xs">{t('print.clubName')}</div>
+                                <div className="text-xs">{t('print.clubNameEn')}</div>
                             </div>
                         </div>
 
@@ -550,94 +583,94 @@ export default function RegistrationManagementPage() {
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).style.display = 'none';
-                                                (e.target as HTMLImageElement).parentElement!.innerText = 'صورة';
+                                                (e.target as HTMLImageElement).parentElement!.innerText = t('print.photo');
                                             }}
                                         />
                                     ) : (
-                                        <span>صورة</span>
+                                        <span>{t('print.photo')}</span>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="col-span-9 space-y-6 z-10 text-right" dir="rtl">
-                                <div className="flex gap-2">
-                                    <span className="font-bold min-w-[80px]">الاسم:</span>
+                            <div className={`col-span-9 space-y-6 z-10 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className="font-bold min-w-[80px]">{t('print.name')}:</span>
                                     <div className="flex-1 border-b border-dotted border-black px-2">{selectedRecord?.first_name_ar} {selectedRecord?.last_name_ar}</div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <span className="font-bold min-w-[80px]">تاريخ الميلاد:</span>
+                                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className="font-bold min-w-[80px]">{t('print.birthDate')}:</span>
                                     <div className="flex-1 border-b border-dotted border-black px-2">{selectedRecord?.birth_date}</div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <span className="font-bold min-w-[80px]">النوع:</span>
+                                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className="font-bold min-w-[80px]">{t('print.gender')}:</span>
                                     <div className="flex-1 border-b border-dotted border-black px-2">
-                                        {selectedRecord?.gender === 'male' ? 'ذكر' : selectedRecord?.gender === 'female' ? 'أنثى' : ''}
+                                        {selectedRecord?.gender === 'male' ? t('addMember.male') : selectedRecord?.gender === 'female' ? t('addMember.female') : ''}
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <span className="font-bold min-w-[80px]">العنوان:</span>
+                                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className="font-bold min-w-[80px]">{t('print.address')}:</span>
                                     <div className="flex-1 border-b border-dotted border-black px-2">{selectedRecord?.address}</div>
                                 </div>
                                 {selectedRecord?.memberType === 'team_member' && selectedRecord.teams && selectedRecord.teams.length > 0 && (
-                                    <div className="flex gap-2">
-                                        <span className="font-bold min-w-[80px]">الفرق:</span>
+                                    <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className="font-bold min-w-[80px]">{t('print.teams')}:</span>
                                         <div className="flex-1 border-b border-dotted border-black px-2">{selectedRecord.teams.join(' - ')}</div>
                                     </div>
                                 )}
                                 {selectedRecord?.memberType !== 'team_member' && (
-                                    <div className="flex gap-2 items-center">
-                                        <span className="font-bold min-w-[80px]">الحالة الاجتماعية:</span>
-                                        <div className="flex gap-4 flex-1">
-                                            {['اعزب', 'متزوج', 'متزوج ويعول', 'ارمل', 'مطلق'].map(status => (
-                                                <div key={status} className="flex items-center gap-1">
-                                                    <div className={`w-4 h-4 rounded-full border border-black ${(status === 'اعزب' && selectedRecord?.social_status === 'single') ||
-                                                        (status === 'متزوج' && selectedRecord?.social_status === 'married') ||
-                                                        (status === 'ارمل' && selectedRecord?.social_status === 'widowed') ||
-                                                        (status === 'مطلق' && selectedRecord?.social_status === 'divorced')
-                                                        ? 'bg-black' : ''
-                                                        }`} />
-                                                    <span>{status}</span>
-                                                </div>
-                                            ))}
+                                    <div className={`flex gap-2 items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className="font-bold min-w-[80px]">{t('print.socialStatus')}:</span>
+                                        <div className={`flex gap-4 flex-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                            {[t('print.single'), t('print.married'), t('print.marriedWithDependents'), t('print.widowed'), t('print.divorced')].map((status, i) => {
+                                                const statusKeys = ['single', 'married', 'married', 'widowed', 'divorced'];
+                                                const isChecked = selectedRecord?.social_status === statusKeys[i] && (i !== 2 || selectedRecord?.social_status === 'married');
+                                                if (i === 2 && selectedRecord?.social_status !== 'married') return null;
+                                                return (
+                                                    <div key={status} className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                                        <div className={`w-4 h-4 rounded-full border border-black ${isChecked ? 'bg-black' : ''}`} />
+                                                        <span>{status}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
-                                <div className="flex gap-2">
-                                    <span className="font-bold min-w-[80px]">الهاتف واتس اب:</span>
+                                <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className="font-bold min-w-[80px]">{t('print.phone')}:</span>
                                     <div className="flex-1 border-b border-dotted border-black px-2" dir="ltr">{selectedRecord?.phone}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-12 text-right z-10 relative" dir="rtl">
-                            <div className="font-bold mb-2">إقرار</div>
-                            <div className="flex gap-4 mb-2">
-                                <span>أقر أنا</span>
+                        <div className={`mt-12 z-10 relative ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                            <div className="font-bold mb-2">{t('print.declaration')}</div>
+                            <div className={`flex gap-4 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <span>{t('print.iDeclare')}</span>
                                 <span className="border-b border-dotted border-black flex-1"></span>
-                                <span>رقم قومي</span>
+                                <span>{t('print.nationalId')}</span>
                                 <span className="border-b border-dotted border-black flex-1">{selectedRecord?.national_id}</span>
-                                <span>الموقع ادناه بأن</span>
+                                <span>{t('print.declareBelow')}</span>
                             </div>
                             <p className="text-justify leading-relaxed mb-8">
-                                البيانات الواردة في هذه الاستمارة صحيحة على مسؤوليتي الشخصية مع الالتزام بالقانون الرياضي المصري ولائحة النظام الأساسي لأندية الشركات والمصانع والوزارات والمصالح الحكومية ووحدات الإدارة المحلية والهيئات العامة وأجهزة الدولة وسلطاتها واللائحة المالية وتعديلاتها.
+                                {t('print.declarationText')}
                             </p>
-                            <div className="flex justify-between items-end mt-8">
-                                <div className="text-left w-1/3">
-                                    <div className="flex gap-2 mb-2">
-                                        <span>تحريراً في</span><span>/</span><span>/</span><span>20 م</span>
+                            <div className={`flex justify-between items-end mt-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-1/3 ${isRTL ? 'text-left' : 'text-right'}`}>
+                                    <div className={`flex gap-2 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span>{t('print.issuedOn')}</span><span>/</span><span>/</span><span>{t('print.year')}</span>
                                     </div>
                                 </div>
                                 <div className="w-1/3">
-                                    <div className="mb-2 flex gap-2">
-                                        <span>المقر بما فيه:</span>
+                                    <div className={`mb-2 flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span>{t('print.acknowledged')}:</span>
                                         <span className="border-b border-dotted border-black flex-1"></span>
                                     </div>
-                                    <div className="mb-2 flex gap-2">
-                                        <span>الاسم:</span>
+                                    <div className={`mb-2 flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span>{t('print.signatureName')}:</span>
                                         <span className="border-b border-dotted border-black flex-1"></span>
                                     </div>
-                                    <div className="mb-2 flex gap-2">
-                                        <span>التوقيع:</span>
+                                    <div className={`mb-2 flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span>{t('print.signature')}:</span>
                                         <span className="border-b border-dotted border-black flex-1"></span>
                                     </div>
                                 </div>
@@ -648,28 +681,28 @@ export default function RegistrationManagementPage() {
                     <DialogFooter className="print:hidden mt-4">
                         <Button onClick={handlePrint} className="gap-2 bg-[#1b71bc] hover:bg-[#1b71bc]/90">
                             <Printer className="h-4 w-4" />
-                            طباعة
+                            {t('actions.print')}
                         </Button>
-                        <Button variant="outline" onClick={() => setPrintDialogOpen(false)}>إغلاق</Button>
+                        <Button variant="outline" onClick={() => setPrintDialogOpen(false)}>{t('actions.close')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Review Record Details Dialog — 2 Tabs */}
             <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
                     <DialogHeader className="shrink-0 pb-0">
                         <div className="flex items-center justify-between">
                             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                                مراجعة الطلب
+                                {t('review.title')}
                                 {selectedRecord?.memberType === 'team_member' ? (
-                                    <span className="text-xs font-normal bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">عضو فريق</span>
+                                    <span className="text-xs font-normal bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{t('memberTypes.teamMember')}</span>
                                 ) : (
-                                    <span className="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">عضو</span>
+                                    <span className="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">{t('memberTypes.member')}</span>
                                 )}
                             </DialogTitle>
                         </div>
-                        <DialogDescription className="sr-only">مراجعة بيانات ومستندات العضو</DialogDescription>
+                        <DialogDescription className="sr-only">{t('review.title')}</DialogDescription>
 
                         {/* ── Tab bar ── */}
                         <div className="flex gap-0 mt-3 border-b border-border">
@@ -682,7 +715,7 @@ export default function RegistrationManagementPage() {
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                         }`}
                                 >
-                                    {tab === 'data' ? '👤 بيانات العضو' : '🖼️ المستندات والصور'}
+                                    {tab === 'data' ? t('review.memberData') : t('review.documents')}
                                 </button>
                             ))}
                         </div>
@@ -697,9 +730,9 @@ export default function RegistrationManagementPage() {
                                 <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl">
                                     <div className="w-20 h-24 rounded-xl border-2 border-border bg-background overflow-hidden shadow flex items-center justify-center shrink-0">
                                         {selectedRecord?.photo ? (
-                                            <img src={getFileUrl(selectedRecord.photo)} alt="الصورة الشخصية" className="w-full h-full object-cover" />
+                                            <img src={getFileUrl(selectedRecord.photo)} alt={t('review.personalPhoto')} className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-xs text-muted-foreground text-center px-1">لا توجد صورة</span>
+                                            <span className="text-xs text-muted-foreground text-center px-1">{t('review.noPhoto')}</span>
                                         )}
                                     </div>
                                     <div className="flex-1 space-y-1">
@@ -710,10 +743,10 @@ export default function RegistrationManagementPage() {
                                         <div className="flex flex-wrap gap-2 mt-1">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${selectedRecord?.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
                                                 }`}>
-                                                {selectedRecord?.status === 'active' ? 'نشط' : 'قيد الانتظار'}
+                                                {selectedRecord?.status === 'active' ? t('status.active') : t('status.pending')}
                                             </span>
                                             <span className="text-xs bg-muted px-2.5 py-0.5 rounded-full text-muted-foreground">
-                                                تسجيل: {selectedRecord?.created_at ? new Date(selectedRecord.created_at).toLocaleDateString('ar-EG') : '—'}
+                                                {t('review.registered')}: {selectedRecord?.created_at ? new Date(selectedRecord.created_at).toLocaleDateString(locale) : t('common.notAvailable')}
                                             </span>
                                         </div>
                                     </div>
@@ -724,27 +757,27 @@ export default function RegistrationManagementPage() {
 
                                     {/* Identity */}
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">الرقم القومي</p>
-                                        <p className="text-sm font-semibold font-mono" dir="ltr">{selectedRecord?.national_id || '—'}</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('table.nationalId')}</p>
+                                        <p className="text-sm font-semibold font-mono" dir="ltr">{selectedRecord?.national_id || t('common.notAvailable')}</p>
                                     </div>
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">رقم الهاتف</p>
-                                        <p className="text-sm font-semibold" dir="ltr">{selectedRecord?.phone || '—'}</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('table.phone')}</p>
+                                        <p className="text-sm font-semibold" dir="ltr">{selectedRecord?.phone || t('common.notAvailable')}</p>
                                     </div>
 
                                     {/* Birthday with age */}
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">تاريخ الميلاد</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('addMember.birthDate')}</p>
                                         {(() => {
                                             const raw = selectedRecord?.birthdate || selectedRecord?.birth_date;
-                                            if (!raw) return <p className="text-sm font-semibold">—</p>;
+                                            if (!raw) return <p className="text-sm font-semibold">{t('common.notAvailable')}</p>;
                                             const dob = new Date(raw);
                                             if (isNaN(dob.getTime())) return <p className="text-sm font-semibold">{String(raw)}</p>;
                                             const age = Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
                                             return (
                                                 <p className="text-sm font-semibold">
-                                                    {dob.toLocaleDateString('ar-EG')}
-                                                    <span className="mr-2 text-xs font-normal text-primary">({age} سنة)</span>
+                                                    {dob.toLocaleDateString(locale)}
+                                                    <span className={`${isRTL ? 'mr-2' : 'ml-2'} text-xs font-normal text-primary`}>({age} {t('review.age')})</span>
                                                 </p>
                                             );
                                         })()}
@@ -752,62 +785,58 @@ export default function RegistrationManagementPage() {
 
                                     {/* Registration date */}
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">تاريخ التسجيل</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('table.registrationDate')}</p>
                                         {selectedRecord?.created_at ? (() => {
                                             const d = new Date(selectedRecord.created_at);
                                             return (
                                                 <p className="text-sm font-semibold">
-                                                    {d.toLocaleDateString('ar-EG')}
-                                                    <span className="mr-2 text-xs font-normal text-muted-foreground">{d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    {d.toLocaleDateString(locale)}
+                                                    <span className={`${isRTL ? 'mr-2' : 'ml-2'} text-xs font-normal text-muted-foreground`}>{d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </p>
                                             );
-                                        })() : <p className="text-sm font-semibold">—</p>}
+                                        })() : <p className="text-sm font-semibold">{t('common.notAvailable')}</p>}
                                     </div>
 
                                     {/* Gender */}
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">الجنس</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('addMember.gender')}</p>
                                         <p className="text-sm font-semibold">
-                                            {selectedRecord?.gender === 'male' ? '👨 ذكر' : selectedRecord?.gender === 'female' ? '👩 أنثى' : '—'}
+                                            {getGenderLabel(selectedRecord?.gender)}
                                         </p>
                                     </div>
 
                                     {/* Social status */}
                                     <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">الحالة الاجتماعية</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('addMember.socialStatus')}</p>
                                         <p className="text-sm font-semibold">
-                                            {selectedRecord?.social_status === 'single' ? 'أعزب / عزباء'
-                                                : selectedRecord?.social_status === 'married' ? 'متزوج / متزوجة'
-                                                    : selectedRecord?.social_status === 'widowed' ? 'أرمل / أرملة'
-                                                        : selectedRecord?.social_status === 'divorced' ? 'مطلق / مطلقة'
-                                                            : selectedRecord?.social_status || '—'}
+                                            {getSocialStatusLabel(selectedRecord?.social_status)}
                                         </p>
                                     </div>
 
                                     {/* Address — full width */}
                                     <div className="sm:col-span-2 bg-background border border-border rounded-lg px-4 py-2.5">
-                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">العنوان</p>
-                                        <p className="text-sm font-semibold">{selectedRecord?.address || '—'}</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('addMember.address')}</p>
+                                        <p className="text-sm font-semibold">{selectedRecord?.address || t('common.notAvailable')}</p>
                                     </div>
                                 </div>
 
                                 {/* ── Special / Extra Data ── */}
                                 <div className="border border-primary/20 bg-primary/5 rounded-xl p-4 space-y-3">
-                                    <p className="text-xs font-bold text-primary tracking-wide">البيانات الخاصة</p>
+                                    <p className="text-xs font-bold text-primary tracking-wide">{t('review.specialData')}</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                            <p className="text-[11px] text-muted-foreground font-medium mb-0.5">نوع العضوية</p>
+                                            <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('review.membershipType')}</p>
                                             <p className="text-sm font-semibold">
-                                                {selectedRecord?.memberType === 'team_member' ? '🏅 عضو فريق رياضي' : '👤 عضو اجتماعي'}
+                                                {selectedRecord?.memberType === 'team_member' ? t('review.sportsTeamMember') : t('review.socialMember')}
                                             </p>
                                         </div>
                                         <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                            <p className="text-[11px] text-muted-foreground font-medium mb-0.5">الوظيفة / المهنة</p>
-                                            <p className="text-sm font-semibold">{selectedRecord?.job || '—'}</p>
+                                            <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('review.job')}</p>
+                                            <p className="text-sm font-semibold">{selectedRecord?.job || t('common.notAvailable')}</p>
                                         </div>
                                         {selectedRecord?.memberType === 'team_member' && selectedRecord.teams && selectedRecord.teams.length > 0 && (
                                             <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-                                                <p className="text-[11px] text-amber-700 font-medium mb-1.5">الفرق الرياضية المسجل بها</p>
+                                                <p className="text-[11px] text-amber-700 font-medium mb-1.5">{t('review.registeredTeams')}</p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {selectedRecord.teams.map(t => (
                                                         <span key={t} className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-200">{t}</span>
@@ -828,21 +857,21 @@ export default function RegistrationManagementPage() {
                                 <div className="space-y-2">
                                     <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                                         <span className="w-1 h-4 bg-[#1b71bc] rounded-full inline-block" />
-                                        الصورة الشخصية
+                                        {t('review.personalPhoto')}
                                     </h4>
                                     <div className="flex justify-center">
                                         {selectedRecord?.photo ? (
                                             <a href={getFileUrl(selectedRecord.photo)} target="_blank" rel="noreferrer">
                                                 <img
                                                     src={getFileUrl(selectedRecord.photo)}
-                                                    alt="الصورة الشخصية"
+                                                    alt={t('review.personalPhoto')}
                                                     className="h-48 w-auto rounded-xl border-2 border-border shadow-md object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
                                                 />
                                             </a>
                                         ) : (
                                             <div className="h-48 w-36 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/10 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                                 <FileText className="h-8 w-8 opacity-40" />
-                                                <span className="text-xs">لا توجد صورة شخصية</span>
+                                                <span className="text-xs">{t('review.noPersonalPhoto')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -851,8 +880,8 @@ export default function RegistrationManagementPage() {
                                 {/* ID front + back side by side */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {[
-                                        { label: 'بطاقة الرقم القومي (أمام)', src: selectedRecord?.national_id_front, color: '#1b71bc' },
-                                        { label: 'بطاقة الرقم القومي (خلف)', src: selectedRecord?.national_id_back, color: '#1b71bc' },
+                                        { label: t('review.idFront'), src: selectedRecord?.national_id_front, color: '#1b71bc' },
+                                        { label: t('review.idBack'), src: selectedRecord?.national_id_back, color: '#1b71bc' },
                                     ].map(doc => (
                                         <div key={doc.label} className="space-y-2">
                                             <h4 className="text-sm font-bold flex items-center gap-2">
@@ -867,7 +896,7 @@ export default function RegistrationManagementPage() {
                                                 ) : (
                                                     <div className="text-center p-4">
                                                         <FileText className="h-7 w-7 mx-auto text-muted-foreground/40 mb-1" />
-                                                        <span className="text-xs text-muted-foreground">لم يتم الرفع</span>
+                                                        <span className="text-xs text-muted-foreground">{t('review.notUploaded')}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -879,17 +908,17 @@ export default function RegistrationManagementPage() {
                                 <div className="space-y-2">
                                     <h4 className="text-sm font-bold flex items-center gap-2">
                                         <span className="w-1 h-4 bg-orange-500 rounded-full inline-block" />
-                                        التقرير الطبي
+                                        {t('review.medicalReport')}
                                     </h4>
                                     <div className="min-h-[220px] w-full rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/10 overflow-hidden flex items-center justify-center group cursor-zoom-in transition-all hover:border-orange-400/60">
                                         {selectedRecord?.medical_report ? (
                                             <a href={getFileUrl(selectedRecord.medical_report)} target="_blank" rel="noreferrer" className="w-full h-full">
-                                                <img src={getFileUrl(selectedRecord.medical_report)} alt="التقرير الطبي" className="w-full h-full object-contain transition-transform group-hover:scale-105" />
+                                                <img src={getFileUrl(selectedRecord.medical_report)} alt={t('review.medicalReport')} className="w-full h-full object-contain transition-transform group-hover:scale-105" />
                                             </a>
                                         ) : (
                                             <div className="text-center p-8">
                                                 <FileText className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                                                <span className="text-sm text-muted-foreground">لم يتم ارفاق تقرير طبي</span>
+                                                <span className="text-sm text-muted-foreground">{t('review.noMedicalReport')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -898,7 +927,7 @@ export default function RegistrationManagementPage() {
                         )}
                     </div>
 
-                    <DialogFooter className="shrink-0 border-t pt-4">
+                    <DialogFooter className={`shrink-0 border-t pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <RoleGuard privilege="MANAGE_MEMBERSHIP_REQUEST">
                             <Button
                                 className="bg-green-600 hover:bg-green-700 text-white gap-2 px-8"
@@ -911,13 +940,13 @@ export default function RegistrationManagementPage() {
                                 disabled={selectedRecord?.status === 'active' || approvingId === `${selectedRecord?.memberType}-${selectedRecord?.id}`}
                             >
                                 {approvingId === `${selectedRecord?.memberType}-${selectedRecord?.id}` ? (
-                                    <><Loader2 className="h-4 w-4 animate-spin" />جارٍ الاعتماد...</>
+                                    <><Loader2 className="h-4 w-4 animate-spin" />{t('review.approving')}</>
                                 ) : (
-                                    <><Check className="h-4 w-4" />اعتماد {selectedRecord?.memberType === 'team_member' ? 'عضوية الفريق' : 'العضوية'}</>
+                                    <><Check className="h-4 w-4" />{t('review.approveMembership', { type: selectedRecord?.memberType === 'team_member' ? t('memberTypes.teamMember') : t('memberTypes.member') })}</>
                                 )}
                             </Button>
                         </RoleGuard>
-                        <Button variant="outline" onClick={() => setReviewDialogOpen(false)} className="px-8">إغلاق</Button>
+                        <Button variant="outline" onClick={() => setReviewDialogOpen(false)} className="px-8">{t('actions.close')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

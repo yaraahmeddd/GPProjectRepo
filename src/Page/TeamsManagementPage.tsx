@@ -375,78 +375,81 @@ export default function TeamsManagementPage() {
 
     // ─── Render ──────────────────────────────────────────────────────────────────
     return (
-        <div className="h-full overflow-y-auto p-6 pb-8 space-y-6">
+        <div className="h-full flex flex-col overflow-hidden" dir="rtl">
 
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <Users className="w-6 h-6 text-primary" />
-                    إدارة الفرق
-                </h1>
-                <RoleGuard privilege="CREATE_TEAM">
-                    <Button onClick={openAdd} className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        إضافة فريق
-                    </Button>
-                </RoleGuard>
+            <div className="px-6 py-4 border-b border-border bg-background shrink-0">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                            <Users className="w-6 h-6 text-primary" />
+                            إدارة الفرق
+                        </h1>
+                        <div className="flex items-center gap-4 mt-1">
+                            <p className="text-sm text-muted-foreground">
+                                إجمالي الفرق: <strong>{teams.length}</strong>
+                            </p>
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
+                                {teams.filter(t => t.status === "active").length} نشط
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
+                                {teams.filter(t => t.status !== "active").length} غير نشط
+                            </span>
+                        </div>
+                    </div>
+                    <RoleGuard privilege="CREATE_TEAM">
+                        <Button onClick={openAdd} className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            إضافة فريق
+                        </Button>
+                    </RoleGuard>
+                </div>
             </div>
 
-            {/* ── Filter bar ── */}
-            <div className="flex items-center gap-3 flex-wrap">
-                {/* Status checkbox popover */}
+            {/* ── Toolbar ── */}
+            <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-muted/20 shrink-0 flex-wrap">
+                {/* Search */}
+                <div className="relative flex-1 max-w-sm">
+                    <Input
+                        placeholder="ابحث عن فريق..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="h-9 pl-7 pr-3"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Status filter */}
                 <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                     <PopoverTrigger asChild>
-                        <button className={`flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs transition-colors
-                            ${filterStatuses.length > 0
-                                ? "border-primary bg-primary/5 text-primary"
-                                : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
-                            <Filter className="w-3 h-3" />
+                        <button className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs transition-colors ${
+                            filterStatuses.length > 0 ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
+                            <Filter className="w-3.5 h-3.5" />
                             الحالة
                             {filterStatuses.length > 0 && (
-                                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
-                                    {filterStatuses.length}
-                                </span>
+                                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">{filterStatuses.length}</span>
                             )}
                         </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-52 p-0" dir="rtl">
                         <div className="py-1">
-                            {([
-                                { key: "active" as TeamStatus, label: "نشط", color: "text-emerald-700" },
-                                { key: "inactive" as TeamStatus, label: "غير نشط", color: "text-rose-700" },
-                                { key: "suspended" as TeamStatus, label: "موقوف", color: "text-amber-700" },
-                                { key: "archived" as TeamStatus, label: "مؤرشف", color: "text-slate-600" },
-                            ]).map(({ key, label, color }) => {
-                                const checked = filterStatuses.includes(key);
-                                const count = teams.filter(t => t.status === key).length;
-                                return (
-                                    <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors">
-                                        <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={() => {
-                                                setFilterStatuses(prev =>
-                                                    prev.includes(key)
-                                                        ? prev.filter(s => s !== key)
-                                                        : [...prev, key]
-                                                );
-                                            }}
-                                            className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
-                                        />
-                                        <span className={`text-xs font-medium ${color}`}>{label}</span>
-                                        <span className="mr-auto text-[10px] text-muted-foreground">{count}</span>
-                                    </label>
-                                );
-                            })}
+                            {([{ key: "active" as TeamStatus, label: "نشط", color: "text-emerald-700" }, { key: "inactive" as TeamStatus, label: "غير نشط", color: "text-rose-700" }, { key: "suspended" as TeamStatus, label: "موقوف", color: "text-amber-700" }, { key: "archived" as TeamStatus, label: "مؤرشف", color: "text-slate-600" }]).map(({ key, label, color }) => (
+                                <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors">
+                                    <input type="checkbox" checked={filterStatuses.includes(key)}
+                                        onChange={() => setFilterStatuses(prev => prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key])}
+                                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer" />
+                                    <span className={`text-xs font-medium ${color}`}>{label}</span>
+                                    <span className="mr-auto text-[10px] text-muted-foreground">{teams.filter(t => t.status === key).length}</span>
+                                </label>
+                            ))}
                         </div>
                         {filterStatuses.length > 0 && (
                             <div className="flex justify-end px-3 py-2 border-t border-border">
-                                <button
-                                    onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    مسح
-                                </button>
+                                <button onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">مسح</button>
                             </div>
                         )}
                     </PopoverContent>
@@ -455,82 +458,49 @@ export default function TeamsManagementPage() {
                 {/* Sport filter */}
                 <Popover open={sportPopoverOpen} onOpenChange={setSportPopoverOpen}>
                     <PopoverTrigger asChild>
-                        <button className={`flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs transition-colors
-                            ${filterSports.length > 0
-                                ? "border-primary bg-primary/5 text-primary"
-                                : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
+                        <button className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs transition-colors ${
+                            filterSports.length > 0 ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
                             الرياضة
                             {filterSports.length > 0 && (
-                                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
-                                    {filterSports.length}
-                                </span>
+                                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">{filterSports.length}</span>
                             )}
                         </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-52 p-0" dir="rtl">
                         <div className="py-1 max-h-64 overflow-y-auto">
-                            {sports.map(s => {
-                                const checked = filterSports.includes(s.id);
-                                const count = teams.filter(t => t.sport_id === s.id).length;
-                                return (
-                                    <label key={s.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors">
-                                        <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={() => {
-                                                setFilterSports(prev =>
-                                                    prev.includes(s.id)
-                                                        ? prev.filter(id => id !== s.id)
-                                                        : [...prev, s.id]
-                                                );
-                                            }}
-                                            className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
-                                        />
-                                        <span className="text-xs font-medium">{s.name_ar}</span>
-                                        <span className="mr-auto text-[10px] text-muted-foreground">{count}</span>
-                                    </label>
-                                );
-                            })}
+                            {sports.map(s => (
+                                <label key={s.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors">
+                                    <input type="checkbox" checked={filterSports.includes(s.id)}
+                                        onChange={() => setFilterSports(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id])}
+                                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer" />
+                                    <span className="text-xs font-medium">{s.name_ar}</span>
+                                    <span className="mr-auto text-[10px] text-muted-foreground">{teams.filter(t => t.sport_id === s.id).length}</span>
+                                </label>
+                            ))}
                         </div>
                         {filterSports.length > 0 && (
                             <div className="flex justify-end px-3 py-2 border-t border-border">
-                                <button
-                                    onClick={() => { setFilterSports([]); setSportPopoverOpen(false); }}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    مسح
-                                </button>
+                                <button onClick={() => { setFilterSports([]); setSportPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">مسح</button>
                             </div>
                         )}
                     </PopoverContent>
                 </Popover>
 
-                {/* Search */}
-                <div className="relative">
-                    <Input
-                        placeholder="ابحث عن فريق..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="h-8 w-48 text-xs pl-7"
-                    />
-                    {search && (
-                        <button onClick={() => setSearch("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            <X className="h-3 w-3" />
-                        </button>
-                    )}
-                </div>
-
+                <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-xs text-muted-foreground">{filtered.length} نتيجة</span>
                 {hasFilters && (
-                    <button
-                        onClick={() => { setFilterSports([]); setFilterStatuses([]); setSearch(""); void fetchTeams(); }}
-                        className="text-xs text-primary hover:underline"
-                    >
+                    <button onClick={() => { setFilterSports([]); setFilterStatuses([]); setSearch(""); void fetchTeams(); }} className="text-xs text-primary hover:underline">
                         مسح الفلاتر ×
                     </button>
                 )}
             </div>
 
+
+            {/* ── Table area ── */}
+            <div className="flex-1 overflow-auto pb-6">
+
             {/* ── Table — same motion wrapper + row style as SportsPage ── */}
+
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="shadow-sm">
                 <Table>
                     <TableHeader>
@@ -625,7 +595,7 @@ export default function TeamsManagementPage() {
                     </TableBody>
                 </Table>
             </motion.div>
-
+            </div>
             {/* ══ Add / Edit Dialog — same structure as SportsPage dialog ══ */}
             <Dialog
                 open={isAddOpen}

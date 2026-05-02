@@ -29,21 +29,20 @@ const HUCLogo = "/assets/HUC logo.jpeg";
  * - Step 5: Files
  */
 const STEP_FIELDS: Record<number, readonly string[]> = {
-    0: ['memberRole'],
-    1: ['selectedSports'], // Conditionally validated
-    2: ['category'],
-    3: [
+    0: [],                // Category — auto-advances on card click, no trigger needed
+    1: ['memberRole'],    // Role Selection
+    2: [
         'first_name_ar', 'last_name_ar', 'first_name_en', 'last_name_en',
         'email', 'password', 'confirmPassword', 'phone', 'dob', 'gender',
         'nationality', 'nationalId', 'passportNumber',
     ],
-    4: [
+    3: [
         'address', 'universityId', 'facultyId', 'graduationYear',
         'professionId', 'department', 'salary', 'professionCode',
         'retirementDate', 'seasonalDuration', 'visaStatus',
         'relatedMemberId', 'relationshipType',
     ],
-    5: [], // Files handled separately
+    4: [], // Files handled separately
 };
 
 /**
@@ -57,17 +56,18 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     // Define steps based on role
     const getSteps = () => {
         if (memberRole === 'sports_player') {
-            // Player: Role -> Basic Info -> Files (Sports step removed)
+            // Player: Category -> Role -> Basic Info -> Files (Details skipped)
             return [
-                { id: 0, label: 'نوع العضوية' },
+                { id: 0, label: 'الفئة' },
+                { id: 1, label: 'نوع العضوية' },
                 { id: 2, label: 'البيانات الأساسية' },
                 { id: 4, label: 'المستندات' },
             ];
         } else {
-            // Member: Role -> Category -> Basic Info -> Details -> Files
+            // Member: Category -> Role -> Basic Info -> Details -> Files
             return [
-                { id: 0, label: 'نوع العضوية' },
-                { id: 1, label: 'الفئة' },
+                { id: 0, label: 'الفئة' },
+                { id: 1, label: 'نوع العضوية' },
                 { id: 2, label: 'البيانات الأساسية' },
                 { id: 3, label: 'التفاصيل' },
                 { id: 4, label: 'المستندات' },
@@ -78,10 +78,11 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     // Map current internal step to visual progress
     const getVisualStep = () => {
         if (memberRole === 'sports_player') {
-            // Player step mapping: 0->0, 2->1, 4->2
-            if (currentStep === 2) return 1; // Basic Info
-            if (currentStep === 4) return 2; // Files
-            return 0; // Role Selection
+            // Player step mapping: 0->0, 1->1, 2->2, 4->3
+            if (currentStep === 1) return 1; // Role
+            if (currentStep === 2) return 2; // Basic Info
+            if (currentStep === 4) return 3; // Files
+            return 0; // Category
         } else {
             // Member uses direct mapping
             return currentStep;
@@ -261,8 +262,7 @@ export const RegisterPage = () => {
      */
     const getNextStep = (current: number): number => {
         if (memberRole === 'sports_player') {
-            // Player skips Sports (Step 1) and Details (Step 3)
-            if (current === 0) return 2; // Role -> Basic Info
+            // Player skips Details (Step 3) only
             if (current === 2) return 4; // Basic Info -> Files
         }
         return current + 1;
@@ -273,8 +273,7 @@ export const RegisterPage = () => {
      */
     const getPrevStep = (current: number): number => {
         if (memberRole === 'sports_player') {
-            // Player reverse skip logic
-            if (current === 2) return 0; // Basic Info -> Role
+            // Player reverse skip: Files go back to Basic Info (not Details)
             if (current === 4) return 2; // Files -> Basic Info
         }
         return current - 1;
@@ -296,12 +295,7 @@ export const RegisterPage = () => {
             return;
         }
 
-        // For step 1 (sports), only validate if player
-        if (step === 1 && memberRole === 'social_member') {
-            setStep(getNextStep(step));
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
+
 
         const isValid = await trigger(fieldsToValidate as (keyof RegisterFormValues)[]);
 
@@ -546,13 +540,11 @@ export const RegisterPage = () => {
     const renderStep = () => {
         switch (step) {
             case 0:
-                return <Step0_RoleSelection />;
+                // Category Selection — shown for BOTH roles
+                return <Step1Category onNext={nextStep} />;
             case 1:
-                if (memberRole === 'sports_player') {
-                    return null; // Skipped
-                } else {
-                    return <Step1Category onNext={nextStep} />;
-                }
+                // Role Selection (Member / Team Member) — shown for BOTH roles
+                return <Step0_RoleSelection />;
             case 2:
                 return <Step2BasicInfo onNext={nextStep} onPrev={prevStep} />;
             case 3:
@@ -583,7 +575,7 @@ export const RegisterPage = () => {
     /**
      * Should show navigation buttons
      */
-    const showNavButtons = step === 0 || step === 1;
+    const showNavButtons = step === 1; // Only Role step needs global nav (Category auto-advances on card click)
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 font-['Cairo'] text-right" dir="rtl">
