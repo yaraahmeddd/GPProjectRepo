@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Search, RefreshCw, Trophy, ChevronRight, ChevronLeft, Loader2, Users } from "lucide-react";
 import {
   Dialog,
@@ -106,6 +106,22 @@ export default function SportsMembersPage() {
   const [sportTeams, setSportTeams] = useState<Record<number, { id: string; name_ar: string; name_en: string }[]>>({});
   // sport_id → selected team uuid
   const [selectedTeams, setSelectedTeams] = useState<Record<number, string>>({});
+
+  // ── Assign-team modal state ───────────────────────────────────────────────
+  const [assignModal, setAssignModal] = useState<{
+    open: boolean;
+    member: MemberRow | null;
+    step: 1 | 2;
+    selectedSport: SportItem | null;
+    selectedTeam: { id: string; name_ar: string } | null;
+  }>({ open: false, member: null, step: 1, selectedSport: null, selectedTeam: null });
+
+  const [assignTeams, setAssignTeams] = useState<{
+    list: { id: string; name_ar: string; max_participants: number }[];
+    loading: boolean;
+  }>({ list: [], loading: false });
+
+  const [assignSaving, setAssignSaving] = useState(false);
 
   // ── Load sports master list ONCE ──────────────────────────────────────────
   useEffect(() => {
@@ -448,6 +464,33 @@ export default function SportsMembersPage() {
     }
   };
 
+  // ── Assign-team modal handlers ────────────────────────────────────────────
+  const openAssignModal = (member: MemberRow) => {
+    setAssignModal({ open: true, member, step: 1, selectedSport: null, selectedTeam: null });
+    setAssignTeams({ list: [], loading: false });
+  };
+
+  const closeAssignModal = () => {
+    setAssignModal({ open: false, member: null, step: 1, selectedSport: null, selectedTeam: null });
+    setAssignTeams({ list: [], loading: false });
+    setAssignSaving(false);
+  };
+
+  const handleAssignSportSelect = (sport: SportItem) => {
+    setAssignModal(prev => ({ ...prev, step: 2, selectedSport: sport, selectedTeam: null }));
+    setAssignTeams({ list: [], loading: true });
+    // Reuse exact same pattern as line 338
+    api.get<{ data?: { id: string; name_ar: string; max_participants: number }[] }>(`/teams?sport_id=${sport.id}`)
+      .then(res => {
+        const raw = res?.data as Record<string, unknown>;
+        const data = Array.isArray(raw?.data)
+          ? (raw.data as { id: string; name_ar: string; max_participants: number }[])
+          : Array.isArray(raw) ? (raw as { id: string; name_ar: string; max_participants: number }[]) : [];
+        setAssignTeams({ list: data, loading: false });
+      })
+      .catch(() => setAssignTeams({ list: [], loading: false }));
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col" dir="rtl">
@@ -643,14 +686,24 @@ export default function SportsMembersPage() {
 
                   {/* Action */}
                   <td className="px-4 py-3 align-middle text-center">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
-                      onClick={() => openEdit(member)}
-                    >
-                      تعديل الرياضات
-                    </Button>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                        onClick={() => openEdit(member)}
+                      >
+                        تعديل الرياضات
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 gap-1.5 border-amber-400/60 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        onClick={() => openAssignModal(member)}
+                      >
+                        تعيين فريق
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -821,6 +874,157 @@ export default function SportsMembersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Assign-Team Modal (2-step) ── */}
+      <Dialog
+        open={assignModal.open}
+        onOpenChange={open => { if (!open) closeAssignModal(); }}
+      >
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {assignModal.step === 1
+                ? "تعيين فريق — اختر الرياضة"
+                : `تعيين فريق — اختر الفريق`}
+            </DialogTitle>
+            <DialogDescription>
+              {assignModal.member
+                ? `العضو: ${assignModal.member.firstNameAr} ${assignModal.member.lastNameAr}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* ── STEP 1: Sport selection ── */}
+          {assignModal.step === 1 && (
+            <div className="space-y-3 py-2">
+              {allSports.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">لا توجد رياضات متاحة</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+                  {allSports.map(sport => (
+                    <button
+                      key={sport.id}
+                      onClick={() => handleAssignSportSelect(sport)}
+                      className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/20 p-4 hover:border-primary hover:bg-primary/5 transition-all duration-150 text-center"
+                    >
+                      <span className="text-sm font-semibold">{sport.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-end pt-2 border-t border-border">
+                <Button variant="outline" onClick={closeAssignModal}>إلغاء</Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2: Team selection ── */}
+          {assignModal.step === 2 && (
+            <div className="space-y-3 py-2">
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <button
+                  onClick={() => setAssignModal(prev => ({ ...prev, step: 1, selectedTeam: null }))}
+                  className="hover:text-primary transition-colors"
+                >
+                  الرياضات
+                </button>
+                <span>/</span>
+                <span className="text-foreground font-medium">{assignModal.selectedSport?.name}</span>
+              </div>
+
+              {/* Teams list */}
+              {assignTeams.loading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">جاري تحميل الفرق...</span>
+                </div>
+              ) : assignTeams.list.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">لا توجد فرق لهذه الرياضة</div>
+              ) : (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {assignTeams.list.map(team => {
+                    const isSelected = assignModal.selectedTeam?.id === team.id;
+                    return (
+                      <button
+                        key={team.id}
+                        onClick={() => setAssignModal(prev => ({ ...prev, selectedTeam: { id: team.id, name_ar: team.name_ar } }))}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all duration-150 text-right ${
+                          isSelected
+                            ? "border-primary bg-primary/8 text-primary"
+                            : "border-border bg-background hover:border-primary/50 hover:bg-muted/40"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">{team.name_ar}</span>
+                        <span className="text-xs text-muted-foreground">{team.max_participants} مشارك</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={() => setAssignModal(prev => ({ ...prev, step: 1, selectedTeam: null }))}
+                >
+                  رجوع
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={closeAssignModal} disabled={assignSaving}>إلغاء</Button>
+                  <Button
+                    disabled={!assignModal.selectedTeam || assignSaving}
+                    className="gap-2"
+                    onClick={async () => {
+                      if (!assignModal.member || !assignModal.selectedSport || !assignModal.selectedTeam) return;
+                      setAssignSaving(true);
+                      try {
+                        if (assignModal.member.isTeamPlayer) {
+                          // Team player — reuse exact same pattern as line 388
+                          await api.post(`/team-members/${assignModal.member.id}/sports`, {
+                            sport_id: assignModal.selectedSport.id,
+                            team_id: assignModal.selectedTeam.id,
+                          });
+                        } else {
+                          // Club member — reuse exact same pattern as line 413
+                          await api.post(`/member-teams/member/${assignModal.member.id}/choose-sport`, {
+                            team_id: assignModal.selectedTeam.id,
+                          });
+                        }
+                        toast({
+                          title: "تم التعيين ✓",
+                          description: `تم تعيين ${assignModal.member.firstNameAr} إلى فريق «${assignModal.selectedTeam.name_ar}» بنجاح`,
+                        });
+                        closeAssignModal();
+                        void fetchPage(currentPage, search, memberTab);
+                      } catch (err) {
+                        const e = err as { response?: { data?: { message?: string } }; message?: string };
+                        toast({
+                          title: "فشل التعيين",
+                          description: e?.response?.data?.message ?? e?.message ?? "حدث خطأ غير متوقع",
+                          variant: "destructive",
+                        });
+                        setAssignSaving(false);
+                      }
+                    }}
+                  >
+                    {assignSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        جارٍ التعيين...
+                      </>
+                    ) : (
+                      "تعيين"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -33,6 +33,13 @@ type Sport = {
     membersCount: number;
 };
 
+type Team = {
+    id: string;
+    name_ar: string;
+    name_en?: string;
+    max_participants?: number;
+};
+
 type SportApiItem = {
     id: number;
     name?: string;
@@ -201,6 +208,11 @@ export default function SportManagementPage() {
     const [sortDir, setSortDir] = useState<SortDir>("desc");           // newest first
     const [page, setPage] = useState(1);
 
+    // ── Team sub-nav state ───────────────────────────────────────────────────────────────
+    const [selectedTeam, setSelectedTeam] = useState<{ id: string; name_ar: string } | null>(null);
+    const [teamsForSport, setTeamsForSport] = useState<Team[]>([]);
+    const [teamsLoading, setTeamsLoading] = useState(false);
+
     // ── Map API sport ────────────────────────────────────────────────────────────
     const mapSport = (item: SportApiItem): Sport => ({
         id: item.id,
@@ -243,9 +255,39 @@ export default function SportManagementPage() {
 
     useEffect(() => { void fetchMembers(selectedSport); }, [selectedSport, fetchMembers]);
 
-    // ── Handle sport selection ───────────────────────────────────────────────────
+    // ── Fetch teams for selected sport (same pattern as SportsMembersPage line 338) ─────────
+    const fetchTeamsForSport = useCallback(async (sport: Sport) => {
+        setTeamsLoading(true);
+        setTeamsForSport([]);
+        try {
+            const res = await api.get(`/teams?sport_id=${sport.id}`);
+            const raw = res?.data as Record<string, unknown>;
+            const data = Array.isArray(raw?.data)
+                ? (raw.data as Team[])
+                : Array.isArray(raw) ? (raw as Team[]) : [];
+            setTeamsForSport(data);
+        } catch {
+            setTeamsForSport([]);
+        } finally {
+            setTeamsLoading(false);
+        }
+    }, []);
+
+    // Fetch teams whenever sport selection changes
+    useEffect(() => {
+        if (selectedSport) {
+            void fetchTeamsForSport(selectedSport);
+        } else {
+            setTeamsForSport([]);
+            setSelectedTeam(null);
+        }
+    }, [selectedSport, fetchTeamsForSport]);
+
+    // ── Handle sport selection ────────────────────────────────────────────────────────────
     const handleSelectSport = (sport: Sport | null) => {
         setSelectedSport(sport);
+        setSelectedTeam(null);
+        setTeamsForSport([]);
         setSearch("");
         setFilterStatus("all");
         setPage(1);
@@ -262,6 +304,13 @@ export default function SportManagementPage() {
         let r = [...members];
 
         if (filterStatus !== "all") r = r.filter((m) => m.status === filterStatus);
+
+        // Filter by selected team (client-side: match team_name in nested team_member_teams)
+        if (selectedTeam) {
+            r = r.filter((m) =>
+                (m.team_member_teams ?? []).some((t) => t.team_name === selectedTeam.name_ar)
+            );
+        }
 
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -281,9 +330,9 @@ export default function SportManagementPage() {
         });
 
         return r;
-    }, [members, search, filterStatus, sortField, sortDir]);
+    }, [members, search, filterStatus, sortField, sortDir, selectedTeam]);
 
-    useEffect(() => { setPage(1); }, [search, filterStatus, sortField, sortDir, selectedSport]);
+    useEffect(() => { setPage(1); }, [search, filterStatus, sortField, sortDir, selectedSport, selectedTeam]);
 
     const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
     const pageRows = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -397,6 +446,58 @@ export default function SportManagementPage() {
                             {processed.length} نتيجة
                         </span>
                     </div>
+
+                    {/* ── Teams chip sub-nav (shown only when a sport is selected) ── */}
+                    {selectedSport && (
+                        <div className="shrink-0 border-b border-border bg-background px-6 py-2">
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+                                {teamsLoading ? (
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        <span>جارٍ تحميل الفرق...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* الكل chip */}
+                                        <button
+                                            onClick={() => setSelectedTeam(null)}
+                                            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-150 ${
+                                                selectedTeam === null
+                                                    ? "border-[#214474] bg-[#214474] text-white shadow-sm"
+                                                    : "border-border bg-card text-muted-foreground hover:border-[#214474]/50 hover:text-foreground"
+                                            }`}
+                                        >
+                                            الكل
+                                        </button>
+                                        {teamsForSport.map((team) => (
+                                            <button
+                                                key={team.id}
+                                                onClick={() => setSelectedTeam({ id: team.id, name_ar: team.name_ar })}
+                                                className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-150 ${
+                                                    selectedTeam?.id === team.id
+                                                        ? "border-[#214474] bg-[#214474] text-white shadow-sm"
+                                                        : "border-border bg-card text-muted-foreground hover:border-[#214474]/50 hover:text-foreground"
+                                                }`}
+                                            >
+                                                <Trophy className="h-3 w-3" />
+                                                {team.name_ar}
+                                                {team.max_participants != null && (
+                                                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                                                        selectedTeam?.id === team.id ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                                                    }`}>
+                                                        {team.max_participants}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        ))}
+                                        {teamsForSport.length === 0 && (
+                                            <span className="text-xs text-muted-foreground">لا توجد فرق لهذه الرياضة</span>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Table */}
                     <div className="flex-1 overflow-auto">
