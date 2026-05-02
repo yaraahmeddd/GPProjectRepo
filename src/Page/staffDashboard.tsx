@@ -79,7 +79,7 @@ function SmartIndexRedirect() {
   const target = FALLBACK_PAGES.find(
     (p) => !p.privilege || hasPrivilege(p.privilege)
   );
- 
+
   return <Navigate to={target?.path ?? "/staff/dashboard/profile"} replace />;
 }
 
@@ -116,7 +116,7 @@ const StaffDashboard = () => {
             <Route path="admin/staff/revoke-privileges" element={<ProtectedRoute requiredPrivilege="VIEW_PRIVILEGES"><RevokePrivilegesPage /></ProtectedRoute>} />
             <Route path="members/manage" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><MemberManagementPage /></ProtectedRoute>} />
             <Route path="members/sports" element={<ProtectedRoute requiredPrivilege="ASSIGN_SPORT_TO_MEMBER"><SportsMembersPage /></ProtectedRoute>} />
-            <Route path="members/sports-view" element={<ProtectedRoute requiredPrivilege="VIEW_TEAM_MEMBERS"><SportManagementPage /></ProtectedRoute>} />
+            {/* <Route path="members/sports-view" element={<ProtectedRoute requiredPrivilege="VIEW_TEAM_MEMBERS"><SportManagementPage /></ProtectedRoute>} /> */}
             <Route path="members/new" element={<ProtectedRoute requiredPrivilege="CREATE_MEMBER"><StaffAddMemberPage /></ProtectedRoute>} />
             <Route path="members/new-team-member" element={<ProtectedRoute requiredPrivilege="ADD_TEAM_MEMBER"><StaffAddTeamMemberPage /></ProtectedRoute>} />
             <Route path="members/card-print" element={<ProtectedRoute requiredPrivilege="VIEW_MEMBERS"><CardPrintPage /></ProtectedRoute>} />

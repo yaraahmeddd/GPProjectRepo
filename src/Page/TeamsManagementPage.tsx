@@ -51,6 +51,8 @@ interface ApiTeam {
     sport?: Sport;
     max_participants: number;
     status: TeamStatus;
+    visibility_type?: string;
+    price?: number | null;
     training_schedules?: {
         id: string;
         days_ar: string;
@@ -75,7 +77,9 @@ type TeamFormState = {
     nameEn: string;
     sportId: string;
     maxParticipants: string;
-    status: "active" | "inactive";
+    status: TeamStatus;
+    visibility: string;
+    price: string;
     training: TeamTraining;
 };
 
@@ -87,6 +91,7 @@ const emptyTraining = (): TeamTraining => ({
 
 const emptyForm = (): TeamFormState => ({
     nameAr: "", nameEn: "", sportId: "", maxParticipants: "", status: "active",
+    visibility: "", price: "",
     training: emptyTraining(),
 });
 
@@ -266,7 +271,9 @@ export default function TeamsManagementPage() {
             nameEn: team.name_en,
             sportId: String(team.sport_id),
             maxParticipants: String(team.max_participants),
-            status: team.status === "active" ? "active" : "inactive",
+            status: team.status,
+            visibility: team.visibility_type ?? "",
+            price: team.price != null ? String(team.price) : "",
             training: sched ? {
                 selectedDays: (sched.days_ar ?? "").split(", ").filter(Boolean),
                 startTime: (sched.start_time ?? "").slice(0, 5),
@@ -310,10 +317,13 @@ export default function TeamsManagementPage() {
         try {
             if (editTeam) {
                 await api.put(`/teams/${editTeam.id}`, {
+                    sport_id: Number(form.sportId),
                     name_ar: form.nameAr,
                     name_en: form.nameEn,
                     max_participants: Number(form.maxParticipants),
                     status: form.status,
+                    visibility_type: form.visibility || undefined,
+                    price: form.price !== "" ? Number(form.price) : undefined,
                     training: trainingBody,
                 });
                 toast({ title: "✓ تم التحديث", description: "تم تحديث الفريق بنجاح" });
@@ -324,6 +334,8 @@ export default function TeamsManagementPage() {
                     name_en: form.nameEn,
                     max_participants: Number(form.maxParticipants),
                     status: form.status,
+                    visibility_type: form.visibility || undefined,
+                    price: form.price !== "" ? Number(form.price) : undefined,
                     training: trainingBody,
                 });
                 toast({ title: "✓ تمت الإضافة", description: "تم إضافة الفريق بنجاح" });
@@ -612,18 +624,23 @@ export default function TeamsManagementPage() {
 
                         <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
 
-                            {/* Sport selector — shown on create only */}
-                            {!isEdit && (
-                                <div>
-                                    <Label>الرياضة <span className="text-destructive">*</span></Label>
-                                    <Select value={form.sportId} onValueChange={v => setForm(p => ({ ...p, sportId: v }))}>
-                                        <SelectTrigger><SelectValue placeholder="اختر الرياضة" /></SelectTrigger>
-                                        <SelectContent>
-                                            {sports.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name_ar}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+                            {/* Sport selector — shown on both create and edit; disabled on edit */}
+                            <div>
+                                <Label>الرياضة <span className="text-destructive">*</span></Label>
+                                <Select
+                                    value={form.sportId}
+                                    onValueChange={v => { if (!isEdit) setForm(p => ({ ...p, sportId: v })); }}
+                                    disabled={isEdit}
+                                >
+                                    <SelectTrigger className={isEdit ? "opacity-60 cursor-not-allowed" : ""}>
+                                        <SelectValue placeholder="اختر الرياضة" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {sports.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name_ar}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                {isEdit && <p className="text-[11px] text-muted-foreground mt-1">لا يمكن تغيير الرياضة بعد إنشاء الفريق</p>}
+                            </div>
 
                             {/* Name row */}
                             <div className="grid grid-cols-2 gap-3">
@@ -668,13 +685,39 @@ export default function TeamsManagementPage() {
                                 </div>
                                 <div>
                                     <Label>الحالة</Label>
-                                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as "active" | "inactive" }))}>
+                                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as TeamStatus }))}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="active">نشط</SelectItem>
                                             <SelectItem value="inactive">غير نشط</SelectItem>
+                                            <SelectItem value="suspended">موقوف</SelectItem>
+                                            <SelectItem value="archived">مؤرشف</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </div>
+                            </div>
+
+                            {/* Visibility + Price */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label>العضوية</Label>
+                                    <Select value={form.visibility || "none"} onValueChange={v => setForm(p => ({ ...p, visibility: v === "none" ? "" : v }))}>
+                                        <SelectTrigger><SelectValue placeholder="اختر العضوية" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none" className="text-muted-foreground">— بدون تحديد —</SelectItem>
+                                            <SelectItem value="INTERNAL">داخلي</SelectItem>
+                                            <SelectItem value="EXTERNAL">خارجي</SelectItem>
+                                            <SelectItem value="BOTH">داخلي و خارجي</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>السعر (ج.م)</Label>
+                                    <Input
+                                        type="number" min={0} placeholder="0"
+                                        value={form.price}
+                                        onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
+                                    />
                                 </div>
                             </div>
 

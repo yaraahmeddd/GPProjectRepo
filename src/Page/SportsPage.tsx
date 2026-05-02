@@ -26,6 +26,8 @@ interface Sport {
   price: number;
   imageUrl?: string | null;
   is_active?: boolean;
+  branch_id?: number | null;
+  requires_booking?: boolean;
   schedules?: ApiSchedule[];
   hasTeams?: boolean;          // true when at least one team exists for this sport
 }
@@ -210,9 +212,17 @@ type SportApiItem = {
   members_count?: number;
   sport_image?: string | null;
   is_active?: boolean;
+  branch_id?: number | null;
+  requires_booking?: boolean;
   // Relations included by getAllSports
   training_schedules?: { id?: string; days_ar?: string; start_time?: string; end_time?: string }[];
   teams?: { id?: string }[];          // included when backend eager-loads teams
+};
+
+type ApiBranch = {
+  id: number;
+  name_ar: string;
+  name_en?: string;
 };
 
 type SportsListResponse = {
@@ -353,9 +363,9 @@ export default function SportsPage() {
   const [editSport, setEditSport] = useState<Sport | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [form, setForm] = useState({ nameAr: "", nameEn: "" });
+  const [form, setForm] = useState({ nameAr: "", nameEn: "", isActive: true, branchId: "" });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [teams, setTeams] = useState<Team[]>([emptyTeam()]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [teamsError, setTeamsError] = useState("");
   const [requiresBooking, setRequiresBooking] = useState(false);
   const [filterTab, setFilterTab] = useState<"all" | "active" | "draft" | "inactive">("all");
@@ -363,6 +373,7 @@ export default function SportsPage() {
   const [dialogMembers, setDialogMembers] = useState<ApiMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [fields, setFields] = useState<ApiField[]>([]);
+  const [branches, setBranches] = useState<ApiBranch[]>([]);
   const { toast } = useToast();
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -389,6 +400,8 @@ export default function SportsPage() {
       price: typeof priceNum === "number" && !Number.isNaN(priceNum) ? priceNum : 0,
       imageUrl: item.sport_image ?? null,
       is_active: item.is_active ?? true,
+      branch_id: item.branch_id ?? null,
+      requires_booking: item.requires_booking ?? false,
       schedules: directSchedules as ApiSchedule[],
       hasTeams,
     };
@@ -432,55 +445,74 @@ export default function SportsPage() {
 
   useEffect(() => { void fetchFields(); }, [fetchFields]);
 
+  // ── Fetch branches ───────────────────────────────────────────────────────────
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: ApiBranch[] }>('/branches');
+      setBranches(Array.isArray(res?.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.warn('[SportsPage][fetchBranches] فشل تحميل الفروع:', err);
+    }
+  }, []);
+
+  useEffect(() => { void fetchBranches(); }, [fetchBranches]);
+
   const handleSave = async () => {
     const action = editSport ? 'EDIT' : 'CREATE';
     console.log(`[SportsPage][handleSave] بدء عملية ${action}`, { form, teams, requiresBooking });
 
-    if (!form.nameAr && !form.nameEn) {
-      console.warn('[SportsPage][handleSave] تحقق فشل: اسم الرياضة مفقود');
+    // ─── Mandatory field validation ───
+    if (!form.nameAr.trim()) {
+      toast({ title: 'حقل مطلوب', description: 'يرجى إدخال اسم الرياضة بالعربي.', variant: 'destructive' });
+      return;
+    }
+    if (!form.nameEn.trim()) {
+      toast({ title: 'حقل مطلوب', description: 'يرجى إدخال اسم الرياضة بالإنجليزي.', variant: 'destructive' });
+      return;
+    }
+    if (!imagePreview) {
+      toast({ title: 'حقل مطلوب', description: 'يرجى رفع صورة للرياضة.', variant: 'destructive' });
+      return;
+    }
+    if (!form.branchId) {
+      toast({ title: 'حقل مطلوب', description: 'يرجى اختيار الفرع.', variant: 'destructive' });
       return;
     }
 
-    // ─── Team Validation ───
-    if (teams.length === 0) {
-      setTeamsError('يرجى إضافة فريق واحد على الأقل.');
-      console.warn('[SportsPage][handleSave] تحقق فشل: لا توجد فرق');
-      return;
-    }
-    for (const t of teams) {
-      if (!t.nameAr.trim() || !t.nameEn.trim()) {
-        setTeamsError('اسم الفريق بالعربي والإنجليزي مطلوبان لكل فريق.');
-        console.warn('[SportsPage][handleSave] تحقق فشل: اسم فريق مفقود -', t);
-        return;
-      }
-      const maxP = Number(t.maxParticipants);
-      if (!t.maxParticipants || isNaN(maxP) || maxP <= 0) {
-        setTeamsError('يرجى تحديد عدد المشاركين الأقصى لكل فريق (أكبر من صفر).');
-        console.warn('[SportsPage][handleSave] تحقق فشل: max_participants -', t.maxParticipants);
-        return;
-      }
-      const tr = t.training;
-      if (!tr.startTime || !tr.endTime) {
-        setTeamsError(`يرجى تحديد وقت بداية ونهاية التدريب لفريق "${t.nameAr || t.nameEn}".`);
-        console.warn('[SportsPage][handleSave] تحقق فشل: وقت التدريب مفقود -', tr);
-        return;
-      }
-      if (!isValidTimeRange(tr.startTime, tr.endTime)) {
-        setTeamsError(`وقت النهاية يجب أن يكون بعد وقت البداية لفريق "${t.nameAr || t.nameEn}".`);
-        return;
-      }
-      if (tr.selectedDays.length === 0) {
-        setTeamsError(`يرجى اختيار يوم تدريب واحد على الأقل لفريق "${t.nameAr || t.nameEn}".`);
-        return;
-      }
-      if (!tr.fieldId) {
-        setTeamsError(`يرجى اختيار الملعب لفريق "${t.nameAr || t.nameEn}".`);
-        return;
-      }
-      const fee = Number(tr.trainingFee);
-      if (tr.trainingFee === "" || isNaN(fee) || fee < 0) {
-        setTeamsError(`يرجى تحديد رسوم التدريب لفريق "${t.nameAr || t.nameEn}".`);
-        return;
+    // ─── Team validation (only when teams have been added) ───
+    if (teams.length > 0) {
+      for (const t of teams) {
+        if (!t.nameAr.trim() || !t.nameEn.trim()) {
+          setTeamsError('اسم الفريق بالعربي والإنجليزي مطلوبان لكل فريق.');
+          return;
+        }
+        const maxP = Number(t.maxParticipants);
+        if (!t.maxParticipants || isNaN(maxP) || maxP <= 0) {
+          setTeamsError('يرجى تحديد عدد المشاركين الأقصى لكل فريق (أكبر من صفر).');
+          return;
+        }
+        const tr = t.training;
+        if (!tr.startTime || !tr.endTime) {
+          setTeamsError(`يرجى تحديد وقت بداية ونهاية التدريب لفريق "${t.nameAr || t.nameEn}".`);
+          return;
+        }
+        if (!isValidTimeRange(tr.startTime, tr.endTime)) {
+          setTeamsError(`وقت النهاية يجب أن يكون بعد وقت البداية لفريق "${t.nameAr || t.nameEn}".`);
+          return;
+        }
+        if (tr.selectedDays.length === 0) {
+          setTeamsError(`يرجى اختيار يوم تدريب واحد على الأقل لفريق "${t.nameAr || t.nameEn}".`);
+          return;
+        }
+        if (!tr.fieldId) {
+          setTeamsError(`يرجى اختيار الملعب لفريق "${t.nameAr || t.nameEn}".`);
+          return;
+        }
+        const fee = Number(tr.trainingFee);
+        if (tr.trainingFee === "" || isNaN(fee) || fee < 0) {
+          setTeamsError(`يرجى تحديد رسوم التدريب لفريق "${t.nameAr || t.nameEn}".`);
+          return;
+        }
       }
     }
     setTeamsError("");
@@ -510,7 +542,10 @@ export default function SportsPage() {
         const body: Record<string, unknown> = {
           name_ar: form.nameAr,
           name_en: form.nameEn,
+          is_active: form.isActive,
+          requires_booking: requiresBooking,
         };
+        if (form.branchId) body.branch_id = Number(form.branchId);
         if (imagePreview !== null) body.sport_image = imagePreview;
         console.log(`[SportsPage][handleSave] PUT /api/sports/${editSport.id}`, body);
         await api.put<{ message: string; data: unknown }>(`/sports/${editSport.id}`, body);
@@ -546,8 +581,11 @@ export default function SportsPage() {
         const body: Record<string, unknown> = {
           name_ar: form.nameAr,
           name_en: form.nameEn,
-          teams: teamsPayload,
+          is_active: form.isActive,
+          requires_booking: requiresBooking,
+          ...(teams.length > 0 ? { teams: teamsPayload } : {}),
         };
+        if (form.branchId) body.branch_id = Number(form.branchId);
         if (imagePreview !== null) body.sport_image = imagePreview;
         console.log('[SportsPage][handleSave] POST /api/sports', JSON.stringify(body, null, 2));
         const res = await api.post<{ message: string; data: unknown }>('/sports', body);
@@ -557,9 +595,9 @@ export default function SportsPage() {
 
       setEditSport(null);
       setIsAddOpen(false);
-      setForm({ nameAr: "", nameEn: "" });
+      setForm({ nameAr: "", nameEn: "", isActive: true, branchId: "" });
       setImagePreview(null);
-      setTeams([emptyTeam()]);
+      setTeams([]);
       setTeamsError("");
       setRequiresBooking(false);
       await fetchSports();
@@ -595,11 +633,16 @@ export default function SportsPage() {
   const openEdit = async (sport: Sport) => {
     console.log('[SportsPage][openEdit] فتح ديالوج التعديل للرياضة:', sport);
     setEditSport(sport);
-    setForm({ nameAr: sport.nameAr, nameEn: sport.nameEn });
+    setForm({
+      nameAr: sport.nameAr,
+      nameEn: sport.nameEn,
+      isActive: sport.is_active ?? true,
+      branchId: sport.branch_id != null ? String(sport.branch_id) : "",
+    });
     setImagePreview(sport.imageUrl ?? null);
     setTeams([emptyTeam()]);
     setTeamsError("");
-    setRequiresBooking(false);
+    setRequiresBooking(sport.requires_booking ?? false);
     setIsAddOpen(true);
 
     // Fetch existing teams for this sport
@@ -625,20 +668,20 @@ export default function SportsPage() {
           } : emptyTraining(),
         })));
       } else {
-        setTeams([emptyTeam()]);
+        setTeams([]);
       }
     } catch (err) {
       console.warn('[SportsPage][openEdit] فشل تحميل الفرق:', err);
-      setTeams([emptyTeam()]);
+      setTeams([]);
     }
   };
 
   const openAdd = () => {
     console.log('[SportsPage][openAdd] فتح ديالوج إضافة رياضة جديدة. الملاعب المتاحة:', fields.length);
     setEditSport(null);
-    setForm({ nameAr: "", nameEn: "" });
+    setForm({ nameAr: "", nameEn: "", isActive: true, branchId: "" });
     setImagePreview(null);
-    setTeams([emptyTeam()]);
+    setTeams([]);
     setTeamsError("");
     setRequiresBooking(false);
     setIsAddOpen(true);
@@ -824,9 +867,7 @@ export default function SportsPage() {
                             <Trash2 className="h-3 w-3" /> حذف
                           </Button>
                         </RoleGuard>
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => openMembers(sport)}>
-                          <Eye className="h-3 w-3" /> الأعضاء
-                        </Button>
+
                       </div>
                     </TableCell>
                   </motion.tr>
@@ -865,6 +906,40 @@ export default function SportsPage() {
                 )}
               </div>
 
+              {/* Status + Branch row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-1 block">الحالة</Label>
+                  <Select
+                    value={form.isActive ? "active" : "inactive"}
+                    onValueChange={v => setForm(f => ({ ...f, isActive: v === "active" }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">نشط</SelectItem>
+                      <SelectItem value="inactive">غير نشط</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="mb-1 block">الفرع</Label>
+                  <Select
+                    value={form.branchId || "none"}
+                    onValueChange={v => setForm(f => ({ ...f, branchId: v === "none" ? "" : v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" className="text-muted-foreground">بدون فرع</SelectItem>
+                      {branches.map(b => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name_ar}{b.name_en ? ` (${b.name_en})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div>
                 <Label>اسم الرياضة (AR)</Label>
                 <Input
@@ -890,7 +965,7 @@ export default function SportsPage() {
               {/* ─── Teams Section ─── */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">{"\u0627\u0644\u0641\u0631\u0642"}</Label>
+                  <Label className="text-base font-semibold">الفرق</Label>
                   <Button
                     type="button" size="sm" variant="outline" className="gap-1.5 text-xs"
                     onClick={() => {
@@ -901,7 +976,7 @@ export default function SportsPage() {
                     }}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    {"\u0625\u0636\u0627\u0641\u0629 \u0641\u0631\u064a\u0642"}
+                    إضافة فريق
                   </Button>
                 </div>
 
@@ -931,11 +1006,11 @@ export default function SportsPage() {
                       >
                         {/* Header */}
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-primary">{"\u0641\u0631\u064a\u0642"} {teamIdx + 1}</span>
+                          <span className="text-sm font-semibold text-primary">فريق {teamIdx + 1}</span>
                           {teams.length > 1 && (
                             <button type="button"
                               onClick={() => { console.log('[SportsPage][removeTeam]', team.id); setTeams(prev => prev.filter(t => t.id !== team.id)); }}
-                              className="rounded-md p-1 text-destructive hover:bg-destructive/10 transition-colors" aria-label="\u062d\u0630\u0641 \u0627\u0644\u0641\u0631\u064a\u0642">
+                              className="rounded-md p-1 text-destructive hover:bg-destructive/10 transition-colors" aria-label="حذف الفريق">
                               <X className="h-3.5 w-3.5" />
                             </button>
                           )}
@@ -944,10 +1019,10 @@ export default function SportsPage() {
                         {/* Bilingual names */}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <Label className="text-xs mb-1 block">{"\u0627\u0633\u0645 \u0627\u0644\u0641\u0631\u064a\u0642 (AR)"} <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1 block">اسم الفريق (AR) <span className="text-destructive">*</span></Label>
                             <input type="text" value={team.nameAr}
                               onChange={e => { upd({ nameAr: e.target.value }); if (teamsError) setTeamsError(""); }}
-                              placeholder="\u0645\u062b\u0627\u0644: \u0641\u0631\u064a\u0642 \u062a\u062d\u062a 18 \u0633\u0646\u0629"
+                              placeholder="مثال: فريق تحت 18 سنة"
                               className="w-full h-8 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                           </div>
                           <div>
@@ -962,7 +1037,7 @@ export default function SportsPage() {
                         {/* Max participants + Subscription price */}
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap shrink-0">{"الحد الأقصى"} <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs whitespace-nowrap shrink-0">الحد الأقصى <span className="text-destructive">*</span></Label>
                             <input type="number" min={1} value={team.maxParticipants}
                               onChange={e => { upd({ maxParticipants: e.target.value }); if (teamsError) setTeamsError(""); }}
                               placeholder="20"
@@ -979,11 +1054,11 @@ export default function SportsPage() {
 
                         {/* Training block */}
                         <div className="space-y-2 rounded-md border border-border/60 bg-background p-2.5">
-                          <span className="text-xs font-semibold text-muted-foreground">{"\u0645\u0648\u0627\u0639\u064a\u062f \u0627\u0644\u062a\u062f\u0631\u064a\u0628"}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">مواعيد التدريب</span>
 
                           {/* Day chips */}
                           <div>
-                            <Label className="text-xs mb-1.5 block">{"\u0623\u064a\u0627\u0645 \u0627\u0644\u062a\u062f\u0631\u064a\u0628"} <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1.5 block">أيام التدريب <span className="text-destructive">*</span></Label>
                             <div className="flex flex-wrap gap-1.5">
                               {DAYS.map(day => {
                                 const on = team.training.selectedDays.includes(day.ar);
@@ -1001,21 +1076,21 @@ export default function SportsPage() {
 
                           {/* Time pickers */}
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Label className="text-xs text-muted-foreground whitespace-nowrap">{"\u0645\u0646"}</Label>
-                            <TimeSlotPicker value={team.training.startTime} placeholder="\u0645\u0646"
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">من</Label>
+                            <TimeSlotPicker value={team.training.startTime} placeholder="من"
                               lockedValue={team.training.endTime} onChange={v => updTr({ startTime: v })} />
-                            <Label className="text-xs text-muted-foreground whitespace-nowrap">{"\u0625\u0644\u0649"}</Label>
-                            <TimeSlotPicker value={team.training.endTime} placeholder="\u0625\u0644\u0649"
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">إلى</Label>
+                            <TimeSlotPicker value={team.training.endTime} placeholder="إلى"
                               lockedValue={team.training.startTime} onChange={v => updTr({ endTime: v })} />
                           </div>
-                          {timeErr && <p className="text-[11px] text-destructive">{"\u0648\u0642\u062a \u0627\u0644\u0646\u0647\u0627\u064a\u0629 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0628\u0639\u062f \u0648\u0642\u062a \u0627\u0644\u0628\u062f\u0627\u064a\u0629"}</p>}
+                          {timeErr && <p className="text-[11px] text-destructive">وقت النهاية يجب أن يكون بعد وقت البداية</p>}
 
                           {/* Field selector — GET /api/fields */}
                           <div>
-                            <Label className="text-xs mb-1 block">{"\u0627\u0644\u0645\u0644\u0639\u0628"} <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs mb-1 block">الملعب <span className="text-destructive">*</span></Label>
                             {fields.length === 0 ? (
                               <p className="text-xs text-amber-600 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-md px-3 py-2">
-                                {"\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0644\u0627\u0639\u0628 \u0645\u062d\u0645\u0644\u0629 \u0645\u0646 API \u2014 \u062a\u0623\u0643\u062f \u0645\u0646 \u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u062e\u0627\u062f\u0645"}
+                                لا توجد ملاعب محملة من API — تأكد من اتصال الخادم
                               </p>
                             ) : (
                               <Select
@@ -1025,9 +1100,9 @@ export default function SportsPage() {
                                   updTr({ fieldId: val === "none" ? "" : val });
                                 }}
                               >
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="\u0627\u062e\u062a\u0631 \u0645\u0644\u0639\u0628" /></SelectTrigger>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="اختر ملعب" /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none" className="text-xs text-muted-foreground">{"\u0627\u062e\u062a\u0631 \u0645\u0644\u0639\u0628"}</SelectItem>
+                                  <SelectItem value="none" className="text-xs text-muted-foreground">اختر ملعب</SelectItem>
                                   {fields.map(f => (
                                     <SelectItem key={f.id} value={f.id} className="text-xs">
                                       {f.name_ar}{f.name_en ? ` (${f.name_en})` : ""}
@@ -1040,7 +1115,7 @@ export default function SportsPage() {
 
                           {/* Training fee */}
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap shrink-0">{"\u0631\u0633\u0648\u0645 \u0627\u0644\u062a\u062f\u0631\u064a\u0628 (\u062c.\u0645)"} <span className="text-destructive">*</span></Label>
+                            <Label className="text-xs whitespace-nowrap shrink-0">رسوم التدريب (ج.م) <span className="text-destructive">*</span></Label>
                             <input type="number" min={0} value={team.training.trainingFee}
                               onChange={e => updTr({ trainingFee: e.target.value })}
                               placeholder="200"
