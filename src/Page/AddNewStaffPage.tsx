@@ -468,7 +468,7 @@ export default function AddNewStaffPage() {
   // Clean up excluded privileges when packages change
   useEffect(() => {
     if (excludedPackagePrivilegeIds.length === 0) return;
-    
+
     // Get all current package privilege IDs
     const currentPackagePrivilegeIds = new Set<number>();
     selectedPackagePrivilegeCodes.forEach((code) => {

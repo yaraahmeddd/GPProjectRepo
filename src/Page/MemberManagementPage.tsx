@@ -22,6 +22,7 @@ import {
 import api from "../api/axios";
 
 import { useToast } from "../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "../Component/StaffPagesComponents/ui/button";
 
@@ -349,19 +350,19 @@ const isTeamPlayerType = (t?: MemberType) => {
 
 
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof CheckCircle; border: string }> = {
+const STATUS_CONFIG: Record<string, { labelKey: string; color: string; bg: string; icon: typeof CheckCircle; border: string }> = {
 
-    active: { label: "نشط", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", icon: CheckCircle },
+    active: { labelKey: "status.active", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", icon: CheckCircle },
 
-    suspended: { label: "موقوف", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", icon: Clock },
+    suspended: { labelKey: "status.suspended", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", icon: Clock },
 
-    banned: { label: "محظور", color: "text-red-700", bg: "bg-red-50", border: "border-red-200", icon: XCircle },
+    banned: { labelKey: "status.banned", color: "text-red-700", bg: "bg-red-50", border: "border-red-200", icon: XCircle },
 
-    expired: { label: "منتهي", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", icon: AlertTriangle },
+    expired: { labelKey: "status.expired", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200", icon: AlertTriangle },
 
-    cancelled: { label: "ملغى", color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", icon: XCircle },
+    cancelled: { labelKey: "status.cancelled", color: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", icon: XCircle },
 
-    pending: { label: "قيد المراجعة", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: Clock },
+    pending: { labelKey: "status.pending", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: Clock },
 
 };
 
@@ -369,7 +370,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const GENDER_LABELS: Record<string, string> = {
 
-    male: "ذكر", female: "أنثى", other: "أخرى",
+    male: "gender.male", female: "gender.female", other: "gender.other",
 
 };
 
@@ -424,35 +425,21 @@ const fmtDateShort = (v?: string | null) => {
 
 
 function StatusBadge({ status, compact = false }: { status: string; compact?: boolean }) {
-
+    const { t } = useTranslation('MemberManagementPage');
     const cfg = STATUS_CONFIG[status] ?? {
-
-        label: status,
-
+        labelKey: `status.${status}`,
         color: "text-muted-foreground",
-
         bg: "bg-muted",
-
         border: "border-muted",
-
         icon: Clock
-
     };
-
     const Icon = cfg.icon;
-
     return (
-
         <span className={`inline-flex items-center gap-1 rounded-full font-semibold border ${cfg.color} ${cfg.bg} ${cfg.border} ${compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"}`}>
-
             <Icon className={compact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-
-            {cfg.label}
-
+            {t(cfg.labelKey, { defaultValue: status })}
         </span>
-
     );
-
 }
 
 
@@ -466,6 +453,7 @@ function PaymentBadge({
     memberId: number;
     memberType?: "member" | "team_member";
 }) {
+    const { t } = useTranslation('MemberManagementPage');
     const payment = PAYMENTS_MAP.get(`${memberType}-${memberId}`);
     if (!payment) return null;
 
@@ -477,14 +465,14 @@ function PaymentBadge({
     if (status === "overdue") {
         return (
             <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 text-[9px] whitespace-nowrap">
-                ⚠ متأخر
+                ⚠ {t('detail.payment.statusOverdue')}
             </span>
         );
     }
 
     return (
         <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 text-[9px] whitespace-nowrap">
-            🔔 {days <= 7 ? `${days} أيام` : `${days} يوم`}
+            🔔 {t('detail.payment.expiringDays', { count: days })}
         </span>
     );
 }
@@ -532,39 +520,26 @@ type PanelProps = {
 
 
 function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, onDelete }: PanelProps) {
-
+    const { t, i18n } = useTranslation('MemberManagementPage');
     const d = details;
-
     const nameAr = `${row.firstNameAr} ${row.lastNameAr}`.trim();
-
     const nameEn = `${row.firstNameEn} ${row.lastNameEn}`.trim();
-
     const [detailTab, setDetailTab] = React.useState<'info' | 'sports' | 'photos'>('info');
 
-
-
-
     const Field = ({ label, value, ltr = false }: { label: string; value?: string | null; ltr?: boolean }) => (
-
         <div className="py-2 border-b border-border/50 last:border-0">
-
             <p className="text-[10px] text-muted-foreground mb-0.5 font-medium">{label}</p>
-
             <p className="text-sm font-semibold truncate" dir={ltr ? 'ltr' : undefined}>
-
-                {value || <span className="text-muted-foreground/40 font-normal">—</span>}
-
+                {value || <span className="text-muted-foreground/40 font-normal">{t('common.notAvailable', { defaultValue: '—' })}</span>}
             </p>
-
         </div>
-
     );
 
 
 
     return (
 
-        <div className="flex flex-col" style={{ maxHeight: '88vh' }} dir="rtl">
+        <div className="flex flex-col" style={{ maxHeight: '88vh' }} dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
 
 
@@ -599,13 +574,9 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                             <Badge variant="secondary" className="text-[10px]">{row.memberTypeLabel}</Badge>
 
                             {row.isTeamPlayer && (
-
                                 <Badge className="text-[10px] bg-amber-100 text-amber-700 hover:bg-amber-100 border-0">
-
-                                    <Trophy className="w-3 h-3 mr-1" /> لاعب
-
+                                    <Trophy className="w-3 h-3 me-1" /> {t('detail.playerBadge')}
                                 </Badge>
-
                             )}
 
                         </div>
@@ -617,19 +588,19 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                 {/* Tab bar */}
                 <div className="flex items-center gap-0 -mb-px">
                     {([
-                        { key: 'info' as const, label: 'المعلومات الشخصية' },
-                        { key: 'sports' as const, label: 'الرياضات' },
-                        { key: 'photos' as const, label: '🖼️ الصور والمستندات' },
-                    ]).map(t => (
+                        { key: 'info' as const, label: t('detail.tabInfo') },
+                        { key: 'sports' as const, label: t('detail.tabSports') },
+                        { key: 'photos' as const, label: t('detail.tabPhotos') },
+                    ]).map(tItem => (
                         <button
-                            key={t.key}
-                            onClick={() => setDetailTab(t.key)}
-                            className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === t.key
+                            key={tItem.key}
+                            onClick={() => setDetailTab(tItem.key)}
+                            className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === tItem.key
                                     ? 'border-primary text-primary'
                                     : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                         >
-                            {t.label}
+                            {tItem.label}
                         </button>
                     ))}
                 </div>
@@ -640,15 +611,10 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
             <div className="flex-1 overflow-y-auto">
 
                 {loading ? (
-
                     <div className="py-16 text-center">
-
                         <div className="w-7 h-7 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-3" />
-
-                        <p className="text-sm text-muted-foreground">جارٍ تحميل التفاصيل...</p>
-
+                        <p className="text-sm text-muted-foreground">{t('detail.loading')}</p>
                     </div>
-
                 ) : detailTab === 'info' ? (
 
                     <div className="grid grid-cols-2 gap-0 divide-x divide-x-reverse divide-border">
@@ -658,45 +624,25 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                         {/* Left column — personal + contact + extra */}
 
                         <div className="p-5 space-y-5">
-
                             <div>
-
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">المعلومات الشخصية</p>
-
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('detail.sectionPersonal')}</p>
                                 <div className="space-y-0">
-
-                                    <Field label="رقم العضو" value={`MEM-${String(row.id).padStart(5, '0')}`} ltr />
-
-                                    <Field label="الرقم القومي" value={d?.national_id ?? row.nationalId} ltr />
-
-                                    <Field label="الجنس" value={GENDER_LABELS[d?.gender ?? row.gender ?? ''] || row.gender} />
-
-                                    <Field label="الجنسية" value={d?.nationality ?? row.nationality} />
-
-                                    <Field label="تاريخ الميلاد" value={fmtDate(d?.birthdate ?? row.birthdate)} />
-
-                                    <Field label="التاريخ القومي" value={fmtDate(d?.created_at ?? row.createdAt)} />
-
+                                    <Field label={t('detail.fieldMemberId')} value={`MEM-${String(row.id).padStart(5, '0')}`} ltr />
+                                    <Field label={t('detail.fieldNationalId')} value={d?.national_id ?? row.nationalId} ltr />
+                                    <Field label={t('detail.fieldGender')} value={t(GENDER_LABELS[d?.gender ?? row.gender ?? ''] || row.gender || '')} />
+                                    <Field label={t('detail.fieldNationality')} value={d?.nationality ?? row.nationality} />
+                                    <Field label={t('detail.fieldBirthdate')} value={fmtDate(d?.birthdate ?? row.birthdate)} />
+                                    <Field label={t('detail.fieldJoinDate')} value={fmtDate(d?.created_at ?? row.createdAt)} />
                                 </div>
-
                             </div>
-
                             <div>
-
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">معلومات التواصل</p>
-
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('detail.sectionContact')}</p>
                                 <div className="space-y-0">
-
-                                    <Field label="البريد الإلكتروني" value={d?.account?.email ?? row.email} ltr />
-
-                                    <Field label="رقم الهاتف" value={d?.phone ?? row.phone} ltr />
-
-                                    <Field label="العنوان" value={d?.address ?? row.address} />
-
+                                    <Field label={t('detail.fieldEmail')} value={d?.account?.email ?? row.email} ltr />
+                                    <Field label={t('detail.fieldPhone')} value={d?.phone ?? row.phone} ltr />
+                                    <Field label={t('detail.fieldAddress')} value={d?.address ?? row.address} />
                                 </div>
-
                             </div>
-
                         </div>
 
 
@@ -704,14 +650,13 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                         {/* Right column — additional + payment */}
 
                         <div className="p-5 space-y-5">
-
                             {/* Additional info */}
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">معلومات إضافية</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('detail.sectionExtra')}</p>
                                 <div className="space-y-0">
-                                    <Field label="الحالة الصحية" value={d?.health_status ?? row.healthStatus} />
-                                    <Field label="النقاط" value={(d?.points_balance ?? row.pointsBalance).toLocaleString()} />
-                                    <Field label="نوع العضوية" value={row.memberTypeLabel} />
+                                    <Field label={t('detail.fieldHealthStatus')} value={d?.health_status ?? row.healthStatus} />
+                                    <Field label={t('detail.fieldPoints')} value={(d?.points_balance ?? row.pointsBalance).toLocaleString()} />
+                                    <Field label={t('detail.fieldMemberType')} value={row.memberTypeLabel} />
                                 </div>
                             </div>
 
@@ -726,40 +671,40 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                                 const days = getDaysUntilRenewal(payment.nextRenewalDate);
 
                                 const statusConfig = {
-                                    active: { label: "نشط", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-                                    expiring: { label: "ينتهي قريباً", cls: "bg-amber-100  text-amber-700  border-amber-200" },
-                                    overdue: { label: "متأخر", cls: "bg-rose-100   text-rose-700   border-rose-200" },
+                                    active: { label: t('detail.payment.statusActive'), cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+                                    expiring: { label: t('detail.payment.statusExpiring'), cls: "bg-amber-100  text-amber-700  border-amber-200" },
+                                    overdue: { label: t('detail.payment.statusOverdue'), cls: "bg-rose-100   text-rose-700   border-rose-200" },
                                 }[status];
 
                                 return (
                                     <section className="mt-5">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                                            بيانات الاشتراك والدفع
+                                            {t('detail.sectionPayment')}
                                         </p>
                                         <div className="rounded-xl border border-border bg-muted/30 overflow-hidden divide-y divide-border">
                                             <div className="flex items-center justify-between px-4 py-2.5">
-                                                <span className="text-[11px] text-muted-foreground">حالة الاشتراك</span>
+                                                <span className="text-[11px] text-muted-foreground">{t('detail.payment.subscriptionStatus')}</span>
                                                 <span className={`text-[11px] font-bold rounded-full border px-2.5 py-0.5 ${statusConfig.cls}`}>
                                                     {statusConfig.label}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between px-4 py-2.5">
-                                                <span className="text-[11px] text-muted-foreground">نوع الاشتراك</span>
+                                                <span className="text-[11px] text-muted-foreground">{t('detail.payment.subscriptionType')}</span>
                                                 <span className="text-sm font-medium">{payment.subscriptionType}</span>
                                             </div>
                                             <div className="flex items-center justify-between px-4 py-2.5">
-                                                <span className="text-[11px] text-muted-foreground">آخر دفعة</span>
+                                                <span className="text-[11px] text-muted-foreground">{t('detail.payment.lastPayment')}</span>
                                                 <div className="text-left" dir="ltr">
                                                     <p className="text-sm font-medium">
                                                         {new Date(payment.lastPaymentDate).toLocaleDateString("ar-EG", { day: "numeric", month: "long", year: "numeric" })}
                                                     </p>
                                                     <p className="text-[10px] text-muted-foreground">
-                                                        {payment.lastPaymentAmount.toLocaleString("ar-EG")} ج.م
+                                                        {payment.lastPaymentAmount.toLocaleString("ar-EG")}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between px-4 py-2.5">
-                                                <span className="text-[11px] text-muted-foreground">التجديد القادم</span>
+                                                <span className="text-[11px] text-muted-foreground">{t('detail.payment.nextRenewal')}</span>
                                                 <div className="text-left" dir="ltr">
                                                     <p className={`text-sm font-medium ${status === "overdue" ? "text-rose-600" :
                                                         status === "expiring" ? "text-amber-600" : ""
@@ -770,8 +715,8 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                                                         <p className={`text-[10px] font-semibold ${status === "overdue" ? "text-rose-500" : "text-amber-500"
                                                             }`}>
                                                             {status === "overdue"
-                                                                ? `متأخر ${Math.abs(days)} يوم`
-                                                                : `فاضل ${days} يوم`}
+                                                                ? t('detail.payment.overdueDays', { count: Math.abs(days) })
+                                                                : t('detail.payment.expiringDays', { count: days })}
                                                         </p>
                                                     )}
                                                 </div>
@@ -784,8 +729,8 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                                                 }`}>
                                                 {status === "overdue" ? "⚠" : "🔔"}
                                                 {status === "overdue"
-                                                    ? `تجاوز موعد التجديد منذ ${Math.abs(days)} يوم`
-                                                    : `الاشتراك سينتهي خلال ${days} يوم`}
+                                                    ? t('detail.payment.alertOverdue', { count: Math.abs(days) })
+                                                    : t('detail.payment.alertExpiring', { count: days })}
                                             </div>
                                         )}
                                     </section>
@@ -804,16 +749,16 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
 
                         <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
-                                الرياضات
+                                {t('detail.tabSports')}
                                 {sports.length > 0 && (
-                                    <span className="mr-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5 font-bold">
+                                    <span className="me-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5 font-bold">
                                         {sports.length}
                                     </span>
                                 )}
                             </p>
                             {sports.length === 0 ? (
                                 <p className="text-xs text-muted-foreground/60 py-2">
-                                    {row.isTeamPlayer ? 'لا توجد رياضات مسجّلة' : 'ليس لاعباً رياضياً'}
+                                    {row.isTeamPlayer ? t('detail.noSports') : t('detail.notPlayer')}
                                 </p>
                             ) : (
                                 <div className="flex flex-col gap-2">
@@ -826,7 +771,7 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                                             <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${s.status === 'active' ? 'bg-emerald-100 text-emerald-700'
                                                     : s.status === 'pending' ? 'bg-amber-100 text-amber-700'
                                                         : 'bg-rose-100 text-rose-700'}`}>
-                                                {s.status === 'active' ? 'نشط' : s.status === 'pending' ? 'قيد المراجعة' : s.status}
+                                                {s.status === 'active' ? t('detail.sportStatusActive') : s.status === 'pending' ? t('detail.sportStatusPending') : s.status}
                                             </span>
                                         </div>
                                     ))}
@@ -845,17 +790,17 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                         <div className="space-y-2">
                             <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                                 <span className="w-1 h-4 bg-primary rounded-full inline-block" />
-                                الصورة الشخصية
+                                {t('detail.photos.personalPhoto')}
                             </h4>
                             <div className="flex justify-center">
                                 {getFileUrl(d?.photo) ? (
                                     <a href={getFileUrl(d?.photo)} target="_blank" rel="noreferrer">
-                                        <img src={getFileUrl(d?.photo)} alt="الصورة الشخصية" className="h-48 w-auto rounded-xl border-2 border-border shadow-md object-cover cursor-zoom-in hover:opacity-90 transition-opacity" />
+                                        <img src={getFileUrl(d?.photo)} alt={t('detail.photos.personalPhoto')} className="h-48 w-auto rounded-xl border-2 border-border shadow-md object-cover cursor-zoom-in hover:opacity-90 transition-opacity" />
                                     </a>
                                 ) : (
                                     <div className="h-48 w-36 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/10 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                         <Eye className="h-8 w-8 opacity-40" />
-                                        <span className="text-xs">لا توجد صورة شخصية</span>
+                                        <span className="text-xs">{t('detail.photos.noPersonalPhoto')}</span>
                                     </div>
                                 )}
                             </div>
@@ -864,8 +809,8 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                         {/* ID front + back */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {([
-                                { label: 'بطاقة الرقم القومي (أمام)', src: d?.national_id_front, color: '#1b71bc' },
-                                { label: 'بطاقة الرقم القومي (خلف)', src: d?.national_id_back, color: '#1b71bc' },
+                                { label: t('detail.photos.idFront'), src: d?.national_id_front, color: '#1b71bc' },
+                                { label: t('detail.photos.idBack'), src: d?.national_id_back, color: '#1b71bc' },
                             ] as const).map(doc => (
                                 <div key={doc.label} className="space-y-2">
                                     <h4 className="text-sm font-bold flex items-center gap-2">
@@ -880,7 +825,7 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                                         ) : (
                                             <div className="text-center p-4">
                                                 <Eye className="h-7 w-7 mx-auto text-muted-foreground/40 mb-1" />
-                                                <span className="text-xs text-muted-foreground">لم يتم الرفع</span>
+                                                <span className="text-xs text-muted-foreground">{t('detail.photos.notUploaded')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -892,17 +837,17 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
                         <div className="space-y-2">
                             <h4 className="text-sm font-bold flex items-center gap-2">
                                 <span className="w-1 h-4 bg-orange-500 rounded-full inline-block" />
-                                التقرير الطبي
+                                {t('detail.photos.medicalReport')}
                             </h4>
                             <div className="min-h-[220px] w-full rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/10 overflow-hidden flex items-center justify-center group hover:border-orange-400/60 transition-all">
                                 {getFileUrl(d?.medical_report) ? (
                                     <a href={getFileUrl(d?.medical_report)} target="_blank" rel="noreferrer" className="w-full h-full">
-                                        <img src={getFileUrl(d?.medical_report)} alt="التقرير الطبي" className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
+                                        <img src={getFileUrl(d?.medical_report)} alt={t('detail.photos.medicalReport')} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
                                     </a>
                                 ) : (
                                     <div className="text-center p-8">
                                         <Eye className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                                        <span className="text-sm text-muted-foreground">لم يتم إرفاق تقرير طبي</span>
+                                        <span className="text-sm text-muted-foreground">{t('detail.photos.noMedicalReport')}</span>
                                     </div>
                                 )}
                             </div>
@@ -919,19 +864,19 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
             <div className="border-t border-border px-5 py-3 bg-muted/20 shrink-0 flex items-center gap-2">
                 <RoleGuard privilege="DELETE_MEMBER">
                     <Button variant="destructive" size="sm" className="gap-1.5" onClick={onDelete}>
-                        <Trash2 className="w-4 h-4" /> حذف
+                        <Trash2 className="w-4 h-4" /> {t('detail.footer.delete')}
                     </Button>
                 </RoleGuard>
 
-                <div className="flex gap-2 mr-auto">
+                <div className="flex gap-2 me-auto">
                     <RoleGuard privilege="MANAGE_MEMBER_BLOCK">
                         <Button variant="outline" size="sm" className="gap-1.5" onClick={onChangeStatus}>
-                            <Shield className="w-4 h-4" /> تغيير الحالة
+                            <Shield className="w-4 h-4" /> {t('detail.footer.changeStatus')}
                         </Button>
                     </RoleGuard>
                     <RoleGuard privilege="UPDATE_MEMBER">
                         <Button size="sm" className="gap-1.5" onClick={onEdit}>
-                            <Pencil className="w-4 h-4" /> تعديل
+                            <Pencil className="w-4 h-4" /> {t('detail.footer.edit')}
                         </Button>
                     </RoleGuard>
                 </div>
@@ -992,7 +937,7 @@ const getFileUrl = (f?: string | null): string => {
 };
 
 export default function MemberManagementPage() {
-
+    const { t, i18n } = useTranslation('MemberManagementPage');
     const { toast } = useToast();
 
 
@@ -1181,7 +1126,7 @@ export default function MemberManagementPage() {
 
         memberTypeId: 0,
 
-        memberTypeLabel: "لاعب فريق",
+        memberTypeLabel: t('memberTypes.teamPlayer', { defaultValue: "لاعب فريق" }),
 
         memberTypeCode: "TEAM_MEMBER",
 
@@ -1457,7 +1402,7 @@ export default function MemberManagementPage() {
 
             const errorMsg = err instanceof Error ? err.message : 'Unknown error';
 
-            toast({ title: "تعذر تحميل الأعضاء", description: errorMsg, variant: "destructive" });
+            toast({ title: t('toast.loadFailed'), description: errorMsg, variant: "destructive" });
 
         } finally {
 
@@ -1711,13 +1656,9 @@ export default function MemberManagementPage() {
                         console.warn('Team member response not successful:', teamRes.data);
 
                         toast({
-
-                            title: "خطأ في تحميل البيانات",
-
-                            description: `فشل تحميل بيانات لاعب الفريق (ID: ${row.id})`,
-
+                            title: t('toast.loadDetailsFailed'),
+                            description: t('toast.teamPlayerLoadFailed', { id: row.id }),
                             variant: "destructive"
-
                         });
 
                     }
@@ -1730,7 +1671,7 @@ export default function MemberManagementPage() {
 
                     toast({
 
-                        title: "تعذر تحميل التفاصيل",
+                        title: t('toast.loadDetailsFailed'),
 
                         description: `${detailMsg} (ID: ${row.id})`,
 
@@ -1776,7 +1717,7 @@ export default function MemberManagementPage() {
 
             console.error('Error loading details:', errorMsg);
 
-            toast({ title: "تعذر تحميل التفاصيل", description: errorMsg, variant: "destructive" });
+            toast({ title: t('toast.loadDetailsFailed'), description: errorMsg, variant: "destructive" });
 
         } finally {
 
@@ -1884,7 +1825,7 @@ export default function MemberManagementPage() {
             // Reset file pickers
             setPhotoFile(null); setIdFrontFile(null); setIdBackFile(null); setMedicalFile(null);
 
-            toast({ title: "تم التحديث بنجاح" });
+            toast({ title: t('toast.updateSuccess') });
 
             setEditOpen(false);
 
@@ -1926,7 +1867,7 @@ export default function MemberManagementPage() {
 
         } catch (err) {
 
-            toast({ title: "فشل التحديث", description: err instanceof Error ? err.message : "", variant: "destructive" });
+            toast({ title: t('toast.updateFailed'), description: err instanceof Error ? err.message : "", variant: "destructive" });
 
         } finally {
 
@@ -1974,7 +1915,7 @@ export default function MemberManagementPage() {
 
             });
 
-            toast({ title: "تم تغيير الحالة" });
+            toast({ title: t('toast.statusChanged') });
 
             setStatusOpen(false);
 
@@ -1984,7 +1925,7 @@ export default function MemberManagementPage() {
 
         } catch (err) {
 
-            toast({ title: "فشل تغيير الحالة", description: err instanceof Error ? err.message : "", variant: "destructive" });
+            toast({ title: t('toast.statusChangeFailed'), description: err instanceof Error ? err.message : "", variant: "destructive" });
 
         } finally {
 
@@ -2016,9 +1957,9 @@ export default function MemberManagementPage() {
 
         try {
 
-            await api.patch(`/members/${selectedRow.id}/status`, { status: "cancelled", reason: "حُذف بواسطة الإدارة" });
+            await api.patch(`/members/${selectedRow.id}/status`, { status: "cancelled", reason: t('toast.deletedByAdmin') });
 
-            toast({ title: "تم حذف العضو" });
+            toast({ title: t('toast.deleted') });
 
             setDeleteOpen(false);
 
@@ -2028,7 +1969,7 @@ export default function MemberManagementPage() {
 
         } catch (err) {
 
-            toast({ title: "فشل الحذف", description: err instanceof Error ? err.message : "", variant: "destructive" });
+            toast({ title: t('toast.deleteFailed'), description: err instanceof Error ? err.message : "", variant: "destructive" });
 
         } finally {
 
@@ -2060,7 +2001,7 @@ export default function MemberManagementPage() {
 
         ${field ? "cursor-pointer hover:text-foreground" : ""}
 
-        ${center ? "text-center" : "text-right"} ${className}`}
+        ${center ? "text-center" : "text-start"} ${className}`}
 
         >
 
@@ -2079,13 +2020,9 @@ export default function MemberManagementPage() {
 
 
     const TAB_CONFIG: { key: TabKey; label: string; icon: typeof Users; count: number }[] = [
-
-        { key: "all", label: "الجميع", icon: Users, count: allRows.length },
-
-        { key: "members", label: "الأعضاء", icon: UserCheck, count: allRows.filter((r) => !r.isTeamPlayer).length },
-
-        { key: "players", label: "اللاعبون", icon: Trophy, count: allRows.filter((r) => r.isTeamPlayer).length },
-
+        { key: "all", label: t('tabs.all'), icon: Users, count: allRows.length },
+        { key: "members", label: t('tabs.members'), icon: UserCheck, count: allRows.filter((r) => !r.isTeamPlayer).length },
+        { key: "players", label: t('tabs.players'), icon: Trophy, count: allRows.filter((r) => r.isTeamPlayer).length },
     ];
 
 
@@ -2094,7 +2031,7 @@ export default function MemberManagementPage() {
 
         <TooltipProvider>
 
-            <div className="h-[calc(100vh-4rem)] flex flex-col" dir="rtl">
+            <div className="h-[calc(100vh-4rem)] flex flex-col" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
 
 
@@ -2107,28 +2044,17 @@ export default function MemberManagementPage() {
                         <div>
 
                             <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-
                                 <Users className="w-5 h-5 text-primary" />
-
-                                إدارة الأعضاء
-
+                                {t('header.title')}
                             </h1>
-
                             <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                                 <p className="text-xs text-muted-foreground">
-
-                                    إجمالي المحملين: <strong>{allRows.length}</strong>
-
+                                    {t('header.totalLoaded')} <strong>{allRows.length}</strong>
                                     {lastFetched && (
-
-                                        <span className="mr-2 text-[10px] opacity-60">
-
-                                            آخر تحديث: {lastFetched.toLocaleTimeString("ar-EG")}
-
+                                        <span className="me-2 text-[10px] opacity-60">
+                                            {t('header.lastUpdated')} {lastFetched.toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'ar-EG')}
                                         </span>
-
                                     )}
-
                                 </p>
                                 {(() => {
                                     const alertCount = allRows.filter(r => {
@@ -2137,7 +2063,7 @@ export default function MemberManagementPage() {
                                     }).length;
                                     return alertCount > 0 ? (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 border border-amber-300 px-2.5 py-0.5 text-xs font-bold">
-                                            🔔 {alertCount} تنبيه دفع
+                                            🔔 {t('header.paymentAlert', { count: alertCount })}
                                         </span>
                                     ) : null;
                                 })()}
@@ -2148,19 +2074,12 @@ export default function MemberManagementPage() {
 
 
                         <button
-
                             onClick={() => void fetchAll()}
-
                             disabled={fetching}
-
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-xs text-muted-foreground disabled:opacity-40"
-
                         >
-
                             <RefreshCw className={`w-3.5 h-3.5 ${fetching ? "animate-spin" : ""}`} />
-
-                            {fetching ? "جارٍ التحميل..." : "تحديث"}
-
+                            {fetching ? t('header.refreshing') : t('header.refresh')}
                         </button>
 
                     </div>
@@ -2209,21 +2128,17 @@ export default function MemberManagementPage() {
 
                         {tab === "players" && playerTypes.length > 1 && (
 
-                            <div className="mr-auto flex items-center gap-2">
+                            <div className="me-auto flex items-center gap-2">
 
                                 <Trophy className="w-3 h-3 text-muted-foreground" />
 
                                 <Select value={filterPlayerType} onValueChange={setFilterPlayerType}>
 
                                     <SelectTrigger className="h-7 w-36 text-xs">
-
-                                        <SelectValue placeholder="كل الأنواع" />
-
+                                        <SelectValue placeholder={t('tabs.allTypesPlaceholder')} />
                                     </SelectTrigger>
-
                                     <SelectContent>
-
-                                        <SelectItem value="all">كل أنواع اللاعبين</SelectItem>
+                                        <SelectItem value="all">{t('tabs.allPlayerTypes')}</SelectItem>
 
                                         {playerTypes.map(({ id, label }) => (
 
@@ -2263,18 +2178,13 @@ export default function MemberManagementPage() {
 
                             <div className="relative flex-1 min-w-[160px] max-w-[280px]">
 
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                <Search className="absolute end-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 
                                 <Input
-
                                     value={search}
-
                                     onChange={(e) => setSearch(e.target.value)}
-
-                                    placeholder="بحث في الأعضاء..."
-
-                                    className="pr-9 h-8 text-xs"
-
+                                    placeholder={t('toolbar.searchPlaceholder')}
+                                    className="pe-9 h-8 text-xs"
                                 />
 
                             </div>
@@ -2294,9 +2204,7 @@ export default function MemberManagementPage() {
                                             : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
 
                                         <Filter className="w-3 h-3" />
-
-                                        الحالة
-
+                                        {t('toolbar.statusFilter')}
                                         {filterStatuses.length > 0 && (
 
                                             <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
@@ -2311,7 +2219,7 @@ export default function MemberManagementPage() {
 
                                 </PopoverTrigger>
 
-                                <PopoverContent align="end" className="w-52 p-0" dir="rtl">
+                                <PopoverContent align="end" className="w-52 p-0" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
                                     <div className="py-1">
 
@@ -2356,12 +2264,10 @@ export default function MemberManagementPage() {
                                                     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cfg.color}`}>
 
                                                         <cfg.icon className="w-3 h-3" />
-
-                                                        {cfg.label}
-
+                                                        {t(cfg.labelKey)}
                                                     </span>
 
-                                                    <span className="mr-auto text-[10px] text-muted-foreground">
+                                                    <span className="me-auto text-[10px] text-muted-foreground">
 
                                                         {statusCounts[key] ?? 0}
 
@@ -2378,21 +2284,13 @@ export default function MemberManagementPage() {
                                     <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-border">
 
                                         <button
-
                                             onClick={() => {
-
                                                 setFilterStatuses([]);
-
                                                 setStatusPopoverOpen(false);
-
                                             }}
-
                                             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-
                                         >
-
-                                            مسح
-
+                                            {t('toolbar.clearFilter')}
                                         </button>
 
                                     </div>
@@ -2403,10 +2301,8 @@ export default function MemberManagementPage() {
 
 
 
-                            <span className="text-xs text-muted-foreground mr-auto">
-
-                                {totalFiltered} نتيجة
-
+                            <span className="text-xs text-muted-foreground me-auto">
+                                {totalFiltered} {t('toolbar.results')}
                             </span>
 
                         </div>
@@ -2422,21 +2318,13 @@ export default function MemberManagementPage() {
                                 <thead className="sticky top-0 bg-muted/70 backdrop-blur border-b border-border z-10">
 
                                     <tr>
-
-                                        <Th field="name" className="w-[200px]">العضو</Th>
-
-                                        <Th field="memberType">النوع</Th>
-
-                                        <Th>الهاتف</Th>
-
-                                        <Th field="points" center>النقاط</Th>
-
-                                        <Th field="status" center>الحالة</Th>
-
-                                        <Th field="createdAt" center>التسجيل</Th>
-
-                                        <Th center className="w-[100px]">الإجراءات</Th>
-
+                                        <Th field="name" className="w-[200px]">{t('table.colMember')}</Th>
+                                        <Th field="memberType">{t('table.colType')}</Th>
+                                        <Th>{t('table.colPhone')}</Th>
+                                        <Th field="points" center>{t('table.colPoints')}</Th>
+                                        <Th field="status" center>{t('table.colStatus')}</Th>
+                                        <Th field="createdAt" center>{t('table.colRegistration')}</Th>
+                                        <Th center className="w-[100px]">{t('table.colActions')}</Th>
                                     </tr>
 
                                 </thead>
@@ -2478,9 +2366,7 @@ export default function MemberManagementPage() {
                                         <tr>
 
                                             <td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-
-                                                {search ? `لا توجد نتائج مطابقة لـ "${search}"` : "لا يوجد أعضاء في هذه الفئة"}
-
+                                                {search ? t('table.noResults', { query: search }) : t('table.noMembers')}
                                             </td>
 
                                         </tr>
@@ -2547,7 +2433,7 @@ export default function MemberManagementPage() {
 
                                                 </td>
 
-                                                <td className="px-4 py-3 text-xs tabular-nums text-right align-middle">
+                                                <td className="px-4 py-3 text-xs tabular-nums text-start align-middle">
 
                                                     <span dir="ltr" className="text-muted-foreground">{row.phone || "—"}</span>
 
@@ -2601,7 +2487,7 @@ export default function MemberManagementPage() {
 
                                                             </TooltipTrigger>
 
-                                                            <TooltipContent side="top" className="text-xs">عرض التفاصيل</TooltipContent>
+                                                            <TooltipContent side="top" className="text-xs">{t('rowActions.viewDetails')}</TooltipContent>
 
                                                         </Tooltip>
 
@@ -2630,7 +2516,7 @@ export default function MemberManagementPage() {
 
                                                                 </TooltipTrigger>
 
-                                                                <TooltipContent side="top" className="text-xs">تعديل</TooltipContent>
+                                                                <TooltipContent side="top" className="text-xs">{t('rowActions.edit')}</TooltipContent>
 
                                                             </Tooltip>
                                                         </RoleGuard>
@@ -2655,8 +2541,7 @@ export default function MemberManagementPage() {
                                                                     <DropdownMenuItem onClick={() => openStatus(row)} className="gap-2">
 
                                                                         <Shield className="w-3.5 h-3.5" />
-
-                                                                        تغيير الحالة
+                                                                        {t('rowActions.changeStatus')}
 
                                                                     </DropdownMenuItem>
                                                                 </RoleGuard>
@@ -2665,8 +2550,7 @@ export default function MemberManagementPage() {
                                                                     <DropdownMenuItem onClick={() => openDelete(row)} className="gap-2 text-red-600 focus:text-red-600">
 
                                                                         <Trash2 className="w-3.5 h-3.5" />
-
-                                                                        حذف العضو
+                                                                        {t('rowActions.deleteMember')}
 
                                                                     </DropdownMenuItem>
                                                                 </RoleGuard>
@@ -2698,7 +2582,11 @@ export default function MemberManagementPage() {
                         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/20 shrink-0 text-xs">
 
                             <span className="text-muted-foreground text-[11px]">
-                                عرض {totalFiltered === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, totalFiltered)} من {totalFiltered} · صفحة {page} من {totalPages}
+                                {totalFiltered === 0 ? t('pagination.showingNone') : t('pagination.showing', {
+                                    from: (page - 1) * PAGE_SIZE + 1,
+                                    to: Math.min(page * PAGE_SIZE, totalFiltered),
+                                    total: totalFiltered
+                                })} · {t('pagination.page', { page, totalPages })}
                             </span>
 
                             <div className="flex items-center gap-2">
@@ -2710,7 +2598,7 @@ export default function MemberManagementPage() {
                                     className="h-8 gap-1"
                                 >
                                     <ChevronRight className="w-4 h-4" />
-                                    السابق
+                                    {t('pagination.previous')}
                                 </Button>
                                 <Button
                                     size="sm"
@@ -2719,7 +2607,7 @@ export default function MemberManagementPage() {
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                     className="h-8 gap-1"
                                 >
-                                    التالي
+                                    {t('pagination.next')}
                                     <ChevronLeft className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -2736,13 +2624,12 @@ export default function MemberManagementPage() {
 
                 <Dialog open={!!selectedRow && !editOpen && !statusOpen && !deleteOpen} onOpenChange={(o) => !o && setSelectedRow(null)}>
 
-                    <DialogContent className="max-w-3xl w-full p-0 overflow-hidden" style={{ maxHeight: '88vh' }} dir="rtl">
+                    <DialogContent className="max-w-3xl w-full p-0 overflow-hidden" style={{ maxHeight: '88vh' }} dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
                         <DialogHeader className="sr-only">
 
-                            <DialogTitle>تفاصيل {selectedRow?.isTeamPlayer ? 'لاعب الفريق' : 'العضو'}</DialogTitle>
-
-                            <DialogDescription>عرض ملف المعلومات الكامل للعضو أو لاعب الفريق</DialogDescription>
+                            <DialogTitle>{t('detailModal.title', { type: selectedRow?.isTeamPlayer ? t('detailModal.teamPlayer') : t('detailModal.member') })}</DialogTitle>
+                            <DialogDescription>{t('detailModal.description')}</DialogDescription>
 
                         </DialogHeader>
 
@@ -2780,18 +2667,18 @@ export default function MemberManagementPage() {
 
                 <Dialog open={editOpen} onOpenChange={(o) => !o && setEditOpen(false)}>
 
-                    <DialogContent className="max-w-xl" dir="rtl">
+                    <DialogContent className="max-w-xl" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
                         <DialogHeader>
-                            <DialogTitle>تعديل بيانات العضو</DialogTitle>
-                            <DialogDescription>تعديل المعلومات الشخصية والتواصل</DialogDescription>
+                            <DialogTitle>{t('editModal.title')}</DialogTitle>
+                            <DialogDescription>{t('editModal.description')}</DialogDescription>
                         </DialogHeader>
 
                         {/* ── Tab bar ── */}
                         <div className="flex gap-0 border-b border-border -mx-1">
                             {([
-                                { key: 'info', label: '👤 البيانات الشخصية' },
-                                { key: 'docs', label: '🖼️ الصور والمستندات' },
+                                { key: 'info', label: t('editModal.tabs.personalInfo') },
+                                { key: 'docs', label: t('editModal.tabs.docsAndPhotos') },
                             ] as const).map(tab => (
                                 <button
                                     key={tab.key}
@@ -2812,51 +2699,50 @@ export default function MemberManagementPage() {
                         {editTab === 'info' && (
                             <div className="grid grid-cols-2 gap-3 py-2">
                                 <div>
-                                    <Label className="text-xs">الاسم الأول (عربي)</Label>
-                                    <Input value={editFirstNameAr} onChange={(e) => setEditFirstNameAr(e.target.value)} className="mt-1 h-8 text-xs" placeholder="محمد" />
+                                    <Label className="text-xs">{t('editModal.fields.firstNameAr')}</Label>
+                                    <Input value={editFirstNameAr} onChange={(e) => setEditFirstNameAr(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.firstNameAr')} />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">الاسم الأخير (عربي)</Label>
-                                    <Input value={editLastNameAr} onChange={(e) => setEditLastNameAr(e.target.value)} className="mt-1 h-8 text-xs" placeholder="أحمد" />
+                                    <Label className="text-xs">{t('editModal.fields.lastNameAr')}</Label>
+                                    <Input value={editLastNameAr} onChange={(e) => setEditLastNameAr(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.lastNameAr')} />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">الاسم الأول (إنجليزي)</Label>
-                                    <Input value={editFirstNameEn} onChange={(e) => setEditFirstNameEn(e.target.value)} className="mt-1 h-8 text-xs" placeholder="Mohamed" dir="ltr" />
+                                    <Label className="text-xs">{t('editModal.fields.firstNameEn')}</Label>
+                                    <Input value={editFirstNameEn} onChange={(e) => setEditFirstNameEn(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.firstNameEn')} dir="ltr" />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">الاسم الأخير (إنجليزي)</Label>
-                                    <Input value={editLastNameEn} onChange={(e) => setEditLastNameEn(e.target.value)} className="mt-1 h-8 text-xs" placeholder="Ahmed" dir="ltr" />
+                                    <Label className="text-xs">{t('editModal.fields.lastNameEn')}</Label>
+                                    <Input value={editLastNameEn} onChange={(e) => setEditLastNameEn(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.lastNameEn')} dir="ltr" />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">الجنس</Label>
+                                    <Label className="text-xs">{t('editModal.fields.gender')}</Label>
                                     <Select value={editGender} onValueChange={setEditGender}>
-                                        <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="اختر" /></SelectTrigger>
+                                        <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder={t('editModal.placeholders.select')} /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="male">ذكر</SelectItem>
-                                            <SelectItem value="female">أنثى</SelectItem>
-                                            <SelectItem value="other">أخرى</SelectItem>
+                                            <SelectItem value="male">{t('gender.male')}</SelectItem>
+                                            <SelectItem value="female">{t('gender.female')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label className="text-xs">تاريخ الميلاد</Label>
+                                    <Label className="text-xs">{t('editModal.fields.birthdate')}</Label>
                                     <Input value={editBirthdate} onChange={(e) => setEditBirthdate(e.target.value)} className="mt-1 h-8 text-xs" type="date" dir="ltr" />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">رقم الهاتف</Label>
-                                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="mt-1 h-8 text-xs" placeholder="+201012345678" dir="ltr" type="tel" />
+                                    <Label className="text-xs">{t('editModal.fields.phone')}</Label>
+                                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.phone')} dir="ltr" type="tel" />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">الجنسية</Label>
-                                    <Input value={editNationality} onChange={(e) => setEditNationality(e.target.value)} className="mt-1 h-8 text-xs" placeholder="Egyptian" dir="ltr" />
+                                    <Label className="text-xs">{t('editModal.fields.nationality')}</Label>
+                                    <Input value={editNationality} onChange={(e) => setEditNationality(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.nationality')} dir="ltr" />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label className="text-xs">العنوان</Label>
-                                    <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="mt-1 h-8 text-xs" placeholder="القاهرة، مصر" />
+                                    <Label className="text-xs">{t('editModal.fields.address')}</Label>
+                                    <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.address')} />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label className="text-xs">الحالة الصحية</Label>
-                                    <Input value={editHealth} onChange={(e) => setEditHealth(e.target.value)} className="mt-1 h-8 text-xs" placeholder="لا توجد أمراض مزمنة" />
+                                    <Label className="text-xs">{t('editModal.fields.healthStatus')}</Label>
+                                    <Input value={editHealth} onChange={(e) => setEditHealth(e.target.value)} className="mt-1 h-8 text-xs" placeholder={t('editModal.placeholders.healthStatus')} />
                                 </div>
                             </div>
                         )}
@@ -2866,10 +2752,10 @@ export default function MemberManagementPage() {
                             <div className="py-2">
                                 <div className="grid grid-cols-2 gap-4">
                                     {([
-                                        { label: 'الصورة الشخصية', file: photoFile, setter: setPhotoFile, existing: selectedDetail?.photo, span: 'col-span-2', height: 'h-36' },
-                                        { label: 'البطاقة القومية (أمام)', file: idFrontFile, setter: setIdFrontFile, existing: selectedDetail?.national_id_front, span: '', height: 'h-24' },
-                                        { label: 'البطاقة القومية (خلف)', file: idBackFile, setter: setIdBackFile, existing: selectedDetail?.national_id_back, span: '', height: 'h-24' },
-                                        { label: 'التقرير الطبي', file: medicalFile, setter: setMedicalFile, existing: selectedDetail?.medical_report, span: 'col-span-2', height: 'h-28' },
+                                        { label: t('editModal.docs.photo'), file: photoFile, setter: setPhotoFile, existing: selectedDetail?.photo, span: 'col-span-2', height: 'h-36' },
+                                        { label: t('editModal.docs.idFront'), file: idFrontFile, setter: setIdFrontFile, existing: selectedDetail?.national_id_front, span: '', height: 'h-24' },
+                                        { label: t('editModal.docs.idBack'), file: idBackFile, setter: setIdBackFile, existing: selectedDetail?.national_id_back, span: '', height: 'h-24' },
+                                        { label: t('editModal.docs.medicalReport'), file: medicalFile, setter: setMedicalFile, existing: selectedDetail?.medical_report, span: 'col-span-2', height: 'h-28' },
                                     ] as { label: string; file: File | null; setter: (f: File | null) => void; existing?: string; span: string; height: string }[]).map(({ label, file, setter, existing, span, height }) => {
                                         const preview = file ? URL.createObjectURL(file) : getFileUrl(existing);
                                         return (
@@ -2884,14 +2770,14 @@ export default function MemberManagementPage() {
                                                     ) : (
                                                         <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
                                                             <span className="text-2xl">📎</span>
-                                                            <span className="text-[11px]">اضغط لرفع صورة</span>
+                                                            <span className="text-[11px]">{t('editModal.docs.clickToUpload')}</span>
                                                         </div>
                                                     )}
                                                     {file && (
                                                         <button
                                                             type="button"
                                                             onClick={e => { e.preventDefault(); setter(null); }}
-                                                            className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full 
+                                                            className="absolute top-1.5 start-1.5 w-5 h-5 rounded-full 
                                                                 bg-rose-500 text-white text-[10px] flex items-center 
                                                                 justify-center hover:bg-rose-600 shadow"
                                                         >✕</button>
@@ -2912,9 +2798,9 @@ export default function MemberManagementPage() {
 
                         <DialogFooter className="mt-2 gap-2 border-t border-border pt-3">
                             <Button onClick={() => void handleSaveEdit()} disabled={editSaving} size="sm" className="text-xs">
-                                {editSaving ? "جارٍ الحفظ..." : "حفظ التغييرات"}
+                                {editSaving ? t('editModal.buttons.saving') : t('editModal.buttons.save')}
                             </Button>
-                            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving} size="sm" className="text-xs">إلغاء</Button>
+                            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving} size="sm" className="text-xs">{t('editModal.buttons.cancel')}</Button>
                         </DialogFooter>
 
                     </DialogContent>
@@ -2927,15 +2813,15 @@ export default function MemberManagementPage() {
 
                 <Dialog open={statusOpen} onOpenChange={(o) => !o && setStatusOpen(false)}>
 
-                    <DialogContent className="max-w-sm" dir="rtl">
+                    <DialogContent className="max-w-sm" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
                         <DialogHeader>
 
-                            <DialogTitle className="text-sm">تغيير حالة العضو</DialogTitle>
+                            <DialogTitle className="text-sm">{t('statusModal.title')}</DialogTitle>
 
                             <DialogDescription className="text-xs">
 
-                                الحالة الحالية: <StatusBadge status={selectedRow?.status ?? ""} compact />
+                                {t('statusModal.currentStatus')} <StatusBadge status={selectedRow?.status ?? ""} compact />
 
                             </DialogDescription>
 
@@ -2945,13 +2831,13 @@ export default function MemberManagementPage() {
 
                             <div>
 
-                                <Label className="text-xs">الحالة الجديدة</Label>
+                                <Label className="text-xs">{t('statusModal.newStatus')}</Label>
 
                                 <Select value={newStatus} onValueChange={setNewStatus}>
 
                                     <SelectTrigger className="mt-1 h-8 text-xs">
 
-                                        <SelectValue placeholder="اختر الحالة" />
+                                        <SelectValue placeholder={t('statusModal.selectStatus')} />
 
                                     </SelectTrigger>
 
@@ -2959,7 +2845,7 @@ export default function MemberManagementPage() {
 
                                         {Object.entries(STATUS_CONFIG).map(([k, v]) => (
 
-                                            <SelectItem key={k} value={k} className="text-xs">{v.label}</SelectItem>
+                                            <SelectItem key={k} value={k} className="text-xs">{t(v.labelKey)}</SelectItem>
 
                                         ))}
 
@@ -2971,11 +2857,11 @@ export default function MemberManagementPage() {
 
                             <div>
 
-                                <Label className="text-xs">السبب (اختياري)</Label>
+                                <Label className="text-xs">{t('statusModal.reason')}</Label>
 
                                 <Input value={statusReason} onChange={(e) => setStatusReason(e.target.value)}
 
-                                    placeholder="سبب تغيير الحالة" className="mt-1 h-8 text-xs" />
+                                    placeholder={t('statusModal.reasonPlaceholder')} className="mt-1 h-8 text-xs" />
 
                             </div>
 
@@ -2984,22 +2870,14 @@ export default function MemberManagementPage() {
                         <DialogFooter className="gap-2">
 
                             <Button
-
                                 onClick={() => void handleChangeStatus()}
-
                                 disabled={statusSaving || !newStatus || newStatus === selectedRow?.status}
-
                                 size="sm"
-
                                 className="text-xs"
-
                             >
-
-                                {statusSaving ? "جارٍ التغيير..." : "تأكيد التغيير"}
-
+                                {statusSaving ? t('statusModal.buttons.saving') : t('statusModal.buttons.confirm')}
                             </Button>
-
-                            <Button variant="outline" onClick={() => setStatusOpen(false)} disabled={statusSaving} size="sm" className="text-xs">إلغاء</Button>
+                            <Button variant="outline" onClick={() => setStatusOpen(false)} disabled={statusSaving} size="sm" className="text-xs">{t('statusModal.buttons.cancel')}</Button>
 
                         </DialogFooter>
 
@@ -3013,25 +2891,25 @@ export default function MemberManagementPage() {
 
                 <Dialog open={deleteOpen} onOpenChange={(o) => !o && setDeleteOpen(false)}>
 
-                    <DialogContent className="max-w-sm" dir="rtl">
+                    <DialogContent className="max-w-sm" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
 
                         <DialogHeader>
 
                             <DialogTitle className="text-destructive flex items-center gap-2 text-sm">
 
-                                <Trash2 className="w-4 h-4" /> حذف العضو
+                                <Trash2 className="w-4 h-4" /> {t('deleteModal.title')}
 
                             </DialogTitle>
 
                             <DialogDescription className="text-xs">
 
-                                هل أنت متأكد من حذف{" "}
+                                {t('deleteModal.areYouSure')}{" "}
 
-                                <strong>{selectedRow ? `${selectedRow.firstNameAr} ${selectedRow.lastNameAr}` : "هذا العضو"}</strong>؟
+                                <strong>{selectedRow ? `${selectedRow.firstNameAr} ${selectedRow.lastNameAr}` : t('deleteModal.thisMember')}</strong>?
 
                                 <br />
 
-                                سيتم تغيير حالته إلى &quot;ملغى&quot; ولن يظهر في القائمة.
+                                {t('deleteModal.warning')}
 
                             </DialogDescription>
 
@@ -3041,11 +2919,11 @@ export default function MemberManagementPage() {
 
                             <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteSaving} size="sm" className="text-xs">
 
-                                {deleteSaving ? "جارٍ الحذف..." : "تأكيد الحذف"}
+                                {deleteSaving ? t('deleteModal.buttons.deleting') : t('deleteModal.buttons.confirm')}
 
                             </Button>
 
-                            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleteSaving} size="sm" className="text-xs">إلغاء</Button>
+                            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleteSaving} size="sm" className="text-xs">{t('deleteModal.buttons.cancel')}</Button>
 
                         </DialogFooter>
 
