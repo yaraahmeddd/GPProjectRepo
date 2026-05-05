@@ -43,7 +43,7 @@ export class TeamController {
      *   name_ar:           string          — required
      *   max_participants:  number          — required; must be ≤ field.capacity
      *   visibility_type:   "INTERNAL" | "EXTERNAL" | "BOTH"  — required
-     *   price:             number          — required; ≥ 0
+
      *   status?:           "active" | "inactive" | "suspended" | "archived"  (default: "active")
      *   branch_id?:        number
      *   training_schedules?: Array<{
@@ -74,7 +74,7 @@ export class TeamController {
             if (!body.name_ar) missing.push('name_ar');
             if (body.max_participants === undefined || body.max_participants === null) missing.push('max_participants');
             if (!body.visibility_type) missing.push('visibility_type');
-            if (body.price === undefined || body.price === null) missing.push('price');
+
 
             if (missing.length > 0) {
                 res.status(422).json({
@@ -92,7 +92,7 @@ export class TeamController {
                 name_ar: body.name_ar as string,
                 max_participants: Number(body.max_participants),
                 visibility_type: body.visibility_type as TeamVisibilityType,
-                price: Number(body.price),
+
                 status: (body.status as TeamStatus) || TeamStatus.ACTIVE,
                 branch_id: body.branch_id ? Number(body.branch_id) : undefined,
                 training_schedules: Array.isArray(body.training_schedules)
@@ -189,7 +189,7 @@ export class TeamController {
             if (body.max_participants !== undefined) updates.max_participants = Number(body.max_participants);
             if (body.status !== undefined)          updates.status = body.status as TeamStatus;
             if (body.visibility_type !== undefined) updates.visibility_type = body.visibility_type as TeamVisibilityType;
-            if (body.price !== undefined)           updates.price = Number(body.price);
+
 
             if (Array.isArray(body.training_schedules)) {
                 updates.training_schedules = (body.training_schedules as Record<string, unknown>[]).map((s) => ({

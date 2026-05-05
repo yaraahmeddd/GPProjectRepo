@@ -28,7 +28,7 @@ export interface UpdateTeamInput {
     max_participants?: number;
     status?: TeamStatus;
     visibility_type?: TeamVisibilityType;
-    price?: number;
+
     branch_id?: number | null;
     field_id?: string | null;
     training_schedules?: TrainingScheduleInput[];
@@ -102,8 +102,7 @@ export class TeamService {
             max_participants: validated.max_participants,
             status: validated.status,
             visibility_type: validated.visibility_type,
-            price: validated.price,
-            subscription_price: validated.price, // keep legacy column in sync
+
         });
 
         const savedTeam = await this.teamRepo.save(team);
@@ -209,13 +208,7 @@ export class TeamService {
             team.visibility_type = updates.visibility_type;
         }
 
-        if (updates.price !== undefined) {
-            if (updates.price < 0) {
-                throw new Error('Validation error: "price" must be zero or a positive number.');
-            }
-            team.price = updates.price;
-            team.subscription_price = updates.price;
-        }
+
 
         await this.teamRepo.save(team);
 
@@ -350,7 +343,7 @@ export class TeamService {
         team_name_en: string;
         team_name_ar: string;
         visibility_type: TeamVisibilityType;
-        price: number | null;
+
         max_participants: number;
         current_members: number;
         available_slots: number;
@@ -432,7 +425,7 @@ export class TeamService {
                     team_name_en: team.name_en,
                     team_name_ar: team.name_ar,
                     visibility_type: team.visibility_type,
-                    price: team.price,
+
                     max_participants: team.max_participants,
                     current_members: currentMembers,
                     available_slots: availableSlots,
