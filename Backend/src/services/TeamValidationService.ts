@@ -45,7 +45,7 @@ export interface CreateTeamInput {
     max_participants: number;
     status?: TeamStatus;
     visibility_type: TeamVisibilityType;
-    price: number;
+
     branch_id?: number;
     training_schedules?: TrainingScheduleInput[];
 }
@@ -60,7 +60,7 @@ export interface ValidatedTeamData {
     max_participants: number;
     status: TeamStatus;
     visibility_type: TeamVisibilityType;
-    price: number;
+
     branch_id: number | null;
     training_schedules: TrainingScheduleInput[];
 }
@@ -103,8 +103,7 @@ export class TeamValidationService {
         // 6. Visibility type is valid
         const visibilityType = this.validateVisibilityType(raw.visibility_type);
 
-        // 7. Price is a non-negative number
-        const price = this.validatePrice(raw.price);
+
 
         // 8. Training schedules: time range + no overlap with same sport
         const schedules = raw.training_schedules ?? [];
@@ -120,7 +119,7 @@ export class TeamValidationService {
             max_participants: maxParticipants,
             status,
             visibility_type: visibilityType,
-            price,
+
             branch_id: raw.branch_id ?? null,
             training_schedules: schedules,
         };
@@ -203,16 +202,7 @@ export class TeamValidationService {
         return value as TeamVisibilityType;
     }
 
-    private validatePrice(value: unknown): number {
-        const num = Number(value);
-        if (value === undefined || value === null || isNaN(num)) {
-            throw new Error('Validation error: "price" is required and must be a numeric value.');
-        }
-        if (num < 0) {
-            throw new Error('Validation error: "price" must be zero or a positive number.');
-        }
-        return num;
-    }
+
 
     /**
      * Validates every training schedule:

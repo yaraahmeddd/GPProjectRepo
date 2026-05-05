@@ -90,12 +90,12 @@ const ensureAuditLogsTable = async () => {
  */
 const getDefaultOrigins = (): string[] => {
   const env = process.env.NODE_ENV || 'development';
-  
+
   if (env === 'production') {
     // Production: only allow explicitly configured origins
     return [];
   }
-  
+
   // Development: allow localhost and LAN access
   return [
     'http://localhost:3000',

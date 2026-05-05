@@ -6,7 +6,7 @@ const sportService = new SportService();
 export class SportController {
     /**
      * @route   POST /api/sports
-     * @desc    Create a new sport with teams
+     * @desc    Create a new sport (teams are optional)
      * @access  SportActivityManager, SportActivitySpecialist
      * @body    {
      *   name_en: string,
@@ -14,13 +14,16 @@ export class SportController {
      *   description_en?: string,
      *   description_ar?: string,
      *   sport_image?: string,
-     *   teams: [
+     *   price?: number,
+     *   max_participants?: number,
+     *   teams?: [   // optional - if omitted the sport is created without teams
      *     {
-     *       name: string (required),
-     *       branch_id?: number,
-     *       max_members?: number
+     *       name_en: string,
+     *       name_ar: string,
+     *       max_participants: number,
+     *       training: { days_en, days_ar, start_time, end_time, field_id, training_fee }
      *     }
-     *   ] (required - at least one team)
+     *   ]
      * }
      */
     static async createSport(req: Request, res: Response): Promise<void> {
@@ -42,6 +45,8 @@ export class SportController {
                 description_en,
                 description_ar,
                 sport_image,
+                price,
+                max_participants,
                 teams,
             } = body;
 
@@ -54,143 +59,135 @@ export class SportController {
                 return;
             }
 
-            // Validate teams
-            if (!teams || !Array.isArray(teams) || teams.length === 0) {
-                res.status(400).json({
-                    success: false,
-                    message: 'At least one team is required to create a sport',
+            const hasTeams = Array.isArray(teams) && teams.length > 0;
+
+            if (hasTeams) {
+                // Validate each team when teams are provided
+                for (let i = 0; i < (teams as unknown[]).length; i++) {
+                    const team = (teams as Record<string, unknown>[])[i];
+
+                    if (!team.name_en || typeof team.name_en !== 'string') {
+                        res.status(400).json({
+                            success: false,
+                            message: `Team ${i + 1}: Team name (English) is required and must be a string`,
+                        });
+                        return;
+                    }
+
+                    if (!team.name_ar || typeof team.name_ar !== 'string') {
+                        res.status(400).json({
+                            success: false,
+                            message: `Team ${i + 1}: Team name (Arabic) is required and must be a string`,
+                        });
+                        return;
+                    }
+
+                    if (typeof team.max_participants !== 'number' || (team.max_participants as number) <= 0) {
+                        res.status(400).json({
+                            success: false,
+                            message: `Team ${i + 1}: max_participants is required and must be a positive number`,
+                        });
+                        return;
+                    }
+
+                    const training = team.training as Record<string, unknown>;
+                    if (!training || typeof training !== 'object') {
+                        res.status(400).json({
+                            success: false,
+                            message: `Team ${i + 1}: training schedule is required`,
+                        });
+                        return;
+                    }
+
+                    if (!training.days_en || typeof training.days_en !== 'string') {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.days_en is required and must be a string` });
+                        return;
+                    }
+                    if (!training.days_ar || typeof training.days_ar !== 'string') {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.days_ar is required and must be a string` });
+                        return;
+                    }
+                    if (!training.start_time || typeof training.start_time !== 'string') {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.start_time is required and must be a string` });
+                        return;
+                    }
+                    if (!training.end_time || typeof training.end_time !== 'string') {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.end_time is required and must be a string` });
+                        return;
+                    }
+                    if (!training.field_id || typeof training.field_id !== 'string') {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.field_id is required and must be a valid UUID string` });
+                        return;
+                    }
+                    if (typeof training.training_fee !== 'number' || (training.training_fee as number) < 0) {
+                        res.status(400).json({ success: false, message: `Team ${i + 1}: training.training_fee is required and must be a non-negative number` });
+                        return;
+                    }
+                }
+
+                // Create sport WITH teams and training schedules
+                const sport = await sportService.createSportWithTeamsAndTraining(
+                    {
+                        name_en: name_en as string,
+                        name_ar: name_ar as string,
+                        description_en: description_en as string | undefined,
+                        description_ar: description_ar as string | undefined,
+                        sport_image: sport_image as string | undefined,
+                    },
+                    teams as unknown as Array<{
+                        name_en: string;
+                        name_ar: string;
+                        max_participants: number;
+                        training: {
+                            days_en: string;
+                            days_ar: string;
+                            start_time: string;
+                            end_time: string;
+                            field_id: string;
+                            training_fee: number;
+                        };
+                    }>,
+                    user.staff_id as number,
+                    user.staff_type_id as number
+                );
+
+                res.status(201).json({
+                    success: true,
+                    message: sport.sport.status === 'active'
+                        ? 'Sport, teams, and training schedules created and activated successfully'
+                        : 'Sport, teams, and training schedules created and pending approval',
+                    data: {
+                        sport: sport.sport,
+                        teams: sport.teams,
+                        trainings: sport.trainings,
+                        teamsCount: sport.teams.length,
+                        trainingsCount: sport.trainings.length,
+                    },
                 });
-                return;
+            } else {
+                // Create sport WITHOUT teams
+                const sport = await sportService.createSport(
+                    {
+                        name_en: name_en as string,
+                        name_ar: name_ar as string,
+                        description_en: description_en as string | undefined,
+                        description_ar: description_ar as string | undefined,
+                        price: price !== undefined ? parseFloat(price as string) : undefined,
+                        sport_image: sport_image as string | undefined,
+                        max_participants: max_participants !== undefined ? parseInt(max_participants as string) : undefined,
+                    },
+                    user.staff_id as number,
+                    user.staff_type_id as number
+                );
+
+                res.status(201).json({
+                    success: true,
+                    message: sport.status === 'active'
+                        ? 'Sport created and activated successfully'
+                        : 'Sport created and pending approval',
+                    data: { sport },
+                });
             }
-
-            // Validate each team
-            for (let i = 0; i < teams.length; i++) {
-                const team = teams[i] as Record<string, unknown>;
-
-                // Validate team names (bilingual)
-                if (!team.name_en || typeof team.name_en !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: Team name (English) is required and must be a string`,
-                    });
-                    return;
-                }
-
-                if (!team.name_ar || typeof team.name_ar !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: Team name (Arabic) is required and must be a string`,
-                    });
-                    return;
-                }
-
-                // Validate max_participants
-                if (typeof team.max_participants !== 'number' || (team.max_participants as number) <= 0) {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: max_participants is required and must be a positive number`,
-                    });
-                    return;
-                }
-
-                // Validate training object
-                const training = team.training as Record<string, unknown>;
-                if (!training || typeof training !== 'object') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training schedule is required`,
-                    });
-                    return;
-                }
-
-                // Validate training fields
-                if (!training.days_en || typeof training.days_en !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.days_en is required and must be a string`,
-                    });
-                    return;
-                }
-
-                if (!training.days_ar || typeof training.days_ar !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.days_ar is required and must be a string`,
-                    });
-                    return;
-                }
-
-                if (!training.start_time || typeof training.start_time !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.start_time is required and must be a string`,
-                    });
-                    return;
-                }
-
-                if (!training.end_time || typeof training.end_time !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.end_time is required and must be a string`,
-                    });
-                    return;
-                }
-
-                if (!training.field_id || typeof training.field_id !== 'string') {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.field_id is required and must be a valid UUID string`,
-                    });
-                    return;
-                }
-
-                if (typeof training.training_fee !== 'number' || (training.training_fee as number) < 0) {
-                    res.status(400).json({
-                        success: false,
-                        message: `Team ${i + 1}: training.training_fee is required and must be a non-negative number`,
-                    });
-                    return;
-                }
-            }
-
-            const sport = await sportService.createSportWithTeamsAndTraining(
-                {
-                    name_en: name_en as string,
-                    name_ar: name_ar as string,
-                    description_en: description_en as string | undefined,
-                    description_ar: description_ar as string | undefined,
-                    sport_image: sport_image as string | undefined,
-                },
-                teams as unknown as Array<{
-                    name_en: string;
-                    name_ar: string;
-                    max_participants: number;
-                    training: {
-                        days_en: string;
-                        days_ar: string;
-                        start_time: string;
-                        end_time: string;
-                        field_id: string;
-                        training_fee: number;
-                    };
-                }>,
-                user.staff_id as number,
-                user.staff_type_id as number
-            );
-
-            res.status(201).json({
-                success: true,
-                message: sport.sport.status === 'active'
-                    ? 'Sport, teams, and training schedules created and activated successfully'
-                    : 'Sport, teams, and training schedules created and pending approval',
-                data: {
-                    sport: sport.sport,
-                    teams: sport.teams,
-                    trainings: sport.trainings,
-                    teamsCount: sport.teams.length,
-                    trainingsCount: sport.trainings.length,
-                },
-            });
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to create sport';
             console.error('Error creating sport:', error);
