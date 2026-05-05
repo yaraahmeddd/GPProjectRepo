@@ -126,7 +126,7 @@ void i18n
     interpolation: { escapeValue: false },
 
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       lookupLocalStorage: 'dashboard-lang',
       caches: ['localStorage'],
       // Sanitize cached region-suffixed locales ("ar-EG" → "ar") at runtime.

@@ -38,9 +38,6 @@ function SportIcon({ name }: { name: string }) {
     return <Trophy className="h-7 w-7" />;
 }
 
-const WEEKDAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const MONTHS_AR = ["يناير", "فبراير", "مارس", "إبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-
 function formatDateLocalized(d: Date, locale: string) {
     return d.toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
@@ -68,7 +65,7 @@ const statusLabel = (s: string) => {
 const SPORT_COLORS = ["#1F3A5F", "#2EA7C9", "#1b71bc", "#F4A623", "#214474", "#4A90D9"];
 
 interface MemberInfo {
-    nameAr: string; memberType: string; status: string; memberId: number;
+    nameAr: string; nameEn: string; memberType: string; status: string; memberId: number;
     photo?: string;
     joinDate?: string;
     expiryDate?: string;
@@ -87,6 +84,8 @@ interface SportSub {
 interface Reservation {
     id: string;
     facilityName: string;
+    facilityNameAr?: string;
+    facilityNameEn?: string;
     date: string;
     timeFrom: string;
     timeTo: string;
@@ -132,7 +131,7 @@ function Card({
 
 /* ─── Page ─────────────────────────────────────────────────────────── */
 export default function MemberHomePage() {
-    const { t, i18n } = useTranslation();
+    const { t, i18n } = useTranslation("member");
     const navigate = useNavigate();
     const [now, setNow] = useState(new Date());
     const [info, setInfo] = useState<MemberInfo | null>(null);
@@ -174,6 +173,16 @@ export default function MemberHomePage() {
     const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isEnglish = i18n.language?.startsWith("en");
     const locale = isEnglish ? "en-US" : "ar-EG";
+    const localizedStatusLabel = (s: string) => {
+        const lc = (s || "").toLowerCase();
+        if (lc === "active" || lc === "approved") return t("status.active");
+        if (lc === "confirmed") return t("status.confirmed");
+        if (lc === "expired") return t("status.expired");
+        if (lc === "cancelled") return t("status.cancelled");
+        if (lc === "pending" || lc === "pending_payment") return t("status.pending");
+        if (lc === "completed") return t("status.completed");
+        return s || t("common.na");
+    };
 
     useEffect(() => {
         tickRef.current = setInterval(() => setNow(new Date()), 1000);
@@ -198,6 +207,7 @@ export default function MemberHomePage() {
 
             setInfo({
                 nameAr: `${d.first_name_ar ?? me.name_ar?.split(" ")[0] ?? ""} ${d.last_name_ar ?? me.name_ar?.split(" ").slice(1).join(" ") ?? ""}`.trim(),
+                nameEn: `${d.first_name_en ?? me.name_en?.split(" ")[0] ?? ""} ${d.last_name_en ?? me.name_en?.split(" ").slice(1).join(" ") ?? ""}`.trim(),
                 memberType: String(d.member_type ?? me.member_type ?? "—"),
                 status: realStatus,
                 memberId,
@@ -217,7 +227,9 @@ export default function MemberHomePage() {
                             )
                             .map((s: any, idx: number) => {
                                 const firstSched = s.schedules?.[0];
-                                const days = firstSched?.days_ar || firstSched?.days_en || "";
+                                const days = isEnglish
+                                    ? (firstSched?.days_en || firstSched?.days_ar || "")
+                                    : (firstSched?.days_ar || firstSched?.days_en || "");
                                 const time = firstSched
                                     ? `${String(firstSched.start_time || "").slice(0, 5)} — ${String(firstSched.end_time || "").slice(0, 5)}`
                                     : "";
@@ -225,7 +237,7 @@ export default function MemberHomePage() {
                                 return {
                                     id: String(s.id || idx + 1),
                                     nameAr: String(s.sport_name_ar || s.name_ar || s.sport_name || s.name || "رياضة"),
-                                    nameEn: String(s.sport_name || s.name_en || ""),
+                                    nameEn: String(s.sport_name_en || s.name_en || s.sport_name || s.name || "Sport"),
                                     status: "active",
                                     schedule: scheduleLabel,
                                 };
@@ -252,15 +264,19 @@ export default function MemberHomePage() {
                         const courtNameEn = String((r as any).field_name_en || (r as any).field?.name_en || "");
 
                         // Build label: "SportName – CourtName" in Arabic, with fallbacks
-                        const sportLabel = sportNameAr || sportNameEn;
-                        const courtLabel = courtNameAr || courtNameEn;
+                        const sportLabel = isEnglish ? (sportNameEn || sportNameAr) : (sportNameAr || sportNameEn);
+                        const courtLabel = isEnglish ? (courtNameEn || courtNameAr) : (courtNameAr || courtNameEn);
                         const facilityName = sportLabel && courtLabel
                             ? `${sportLabel} – ${courtLabel}`
                             : courtLabel || sportLabel || String((r as any).facility_name || (r as any).name || "ملعب");
+                        const facilityNameAr = [sportNameAr, courtNameAr].filter(Boolean).join(" – ") || facilityName;
+                        const facilityNameEn = [sportNameEn, courtNameEn].filter(Boolean).join(" – ") || facilityName;
 
                         return {
                             id: String(r.id ?? Math.random()),
                             facilityName,
+                            facilityNameAr,
+                            facilityNameEn,
                             date: String((r as any).start_time || (r as any).date || (r as any).reservation_date || ""),
                             timeFrom: String((r as any).start_time || (r as any).time_from || ""),
                             timeTo: String((r as any).end_time || (r as any).time_to || ""),
@@ -378,8 +394,11 @@ export default function MemberHomePage() {
 
     useEffect(() => { void loadData(); }, [loadData]);
 
+    const displayMemberName = isEnglish
+        ? (info?.nameEn || info?.nameAr || "")
+        : (info?.nameAr || info?.nameEn || "");
     const initials = info
-        ? `${info.nameAr.trim().charAt(0)}${info.nameAr.trim().split(" ").at(-1)?.charAt(0) ?? ""}`
+        ? `${displayMemberName.trim().charAt(0)}${displayMemberName.trim().split(" ").at(-1)?.charAt(0) ?? ""}`
         : "";
     const displayPhoto = resolveFileUrl(info?.photo);
 
@@ -389,7 +408,13 @@ export default function MemberHomePage() {
         try {
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return dateStr;
-            return `${WEEKDAYS_AR[d.getDay()]}، ${d.getDate()} ${MONTHS_AR[d.getMonth()]} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+            return d.toLocaleString(locale, {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
         } catch {
             return dateStr;
         }
@@ -399,12 +424,12 @@ export default function MemberHomePage() {
         if (selectedReservation?.shareToken) {
             const link = `${window.location.origin}/bookings/share/${selectedReservation.shareToken}`;
             navigator.clipboard.writeText(link);
-            toast.success("تم نسخ الرابط بنجاح!");
+            toast.success(t("homePage.copied"));
         }
     };
 
     return (
-        <div className="space-y-4" dir="rtl">
+        <div className="space-y-4" dir={isEnglish ? "ltr" : "rtl"}>
             <Toaster position="top-center" />
 
             {/* ── Top bar: date + clock */}
@@ -427,7 +452,7 @@ export default function MemberHomePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     {/* ── Card 1: Member info ───────────────────────────── */}
-                    <Card title="بياناتي" icon={User} accent="#1b71bc">
+                    <Card title={t("homePage.myData")} icon={User} accent="#1b71bc">
                         {/* Avatar + name row */}
                         <div className="flex items-center gap-4 mb-5">
                             <div
@@ -441,13 +466,13 @@ export default function MemberHomePage() {
                                 )}
                             </div>
                             <div>
-                                <p className="text-xl font-bold text-foreground">{info?.nameAr}</p>
+                                <p className="text-xl font-bold text-foreground">{displayMemberName}</p>
                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                                     <span className="inline-flex items-center gap-1 text-xs bg-[#1F3A5F]/10 text-[#1F3A5F] rounded-full px-2.5 py-1 font-medium">
                                         <CreditCard className="h-3 w-3" />{info?.memberType}
                                     </span>
                                     <span className={`text-xs rounded-full px-2.5 py-1 font-medium ${statusBadge(info?.status ?? "")}`}>
-                                        {statusLabel(info?.status ?? "")}
+                                        {localizedStatusLabel(info?.status ?? "")}
                                     </span>
                                 </div>
                             </div>
@@ -459,9 +484,9 @@ export default function MemberHomePage() {
                         {/* Quick stats row */}
                         <div className="grid grid-cols-3 gap-3 text-center">
                             {[
-                                { label: "رقم العضو", value: info?.memberId ?? "—" },
-                                { label: "الرياضات", value: sports.length },
-                                { label: "الحجوزات", value: reservations.length },
+                                { label: t("homePage.memberId"), value: info?.memberId ?? t("common.na") },
+                                { label: t("homePage.sportsCount"), value: sports.length },
+                                { label: t("homePage.bookingsCount"), value: reservations.length },
                             ].map((stat) => (
                                 <div key={stat.label} className="rounded-xl bg-muted/40 py-3 px-2">
                                     <p className="text-lg font-bold text-[#1F3A5F]">{stat.value}</p>
@@ -472,7 +497,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 2: Sports subscriptions — list with name + next day + time ─ */}
-                    <Card title={t("member.home.sportsSubscriptions")} icon={Trophy} accent="#2EA7C9" delay={0.06}>
+                    <Card title={t("home.sportsSubscriptions")} icon={Trophy} accent="#2EA7C9" delay={0.06}>
                         {sports.length > 0 ? (
                             <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
                                 {sports.map((sport, idx) => {
@@ -493,12 +518,12 @@ export default function MemberHomePage() {
                                                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm"
                                                 style={{ backgroundColor: color }}
                                             >
-                                                <SportIcon name={sport.nameAr} />
+                                                <SportIcon name={isEnglish ? (sport.nameEn || sport.nameAr) : (sport.nameAr || sport.nameEn)} />
                                             </div>
 
                                             {/* Name + schedule */}
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-foreground leading-tight">{sport.nameAr}</p>
+                                                <p className="text-sm font-bold text-foreground leading-tight">{isEnglish ? (sport.nameEn || sport.nameAr) : (sport.nameAr || sport.nameEn)}</p>
                                                 <div className="flex items-center flex-wrap gap-1.5 mt-1">
                                                     {days && (
                                                         <span
@@ -535,7 +560,7 @@ export default function MemberHomePage() {
                                 >
                                     <Trophy className="h-8 w-8 text-[#2EA7C9]" />
                                 </div>
-                                <p className="text-sm font-medium text-foreground">{t("member.home.noSubscriptions")}</p>
+                                <p className="text-sm font-medium text-foreground">{t("home.noSubscriptions")}</p>
                                 <p className="text-xs text-muted-foreground">
                                     يمكنك الاشتراك في الأنشطة الرياضية للنادي من خلال مكتب التسجيل
                                 </p>
@@ -544,7 +569,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 3: Court Reservations ───────────────────── */}
-                    <Card title={t("member.home.bookings")} icon={CalendarDays} accent="#F4A623" delay={0.1}>
+                    <Card title={t("home.bookings")} icon={CalendarDays} accent="#F4A623" delay={0.1}>
                         {reservations.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-6 gap-3 text-center">
                                 <div
@@ -553,9 +578,11 @@ export default function MemberHomePage() {
                                 >
                                     <Volleyball className="h-8 w-8 text-[#F4A623]" />
                                 </div>
-                                <p className="text-sm font-medium text-foreground">{t("member.home.noBookings")}</p>
+                                <p className="text-sm font-medium text-foreground">{t("home.noBookings")}</p>
                                 <p className="text-xs text-muted-foreground">
-                                    ستظهر هنا حجوزاتك القادمة للملاعب والمرافق الرياضية
+                                    {isEnglish
+                                        ? "Your upcoming court and facility bookings will appear here."
+                                        : "ستظهر هنا حجوزاتك القادمة للملاعب والمرافق الرياضية"}
                                 </p>
                             </div>
                         ) : (
@@ -570,7 +597,11 @@ export default function MemberHomePage() {
                                             <MapPin className="h-5 w-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-foreground truncate">{r.facilityName}</p>
+                                            <p className="text-sm font-semibold text-foreground truncate">
+                                                {isEnglish
+                                                    ? (r.facilityNameEn || r.facilityNameAr || r.facilityName)
+                                                    : (r.facilityNameAr || r.facilityNameEn || r.facilityName)}
+                                            </p>
                                             <p className="text-xs text-muted-foreground mt-0.5">
                                                 {formatBookingTime(r.timeFrom)}
                                                 {r.timeTo && r.timeTo !== r.timeFrom && (
@@ -579,13 +610,13 @@ export default function MemberHomePage() {
                                             </p>
                                             {r.price > 0 && (
                                                 <p className="text-[11px] font-bold text-ds-orange mt-1">
-                                                    💰 {r.price.toLocaleString("ar-EG")} ج.م
+                                                    {`💰 ${r.price.toLocaleString(locale)} ${t("subscribePage.currency")}`}
                                                 </p>
                                             )}
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <span className={`text-xs rounded-full px-2.5 py-1 font-medium shrink-0 ${statusBadge(r.status)}`}>
-                                                {statusLabel(r.status)}
+                                                {localizedStatusLabel(r.status)}
                                             </span>
                                         </div>
                                     </div>
@@ -595,7 +626,7 @@ export default function MemberHomePage() {
                     </Card>
 
                     {/* ── Card 4: Notifications ───────────────────────── */}
-                    <Card title={t("member.home.notifications")} icon={Bell} accent="#1F3A5F" delay={0.14}>
+                    <Card title={t("home.notifications")} icon={Bell} accent="#1F3A5F" delay={0.14}>
                         <div className="space-y-3">
                             {notifications.length > 0 && notifications.some(n => !readNotifs.includes(n.id)) && (
                                 <div className="flex justify-between items-center pb-2 pt-1 mb-2">
@@ -661,7 +692,7 @@ export default function MemberHomePage() {
                                 })
                             ) : (
                                 <div className="p-4 text-center text-muted-foreground text-sm">
-                                    {t("member.home.noNotifications")}
+                                    {t("home.noNotifications")}
                                 </div>
                             )}
 
@@ -702,7 +733,11 @@ export default function MemberHomePage() {
                         
                         <div className="p-6 space-y-4 text-foreground text-sm">
                             <div className="bg-muted/30 p-4 rounded-xl border border-border">
-                                <p className="font-bold text-base mb-1">{selectedReservation.facilityName}</p>
+                                <p className="font-bold text-base mb-1">
+                                    {isEnglish
+                                        ? (selectedReservation.facilityNameEn || selectedReservation.facilityNameAr || selectedReservation.facilityName)
+                                        : (selectedReservation.facilityNameAr || selectedReservation.facilityNameEn || selectedReservation.facilityName)}
+                                </p>
                                 <p className="text-muted-foreground">{formatBookingTime(selectedReservation.timeFrom)}</p>
                             </div>
                             

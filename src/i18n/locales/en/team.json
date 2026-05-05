@@ -1,4 +1,4 @@
-{
+﻿{
   "dashboard": {
     "title": "Team member dashboard",
     "meta_title": "Team Member Dashboard | Helwan University Club",
@@ -164,9 +164,9 @@
     "refresh": "Refresh List",
     "loading": "Loading sports...",
     "status": {
-      "payment_required": "💳 PAYMENT REQUIRED",
-      "pending_review": "⏳ PENDING REVIEW",
-      "joined": "✓ JOINED"
+      "payment_required": "ðŸ’³ PAYMENT REQUIRED",
+      "pending_review": "â³ PENDING REVIEW",
+      "joined": "âœ“ JOINED"
     },
     "slots": {
       "no_slots": "No slots currently available",
@@ -180,7 +180,7 @@
       "join_now": "Join Now",
       "rejoin": "Rejoin",
       "go_to_payment": "Go to Payment",
-      "sending": "⏳ Sending...",
+      "sending": "â³ Sending...",
       "already_joined": "Already Joined"
     },
     "alerts": {
@@ -189,7 +189,7 @@
     }
   },
   "court_rental": {
-    "title": "Court Rental",
+    "title": "Court Booking",
     "subtitle": "Easily choose courts and activities based on available times for this week.",
     "controls": {
       "activity": "Sport Activity",
@@ -229,7 +229,7 @@
       "min_duration": "Minimum booking duration is 30 minutes.",
       "conflict": "This time is reserved or conflicts. Please choose another time.",
       "login_required": "You must log in first to complete the booking",
-      "success": "✅ Booking request submitted successfully! Redirecting to payment...",
+      "success": "âœ… Booking request submitted successfully! Redirecting to payment...",
       "fail": "Failed to complete booking. Please try again",
       "load_sports_fail": "Failed to load sports from server",
       "load_fields_fail": "Failed to load fields from server"
@@ -266,7 +266,7 @@
     "description": "Thank you for joining us! Your data is currently being reviewed by the club management. We will activate your account as soon as the verification process is complete.",
     "status_label": "Request Status: Pending",
     "logout": "Logout",
-    "footer": "© {{year}} Helwan University Club - All rights reserved"
+    "footer": "Â© {{year}} Helwan University Club - All rights reserved"
   },
   "payment": {
     "title": "Payment Page",
@@ -288,14 +288,14 @@
       "back": "Back",
       "processing": "Processing...",
       "copy": "Copy Link",
-      "copied": "✅ Copied",
+      "copied": "âœ… Copied",
       "return_home": "Return Home"
     },
     "alerts": {
       "incomplete_data": "Incomplete payment data. Please try again.",
       "missing_booking_id": "Booking ID missing",
       "missing_subscription": "Could not find your subscription. Please join the sport again.",
-      "success_booking": "✅ Booking and payment confirmed successfully.",
+      "success_booking": "âœ… Booking and payment confirmed successfully.",
       "success_subscription": "Payment completed successfully. Your subscription is now active.",
       "fail": "Payment failed"
     },

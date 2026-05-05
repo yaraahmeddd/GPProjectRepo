@@ -109,6 +109,24 @@ export function Navbar() {
   if (!user) return null;
 
   const isMember = user.role === "MEMBER";
+  const isEnglish = language === "en";
+
+  const buildName = (...parts: Array<unknown>) =>
+    parts
+      .map((p) => (typeof p === "string" ? p.trim() : ""))
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  const displayNameAr =
+    buildName((user as any)?.first_name_ar, (user as any)?.last_name_ar) ||
+    (typeof (user as any)?.name_ar === "string" ? (user as any).name_ar.trim() : "");
+  const displayNameEn =
+    buildName((user as any)?.first_name_en, (user as any)?.last_name_en) ||
+    (typeof (user as any)?.name_en === "string" ? (user as any).name_en.trim() : "");
+  const displayUserName = isEnglish
+    ? (displayNameEn || displayNameAr || user.fullName)
+    : (displayNameAr || displayNameEn || user.fullName);
 
   const handleLogoutConfirm = () => {
     setShowLogoutModal(false);
@@ -250,7 +268,7 @@ export function Navbar() {
             <div className={`${isMember ? "w-[110px] sm:w-[170px] xl:w-[250px]" : "flex-1"} flex items-center justify-end gap-2 sm:gap-4 min-w-0`}>
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="text-right hidden xl:block">
-                  <p className="text-sm font-semibold text-foreground truncate max-w-[110px] sm:max-w-[180px]">{user.fullName}</p>
+                  <p className="text-sm font-semibold text-foreground truncate max-w-[110px] sm:max-w-[180px]">{displayUserName}</p>
                   <Badge className="bg-huc-orange text-huc-orange-foreground text-[12px] px-3 py-0.5 rounded-full">
                     {ROLE_LABELS[user.role]}
                   </Badge>
@@ -259,7 +277,7 @@ export function Navbar() {
                   <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border">
                     <img
                       src={effectivePhotoUrl}
-                      alt={user.fullName}
+                      alt={displayUserName}
                       className="h-full w-full object-cover"
                       onError={() => setAvatarFailed(true)}
                     />

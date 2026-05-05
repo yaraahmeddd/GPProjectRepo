@@ -348,7 +348,7 @@ const SportDetailedPG: React.FC = () => {
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
                                     {branches.length === 0 ? (
-                                        <option value="">{t("clubs.no_branches", "?? ???? ???? ?????")}</option>
+                                        <option value="">{t("sports.no_branches")}</option>
                                     ) : (
                                         branches.map((branch) => (
                                             <option key={branch.id} value={String(branch.id)}>
@@ -369,11 +369,11 @@ const SportDetailedPG: React.FC = () => {
                                     className="w-full bg-[#0A1A44] border-2 border-[#FDBF00] text-white px-6 py-4 rounded-full font-bold text-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FDBF00]"
                                 >
                                     {loadingBranchSports ? (
-                                        <option value="">{t("sports.loading", "Loading sports...")}</option>
+                                        <option value="">{t("sports.loading")}</option>
                                     ) : branchSportsError ? (
                                         <option value="">{branchSportsError}</option>
                                     ) : availableSports.length === 0 ? (
-                                        <option value="">{t("sports.no_sports_for_branch", "?? ???? ?????? ????? ?? ??? ?????")}</option>
+                                        <option value="">{t("sports.no_sports_for_branch")}</option>
                                     ) : (
                                         availableSports.map((sport) => (
                                             <option key={sport.value} value={sport.value}>

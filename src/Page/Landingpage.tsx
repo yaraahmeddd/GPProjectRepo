@@ -60,6 +60,29 @@ interface BranchItem {
   phone?: string | null;
 }
 
+const EgFlagIcon = ({ className = "w-5 h-3.5 rounded-sm shadow-sm" }: { className?: string }) => (
+  <svg viewBox="0 0 60 40" className={className} aria-hidden="true">
+    <rect width="60" height="40" fill="#CE1126" />
+    <rect y="13.333" width="60" height="13.333" fill="#FFFFFF" />
+    <rect y="26.666" width="60" height="13.334" fill="#000000" />
+    <circle cx="30" cy="20" r="2.4" fill="#C8A951" />
+  </svg>
+);
+
+const GbFlagIcon = ({ className = "w-5 h-3.5 rounded-sm shadow-sm" }: { className?: string }) => (
+  <svg viewBox="0 0 60 40" className={className} aria-hidden="true">
+    <rect width="60" height="40" fill="#012169" />
+    <polygon points="0,0 7,0 60,34 60,40 53,40 0,6" fill="#FFFFFF" />
+    <polygon points="60,0 53,0 0,34 0,40 7,40 60,6" fill="#FFFFFF" />
+    <polygon points="0,0 3.5,0 60,36.5 60,40 56.5,40 0,3.5" fill="#C8102E" />
+    <polygon points="60,0 56.5,0 0,36.5 0,40 3.5,40 60,3.5" fill="#C8102E" />
+    <rect x="24" width="12" height="40" fill="#FFFFFF" />
+    <rect y="14" width="60" height="12" fill="#FFFFFF" />
+    <rect x="26" width="8" height="40" fill="#C8102E" />
+    <rect y="16" width="60" height="8" fill="#C8102E" />
+  </svg>
+);
+
 const BACKEND_URL = "http://localhost:3000";
 const asset = (p: string) => `/assets/${p}`;
 const DEFAULT_NEWS_IMAGE = asset("HUC Picture Full.jpg");
@@ -774,13 +797,7 @@ const App = () => {
                   onClick={() => setLangDropdownOpen((v) => !v)}
                   className="flex items-center gap-2 bg-white border border-gray-200 hover:border-[#2596be] px-3 py-1.5 rounded-full transition-all duration-300 shadow-sm hover:shadow-md"
                 >
-                  <span className="flex items-center">
-                    {i18n.language.startsWith('ar') ? (
-                      <img src="https://flagcdn.com/w20/eg.png" alt="AR" className="w-5 rounded-sm shadow-sm" />
-                    ) : (
-                      <img src="https://flagcdn.com/w20/gb.png" alt="EN" className="w-5 rounded-sm shadow-sm" />
-                    )}
-                  </span>
+                  {i18n.language.startsWith('ar') ? <EgFlagIcon /> : <GbFlagIcon />}
                   <span className="text-sm font-bold text-gray-700">
                     {i18n.language.startsWith('ar') ? 'AR' : 'EN'}
                   </span>
@@ -796,15 +813,15 @@ const App = () => {
                       onClick={() => { i18n.changeLanguage('ar'); setLangDropdownOpen(false); }}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-start text-sm font-semibold transition-colors ${i18n.language.startsWith('ar') ? 'bg-blue-50 text-[#2596be]' : 'text-[#0e1c38] hover:bg-gray-50'}`}
                     >
-                      <img src="https://flagcdn.com/w20/eg.png" alt="AR" className="w-5 rounded-sm shadow-sm" />
-                      العربية
+                      <EgFlagIcon />
+                      AR
                     </button>
                     <button
                       onClick={() => { i18n.changeLanguage('en'); setLangDropdownOpen(false); }}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-start text-sm font-semibold transition-colors ${i18n.language.startsWith('en') ? 'bg-blue-50 text-[#2596be]' : 'text-[#0e1c38] hover:bg-gray-50'}`}
                     >
-                      <img src="https://flagcdn.com/w20/gb.png" alt="EN" className="w-5 rounded-sm shadow-sm" />
-                      English
+                      <GbFlagIcon />
+                      EN
                     </button>
                   </div>
                 )}
@@ -910,13 +927,13 @@ const App = () => {
               onClick={() => { i18n.changeLanguage('ar'); }}
               className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('ar') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              <img src="https://flagcdn.com/w20/eg.png" alt="AR" className="w-5 rounded-sm shadow-sm" /> AR
+              <EgFlagIcon className="w-5 h-3.5 rounded-sm" /> AR
             </button>
             <button
               onClick={() => { i18n.changeLanguage('en'); }}
               className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('en') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              <img src="https://flagcdn.com/w20/gb.png" alt="EN" className="w-5 rounded-sm shadow-sm" /> EN
+              <GbFlagIcon className="w-5 h-3.5 rounded-sm" /> EN
             </button>
           </div>
 

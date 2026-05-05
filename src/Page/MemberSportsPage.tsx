@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+﻿import { useCallback, useEffect, useState, useMemo } from "react";
 import {
     AlertCircle,
     Calendar,
@@ -30,7 +30,7 @@ import {
     localizeDays
 } from "../features/dashboard/calendarUtils";
 
-/* ─── Types ──────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface SportSubscription extends EnrolledSport {
     startDate: string;
     endDate: string;
@@ -38,38 +38,38 @@ interface SportSubscription extends EnrolledSport {
     schedule?: string;
 }
 
-/* ─── Constants ──────────────────────────────────────────────────── */
+/* â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const MAX_SPORTS = 4;
 const LS_KEY = (memberId: number | string) => `member_pending_sports_${memberId}`;
 
-/* ─── Helpers ────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const statusColor = (s: EnrolledSport["status"]) =>
-    s === "نشط" ? "#16A34A" : s === "قيد الانتظار" ? "#3B82F6" : s === "قادم" ? "#F59E0B" : "#8FA3BB";
+    s === "Ù†Ø´Ø·" ? "#16A34A" : s === "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±" ? "#3B82F6" : s === "Ù‚Ø§Ø¯Ù…" ? "#F59E0B" : "#8FA3BB";
 
 const getSportIconFromName = (name: string): string => {
     const n = name.toLowerCase();
-    if (n.includes("قدم") || n.includes("كرة القدم") || n.includes("foot")) return "⚽";
-    if (n.includes("سلة") || n.includes("كرة السلة") || n.includes("basket")) return "🏀";
-    if (n.includes("تنس") || n.includes("tennis")) return "🎾";
-    if (n.includes("سباح") || n.includes("السباحة") || n.includes("swim")) return "🏊";
-    if (n.includes("طائر") || n.includes("الكرة الطائرة") || n.includes("volley")) return "🏐";
-    if (n.includes("جمباز") || n.includes("gym")) return "🤸";
-    return "🏅";
+    if (n.includes("Ù‚Ø¯Ù…") || n.includes("ÙƒØ±Ø© Ø§Ù„Ù‚Ø¯Ù…") || n.includes("foot")) return "âš½";
+    if (n.includes("Ø³Ù„Ø©") || n.includes("ÙƒØ±Ø© Ø§Ù„Ø³Ù„Ø©") || n.includes("basket")) return "ðŸ€";
+    if (n.includes("ØªÙ†Ø³") || n.includes("tennis")) return "ðŸŽ¾";
+    if (n.includes("Ø³Ø¨Ø§Ø­") || n.includes("Ø§Ù„Ø³Ø¨Ø§Ø­Ø©") || n.includes("swim")) return "ðŸŠ";
+    if (n.includes("Ø·Ø§Ø¦Ø±") || n.includes("Ø§Ù„ÙƒØ±Ø© Ø§Ù„Ø·Ø§Ø¦Ø±Ø©") || n.includes("volley")) return "ðŸ";
+    if (n.includes("Ø¬Ù…Ø¨Ø§Ø²") || n.includes("gym")) return "ðŸ¤¸";
+    return "ðŸ…";
 };
 
 function SportIcon({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
     const n = (name ?? "").toLowerCase();
     const cls = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-    if (n.includes("سباح") || n.includes("swim")) return <span>🏊</span>;
-    if (n.includes("كرة") || n.includes("ball") || n.includes("قدم")) return <span>⚽</span>;
-    if (n.includes("تنس") || n.includes("tennis")) return <span>🎾</span>;
-    if (n.includes("ملاكم") || n.includes("كاراته") || n.includes("box")) return <span>🥊</span>;
-    if (n.includes("لياق") || n.includes("gym") || n.includes("fitness")) return <Dumbbell className={cls} />;
-    if (n.includes("جمباز") || n.includes("gymn")) return <span>🤸</span>;
+    if (n.includes("Ø³Ø¨Ø§Ø­") || n.includes("swim")) return <span>ðŸŠ</span>;
+    if (n.includes("ÙƒØ±Ø©") || n.includes("ball") || n.includes("Ù‚Ø¯Ù…")) return <span>âš½</span>;
+    if (n.includes("ØªÙ†Ø³") || n.includes("tennis")) return <span>ðŸŽ¾</span>;
+    if (n.includes("Ù…Ù„Ø§ÙƒÙ…") || n.includes("ÙƒØ§Ø±Ø§ØªÙ‡") || n.includes("box")) return <span>ðŸ¥Š</span>;
+    if (n.includes("Ù„ÙŠØ§Ù‚") || n.includes("gym") || n.includes("fitness")) return <Dumbbell className={cls} />;
+    if (n.includes("Ø¬Ù…Ø¨Ø§Ø²") || n.includes("gymn")) return <span>ðŸ¤¸</span>;
     return <Trophy className={cls} />;
 }
 
-/* ─── localStorage helpers ───────────────────────────────────────── */
+/* â”€â”€â”€ localStorage helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function loadPendingFromStorage(userId: number | string | undefined | null): SportSubscription[] {
     if (!userId) return [];
     try {
@@ -93,6 +93,10 @@ function savePendingToStorage(userId: number | string | undefined | null, list: 
 const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ sport, delay }) => {
     const { t, i18n } = useTranslation("team");
     const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
+    const displayName = isRtl
+        ? (sport.nameAr || sport.nameEn || sport.name)
+        : (sport.nameEn || sport.nameAr || sport.name);
+    const locale = isRtl ? "ar-EG" : "en-US";
     const pct = sport.total > 0 ? Math.round((sport.attended / sport.total) * 100) : 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -125,18 +129,18 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
                         style={{ background: (sport.color || "#1E6FB9") + "15" }}
                     >
                         {sport.img ? (
-                            <img src={sport.img} alt={sport.nameAr || sport.name} className="absolute inset-0 w-full h-full object-cover" />
+                            <img src={sport.img} alt={displayName} className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
-                            <SportIcon name={sport.nameAr || sport.name} />
+                            <SportIcon name={displayName} />
                         )}
                     </div>
                     <div>
-                        <div className="font-extrabold text-[16px] mb-0.5 leading-tight">{sport.nameAr}</div>
+                        <div className="font-extrabold text-[16px] mb-0.5 leading-tight">{displayName}</div>
                         <div className="flex items-center gap-2">
-                        <Badge label={t(`sports.status.${sport.status === "نشط" ? "active" : sport.status === "قيد الانتظار" ? "pending" : "upcoming"}`)} color={statusColor(sport.status)} />
+                        <Badge label={t(`sports.status.${sport.status === "Ù†Ø´Ø·" ? "active" : sport.status === "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±" ? "pending" : "upcoming"}`)} color={statusColor(sport.status)} />
                         {(sport.startDate || (sport as any).start_date) && (
                             <span className="text-[10px] text-ds-text-muted font-bold">
-                                📅 {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
+                                {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
                             </span>
                         )}
                     </div>
@@ -152,19 +156,19 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
                     }}
                 >
                     <span className="text-[10px] text-ds-text-muted ml-1.5 shrink-0">{t("my_sports.next_session")}</span>
-                    <span className="font-bold text-[12px] shrink-0" style={{ color: sport.color || "#1E6FB9" }}>📅 {localizeDays(sport.nextDay || "-", isRtl)}</span>
-                    <span className="text-ds-border">·</span>
-                    <span className="font-semibold text-[12px] shrink-0">⏰ {sport.nextTime || "-"}</span>
-                    <span className="text-ds-border">·</span>
-                    <span className="font-semibold text-[12px] shrink-0">📍 {sport.court || "-"}</span>
+                    <span className="font-bold text-[12px] shrink-0" style={{ color: sport.color || "#1E6FB9" }}>{localizeDays(sport.nextDay || "-", isRtl)}</span>
+                    <span className="text-ds-border">Â·</span>
+                    <span className="font-semibold text-[12px] shrink-0">{sport.nextTime || "-"}</span>
+                    <span className="text-ds-border">Â·</span>
+                    <span className="font-semibold text-[12px] shrink-0">{sport.court || "-"}</span>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="flex gap-1.5 mb-2.5">
-                <StatChip icon="✅" label={t("training_card.attended")} val={sport.attended} color="#16A34A" />
-                <StatChip icon="❌" label={t("training_card.absent")} val={sport.absent} color="#DC2626" />
-                <StatChip icon="⏳" label={t("training_card.remaining")} val={remainingDynamic} color="#1F6FD5" />
+                <StatChip icon="✓" label={t("training_card.attended")} val={sport.attended} color="#16A34A" />
+                <StatChip icon="✕" label={t("training_card.absent")} val={sport.absent} color="#DC2626" />
+                <StatChip icon="…" label={t("training_card.remaining")} val={remainingDynamic} color="#1F6FD5" />
             </div>
 
             {/* Progress */}
@@ -182,11 +186,12 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
     );
 };
 
-/* ─── Page ───────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export default function MemberSportsPage() {
     /* Separate state slices as required */
     const { t, i18n } = useTranslation("team");
     const isRtl = i18n.resolvedLanguage?.startsWith('ar') || i18n.language.startsWith('ar');
+    const locale = isRtl ? "ar-EG" : "en-US";
     const [approvedSports, setApprovedSports] = useState<SportSubscription[]>([]);
     const [pendingSports, setPendingSports] = useState<SportSubscription[]>([]);
     const [serverBookings, setServerBookings] = useState<any[]>([]);
@@ -205,7 +210,7 @@ export default function MemberSportsPage() {
     const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
     const { user } = useAuth();
 
-    // ── Confirmed Bookings combined (Server + LocalStorage) ──
+    // â”€â”€ Confirmed Bookings combined (Server + LocalStorage) â”€â”€
     const combinedBookings = useMemo(() => {
         try {
             const userId = user?.member_id || user?.team_member_id;
@@ -216,7 +221,9 @@ export default function MemberSportsPage() {
                 id: b.id,
                 date: (b.start_time || b.date || "").split('T')[0],
                 time: (b.start_time || "").split('T')[1]?.slice(0, 5) || b.time_from || "",
-                court: b.field?.name_ar || b.facility_name || "ملعب",
+                court: isRtl
+                    ? (b.field?.name_ar || b.field?.name_en || b.facility_name || "ملعب")
+                    : (b.field?.name_en || b.field?.name_ar || b.facility_name || "Court"),
                 isServer: true
             }));
 
@@ -228,9 +235,9 @@ export default function MemberSportsPage() {
             });
             return combined;
         } catch { return []; }
-    }, [user, serverBookings]);
+    }, [user, serverBookings, isRtl]);
 
-    /* Merged list for display — approved first, then pending */
+    /* Merged list for display â€” approved first, then pending */
     const allSubscriptions: SportSubscription[] = useMemo(() => [
         ...approvedSports,
         ...pendingSports.filter(
@@ -250,7 +257,7 @@ export default function MemberSportsPage() {
 
     const totalSlotsFilled = allSubscriptions.length;
 
-    // ── Month events (cached for grid) ──
+    // â”€â”€ Month events (cached for grid) â”€â”€
     const events = useMemo(() => buildMonthEvents(viewYear, viewMonth, allSubscriptions, combinedBookings), [viewYear, viewMonth, allSubscriptions, combinedBookings]);
     const firstDay = new Date(viewYear, viewMonth, 1).getDay();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -272,12 +279,12 @@ export default function MemberSportsPage() {
         : [];
 
     const monthlySummary = {
-        attended: Array.from(events.values()).flat().filter(e => e.status === "attended" || e.status === "حضور").length,
-        absent: Array.from(events.values()).flat().filter(e => e.status === "absent" || e.status === "غياب").length,
-        upcoming: Array.from(events.values()).flat().filter(e => e.status === "upcoming" || e.status === "قادم").length,
+        attended: Array.from(events.values()).flat().filter(e => e.status === "attended" || e.status === "Ø­Ø¶ÙˆØ±").length,
+        absent: Array.from(events.values()).flat().filter(e => e.status === "absent" || e.status === "ØºÙŠØ§Ø¨").length,
+        upcoming: Array.from(events.values()).flat().filter(e => e.status === "upcoming" || e.status === "Ù‚Ø§Ø¯Ù…").length,
     };
 
-    // ديناميكي: مجموع المتبقي لكل رياضة حتى نهاية الشهر الحالي
+    // Ø¯ÙŠÙ†Ø§Ù…ÙŠÙƒÙŠ: Ù…Ø¬Ù…ÙˆØ¹ Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ Ù„ÙƒÙ„ Ø±ÙŠØ§Ø¶Ø© Ø­ØªÙ‰ Ù†Ù‡Ø§ÙŠØ© Ø§Ù„Ø´Ù‡Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ
     const totalRemainingDynamic = useMemo(() => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -300,7 +307,7 @@ export default function MemberSportsPage() {
         return sum;
     }, [allSubscriptions]);
 
-    /* ─── On mount: load approved from API + pending from localStorage ── */
+    /* â”€â”€â”€ On mount: load approved from API + pending from localStorage â”€â”€ */
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
@@ -374,13 +381,13 @@ export default function MemberSportsPage() {
                 const { sports: backendSports } = statsRes.data;
 
                 const dayMap: Record<string, number> = {
-                    "Sunday": 0, "الاحد": 0, "الأحد": 0,
-                    "Monday": 1, "الاثنين": 1, "الإثنين": 1,
-                    "Tuesday": 2, "الثلاثاء": 2,
-                    "Wednesday": 3, "الاربعاء": 3, "الأربعاء": 3,
-                    "Thursday": 4, "الخميس": 4,
-                    "Friday": 5, "الجمعة": 5,
-                    "Saturday": 6, "السبت": 6
+                    "Sunday": 0, "Ø§Ù„Ø§Ø­Ø¯": 0, "Ø§Ù„Ø£Ø­Ø¯": 0,
+                    "Monday": 1, "Ø§Ù„Ø§Ø«Ù†ÙŠÙ†": 1, "Ø§Ù„Ø¥Ø«Ù†ÙŠÙ†": 1,
+                    "Tuesday": 2, "Ø§Ù„Ø«Ù„Ø§Ø«Ø§Ø¡": 2,
+                    "Wednesday": 3, "Ø§Ù„Ø§Ø±Ø¨Ø¹Ø§Ø¡": 3, "Ø§Ù„Ø£Ø±Ø¨Ø¹Ø§Ø¡": 3,
+                    "Thursday": 4, "Ø§Ù„Ø®Ù…ÙŠØ³": 4,
+                    "Friday": 5, "Ø§Ù„Ø¬Ù…Ø¹Ø©": 5,
+                    "Saturday": 6, "Ø§Ù„Ø³Ø¨Øª": 6
                 };
 
                 approvedList = backendSports.reduce((acc: SportSubscription[], s: any, idx: number) => {
@@ -404,7 +411,7 @@ export default function MemberSportsPage() {
 
                     const sportIdRaw = s.sport_id ?? s.id;
                     const sportNameAr = s.sport_name_ar || s.name_ar || s.sport_name || s.name || "رياضة";
-                    const sportNameEn = s.sport_name || s.name_en || "";
+                    const sportNameEn = s.sport_name_en || s.name_en || s.sport_name || s.name || "";
                     const matchesAllowedSubscription =
                         allowedSportIds.size === 0
                             ? true
@@ -417,8 +424,8 @@ export default function MemberSportsPage() {
                     const firstSched = s.schedules?.[0];
                     const weekdaysSet = new Set<number>();
                     (s.schedules || []).forEach((sched: any) => {
-                        const dArs = (sched.days_ar || "").split(/[،,]/).map((d: string) => d.trim());
-                        const dEns = (sched.days_en || "").split(/[،,]/).map((d: string) => d.trim());
+                        const dArs = (sched.days_ar || "").split(/[ØŒ,]/).map((d: string) => d.trim());
+                        const dEns = (sched.days_en || "").split(/[ØŒ,]/).map((d: string) => d.trim());
                         dArs.forEach((d: string) => { if (dayMap[d] !== undefined) weekdaysSet.add(dayMap[d]); });
                         dEns.forEach((d: string) => { if (dayMap[d] !== undefined) weekdaysSet.add(dayMap[d]); });
                     });
@@ -427,26 +434,34 @@ export default function MemberSportsPage() {
                     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                     const remainingThisMonth = Math.max(0, endOfMonth.getDate() - today.getDate());
 
+                    const displaySportName = isRtl
+                        ? (sportNameAr || sportNameEn || "رياضة")
+                        : (sportNameEn || sportNameAr || "Sport");
+
                     acc.push({
                         id: String(s.id || idx + 1),
                         sportId: String(sportIdRaw || idx + 1),
-                        name: sportNameAr,
+                        name: displaySportName,
                         nameAr: sportNameAr,
                         nameEn: sportNameEn,
-                        icon: getSportIconFromName(s.sport_name_ar || s.sport_name || s.name || ""),
+                        icon: getSportIconFromName(displaySportName),
                         img: s.sport_image || s.sportImage || null,
                         status:
                             s.status === "approved" ||
                             s.status === "active" ||
                             rawSubscriptionStatus === "approved" ||
                             rawSubscriptionStatus === "active"
-                            ? "نشط"
+                            ? "Ù†Ø´Ø·"
                             : ((s.status === "pending" || rawSubscriptionStatus === "pending" || !s.status) && hasConfirmedPayment)
-                                ? "قيد الانتظار"
-                                : "قادم",
-                        nextDay: firstSched?.days_ar || "قريباً",
+                                ? "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±"
+                                : "Ù‚Ø§Ø¯Ù…",
+                        nextDay: isRtl
+                            ? (firstSched?.days_ar || firstSched?.days_en || "قريباً")
+                            : (firstSched?.days_en || firstSched?.days_ar || "Soon"),
                         nextTime: firstSched ? `${firstSched.start_time} - ${firstSched.end_time}` : "-",
-                        court: firstSched?.field?.name_ar || "ملعب النادي",
+                        court: isRtl
+                            ? (firstSched?.field?.name_ar || firstSched?.field?.name_en || "ملعب النادي")
+                            : (firstSched?.field?.name_en || firstSched?.field?.name_ar || "Club Court"),
                         attended: s.stats.attended,
                         absent: s.stats.absent,
                         remaining: remainingThisMonth,
@@ -491,30 +506,30 @@ export default function MemberSportsPage() {
             }
             setPendingSports(reconciled);
         } catch {
-            setError("فشل في تحميل بيانات الرياضات. يرجى المحاولة مرة أخرى.");
+            setError("ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙŠØ§Ø¶Ø§Øª. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.");
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isRtl]);
 
     useEffect(() => { void loadData(); }, [loadData]);
 
-    /* ─── 5. UI Render ─── */
+    /* â”€â”€â”€ 5. UI Render â”€â”€â”€ */
     return (
-        <div className="flex flex-col gap-6 animate-fade-up" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-col gap-6 animate-fade-up px-1 sm:px-0" dir={isRtl ? "rtl" : "ltr"}>
             {/* Header section */}
-            <div className={`flex flex-col md:flex-row md:items-end justify-between gap-4 ${isRtl ? '' : 'md:flex-row-reverse'}`}>
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div className={`flex flex-col gap-2 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    <div className={`flex items-center gap-3 ${isRtl ? '' : 'flex-row-reverse'}`}>
+                    <div className="flex items-center gap-3">
                         <Trophy className="h-8 w-8 text-[#2EA7C9]" />
-                        <h1 className="text-[32px] font-black text-[#214474] tracking-tight">{t("my_sports.title")}</h1>
+                        <h1 className="text-[26px] sm:text-[32px] font-black text-[#214474] tracking-tight">{t("my_sports.title")}</h1>
                     </div>
                     <p className="text-muted-foreground font-medium opacity-80 flex items-center gap-2">
                         {t("my_sports.limit", { count: totalSlotsFilled, max: MAX_SPORTS })}
                     </p>
                 </div>
 
-                <div className={`flex items-center gap-3 ${isRtl ? '' : 'flex-row-reverse'}`}>
+                <div className="flex flex-wrap items-center gap-3">
                     {/* Status filter popover */}
                     <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                         <PopoverTrigger asChild>
@@ -534,9 +549,9 @@ export default function MemberSportsPage() {
                         <PopoverContent align={isRtl ? "end" : "start"} className="w-52 p-0" dir={isRtl ? "rtl" : "ltr"}>
                             <div className="py-1">
                                 {([
-                                    { key: "نشط", label: t("sports.status.active"), color: "text-emerald-700" },
-                                    { key: "قيد الانتظار", label: t("sports.status.pending"), color: "text-blue-700" },
-                                    { key: "قادم", label: t("sports.status.upcoming"), color: "text-amber-700" },
+                                    { key: "Ù†Ø´Ø·", label: t("sports.status.active"), color: "text-emerald-700" },
+                                    { key: "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±", label: t("sports.status.pending"), color: "text-blue-700" },
+                                    { key: "Ù‚Ø§Ø¯Ù…", label: t("sports.status.upcoming"), color: "text-amber-700" },
                                 ]).map(({ key, label, color }) => {
                                     const checked = filterStatuses.includes(key);
                                     const count = allSubscriptions.filter(s => s.status === key).length;
@@ -575,7 +590,7 @@ export default function MemberSportsPage() {
 
                     <Button
                         onClick={() => (window.location.href = "/member/dashboard/subscribe")}
-                        className="bg-[#2EA7C9] hover:bg-[#2589a5] text-white rounded-xl px-6 h-12 font-bold flex items-center gap-2 shadow-lg shadow-[#2EA7C9]/20 transition-all hover:scale-[1.02]"
+                        className="bg-[#2EA7C9] hover:bg-[#2589a5] text-white rounded-xl px-5 sm:px-6 h-11 sm:h-12 font-bold flex items-center gap-2 shadow-lg shadow-[#2EA7C9]/20 transition-all hover:scale-[1.02]"
                     >
                         <Plus className="h-5 w-5" />
                         {t("my_sports.subscribe")}
@@ -614,13 +629,13 @@ export default function MemberSportsPage() {
                     </Button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-[1fr_550px] gap-6 items-start">
+                <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_minmax(380px,520px)] gap-6 items-start">
                     {/* Training Cards Column */}
                     <div>
                         <div className={`font-bold text-[15px] text-ds-text-secondary mb-3 flex items-center gap-2 ${isRtl ? '' : 'flex-row-reverse'}`}>
-                            <span>🏋️</span> {isRtl ? "رياضاتي وسجل الحضور" : "My Sports & Attendance"}
+                            <span>🏋️</span> {t("dashboard.my_sports_section")}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {filteredSubscriptions.map((s, i) => (
                                 <TrainingCard key={s.id} sport={s} delay={i * 70} />
                             ))}
@@ -628,9 +643,9 @@ export default function MemberSportsPage() {
                     </div>
 
                     {/* Calendar + Sidebar Column */}
-                    <div className="flex flex-col gap-4 xl:sticky xl:top-20">
+                    <div className="flex flex-col gap-4 2xl:sticky 2xl:top-20">
                         {/* Monthly Summary Chips */}
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {[
                                 { label: t("training_card.attended"), val: monthlySummary.attended, color: "#16A34A", bg: "#F0FDF4" },
                                 { label: t("training_card.absent"), val: monthlySummary.absent, color: "#DC2626", bg: "#FEF2F2" },
@@ -646,11 +661,11 @@ export default function MemberSportsPage() {
                         {/* Calendar Card */}
                         <Card className="p-4 border-none shadow-sm">
                             <div className="flex items-center justify-between mb-4">
-                                <button onClick={prevMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">‹</button>
+                                <button onClick={prevMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">{"<"}</button>
                                 <div className="text-center">
                                     <span className="font-black text-lg text-ds-text-primary">{getMonthName(viewMonth, t)} {viewYear}</span>
                                 </div>
-                                <button onClick={nextMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">›</button>
+                                <button onClick={nextMonth} className="w-9 h-9 rounded-xl border border-ds-border bg-ds-border/10 cursor-pointer text-lg flex items-center justify-center hover:bg-ds-border/20 transition-colors">{">"}</button>
                             </div>
 
                             {/* Sport Filter Pills */}
@@ -659,7 +674,7 @@ export default function MemberSportsPage() {
                                     onClick={() => setFilterSport(null)}
                                     className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-all border ${filterSport === null ? 'bg-ds-primary text-white border-ds-primary' : 'bg-white text-ds-text-secondary border-ds-border hover:bg-ds-border/10'}`}
                                 >
-                                    الكل
+                                    {t("dashboard.calendar.filter_all")}
                                 </button>
                                 {allSubscriptions.map(s => (
                                     <button
@@ -672,7 +687,7 @@ export default function MemberSportsPage() {
                                             borderColor: filterSport === s.id ? s.color : "#DDE5F0"
                                         }}
                                     >
-                                        {s.icon} {s.nameAr}
+                                        {s.icon} {isRtl ? (s.nameAr || s.nameEn || s.name) : (s.nameEn || s.nameAr || s.name)}
                                     </button>
                                 ))}
                             </div>
@@ -711,7 +726,7 @@ export default function MemberSportsPage() {
                                                         {ev.name}
                                                     </div>
                                                 ))}
-                                                {dayEvts.length > 2 && <div className="text-[8px] text-ds-text-muted font-bold mr-1">+{dayEvts.length - 2} المزيد</div>}
+                                                {dayEvts.length > 2 && <div className="text-[8px] text-ds-text-muted font-bold mr-1">+{dayEvts.length - 2} {isRtl ? "المزيد" : "more"}</div>}
                                             </div>
                                         </div>
                                     );
@@ -725,11 +740,11 @@ export default function MemberSportsPage() {
                                 <>
                                     <div className="flex justify-between items-center mb-4 border-b pb-2">
                                         <span className="font-extrabold text-sm text-ds-text-primary">
-                                            📅 {new Date(selectedKey + "T12:00:00").toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })}
+                                            📅 {new Date(selectedKey + "T12:00:00").toLocaleDateString(isRtl ? "ar-EG" : "en-US", { weekday: "long", day: "numeric", month: "long" })}
                                         </span>
                                     </div>
                                     {selectedEvents.length === 0 ? (
-                                        <div className="text-center text-ds-text-muted py-8 text-xs italic">لا توجد جلسات لهذا اليوم</div>
+                                        <div className="text-center text-ds-text-muted py-8 text-xs italic">{t("dashboard.calendar.no_sessions")}</div>
                                     ) : (
                                         <div className="flex flex-col gap-3">
                                             {selectedEvents.map((ev, i) => {
@@ -754,7 +769,7 @@ export default function MemberSportsPage() {
                                                             </div>
                                                             {ev.price ? (
                                                                 <div className="flex items-center gap-1.5 text-ds-orange">
-                                                                    <span className="text-[11px] font-black">💰 {ev.price.toLocaleString("ar-EG")} ج.م</span>
+                                                                    <span className="text-[11px] font-black">💰 {ev.price.toLocaleString(locale)} {t("sports.currency")}</span>
                                                                 </div>
                                                             ) : null}
                                                         </div>
@@ -767,7 +782,7 @@ export default function MemberSportsPage() {
                             ) : (
                                 <div className="text-center py-10 flex flex-col items-center gap-2 opacity-40">
                                     <Calendar className="w-12 h-12 text-ds-text-muted" />
-                                    <div className="font-bold text-sm text-ds-text-secondary">اختر يوماً من التقويم لعرض الجلسات</div>
+                                    <div className="font-bold text-sm text-ds-text-secondary">{t("dashboard.calendar.select_day")}</div>
                                 </div>
                             )}
                         </Card>
@@ -777,4 +792,5 @@ export default function MemberSportsPage() {
         </div>
     );
 }
+
 

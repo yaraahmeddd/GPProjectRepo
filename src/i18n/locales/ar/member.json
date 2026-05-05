@@ -1,4 +1,4 @@
-﻿{
+{
   "dashboard": {
     "title": "لوحة العضو"
   },
@@ -23,6 +23,13 @@
     "noSubscriptions": "لا توجد اشتراكات رياضية",
     "noBookings": "لا توجد حجوزات حالياً",
     "noNotifications": "لا توجد إشعارات حالياً"
+  },
+  "homePage": {
+    "myData": "بياناتي",
+    "memberId": "رقم العضو",
+    "sportsCount": "الرياضات",
+    "bookingsCount": "الحجوزات",
+    "copied": "تم نسخ الرابط بنجاح!"
   },
   "profilePage": {
     "edit": "تعديل البيانات",
