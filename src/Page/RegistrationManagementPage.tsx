@@ -69,7 +69,8 @@ export default function RegistrationManagementPage() {
     });
 
     const isRTL = i18n.language === 'ar';
-    const getDisplayName = (m: Pick<RegistrationRecord, 'first_name_ar' | 'last_name_ar' | 'first_name_en' | 'last_name_en'>) => {
+    const getDisplayName = (m?: Pick<RegistrationRecord, 'first_name_ar' | 'last_name_ar' | 'first_name_en' | 'last_name_en'> | null) => {
+        if (!m) return '';
         const ar = `${m.first_name_ar || ''} ${m.last_name_ar || ''}`.trim();
         const en = `${m.first_name_en || ''} ${m.last_name_en || ''}`.trim();
         return isRTL ? (ar || en) : (en || ar);
@@ -257,7 +258,7 @@ export default function RegistrationManagementPage() {
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="min-h-screen flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
 
             {/* ── Header ── */}
             <div className="px-6 py-4 border-b border-border bg-background shrink-0">
