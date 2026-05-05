@@ -67,6 +67,8 @@ type Team = {
   nameEn: string;           // → name_en
   maxParticipants: string;  // → max_participants (number)
   subscriptionPrice: string;// → subscription_price (number)
+  visibility: string;       // → visibility_type: INTERNAL | EXTERNAL | BOTH
+  price: string;            // → price (number)
   training: TeamTraining;
 };
 
@@ -106,6 +108,8 @@ const emptyTeam = (): Team => ({
   nameEn: "",
   maxParticipants: "",
   subscriptionPrice: "",
+  visibility: "",
+  price: "",
   training: emptyTraining(),
 });
 
@@ -389,8 +393,8 @@ export default function SportsPage() {
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const sportDisplayName = useCallback((s: Pick<Sport, "nameAr" | "nameEn">) => {
-    return s.nameAr || s.nameEn;
-  }, []);
+    return isRTL ? (s.nameAr || s.nameEn) : (s.nameEn || s.nameAr);
+  }, [isRTL]);
 
   const mapApiSport = useCallback((item: SportApiItem): Sport => {
     const nameAr = item.name_ar || (item.name && !item.name_en ? item.name : "") || "";
@@ -533,6 +537,8 @@ export default function SportsPage() {
         name_en: t.nameEn,
         max_participants: Number(t.maxParticipants),
         subscription_price: Number(t.subscriptionPrice) || 0,
+        visibility_type: t.visibility || undefined,
+        price: t.price !== "" ? Number(t.price) : undefined,
         training: {
           days_ar: t.training.selectedDays.join(", "),
           days_en: t.training.selectedDays
@@ -569,6 +575,8 @@ export default function SportsPage() {
             name_en: t.nameEn,
             max_participants: Number(t.maxParticipants),
             subscription_price: Number(t.subscriptionPrice) || 0,
+            visibility_type: t.visibility || undefined,
+            price: t.price !== "" ? Number(t.price) : undefined,
             training: {
               days_ar: t.training.selectedDays.join(", "),
               days_en: t.training.selectedDays
@@ -667,6 +675,8 @@ export default function SportsPage() {
           nameEn: t.name_en,
           maxParticipants: String(t.max_participants ?? 20),
           subscriptionPrice: "",
+          visibility: (t as any).visibility_type ?? "",
+          price: (t as any).price != null ? String((t as any).price) : "",
           training: t.training_schedules?.[0] ? {
             selectedDays: (t.training_schedules[0].days_ar ?? "").split(", ").filter(Boolean),
             startTime: (t.training_schedules[0].start_time ?? "").slice(0, 5),
@@ -766,7 +776,7 @@ export default function SportsPage() {
   });
 
   return (
-    <div className="h-full overflow-y-auto p-6 pb-8 space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen p-6 pb-8 space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('header.title')}</h1>
         <RoleGuard privilege="CREATE_SPORT">
@@ -1060,6 +1070,32 @@ export default function SportsPage() {
                           </div>
                         </div>
 
+                        {/* Visibility + Price — matches TeamsManagementPage */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs mb-1 block">العضوية</Label>
+                            <Select
+                              value={team.visibility || "none"}
+                              onValueChange={val => upd({ visibility: val === "none" ? "" : val })}
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="اختر العضوية" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs text-muted-foreground">— بدون تحديد —</SelectItem>
+                                <SelectItem value="INTERNAL" className="text-xs">داخلي</SelectItem>
+                                <SelectItem value="EXTERNAL" className="text-xs">خارجي</SelectItem>
+                                <SelectItem value="BOTH" className="text-xs">داخلي و خارجي</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs whitespace-nowrap shrink-0">السعر (ج.م)</Label>
+                            <input type="number" min={0} value={team.price}
+                              onChange={e => upd({ price: e.target.value })}
+                              placeholder="0"
+                              className="w-24 h-8 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                          </div>
+                        </div>
+
                         {/* Training block */}
                         <div className="space-y-2 rounded-md border border-border/60 bg-background p-2.5">
                           <span className="text-xs font-semibold text-muted-foreground">{t('form.trainingLabel')}</span>
@@ -1254,7 +1290,9 @@ export default function SportsPage() {
                   </TableRow>
                 ) : (
                   dialogMembers.map((m) => {
-                    const nameAr = [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ");
+                    const displayName = isRTL 
+                      ? [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ")
+                      : [m.first_name_en, m.last_name_en].filter(Boolean).join(" ") || [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ");
                     const statusCls =
                       m.status === "active" || m.status === "approved"
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -1267,7 +1305,7 @@ export default function SportsPage() {
                           : m.status === "suspended" ? t('memberStatus.suspended') : t('memberStatus.inactive');
                     return (
                       <TableRow key={m.id}>
-                        <TableCell className="font-medium">{nameAr}</TableCell>
+                        <TableCell className="font-medium">{displayName}</TableCell>
                         <TableCell className="font-mono text-xs" dir="ltr">{m.national_id}</TableCell>
                         <TableCell dir="ltr">{m.phone ?? "—"}</TableCell>
                         <TableCell>

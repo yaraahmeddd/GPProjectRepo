@@ -129,6 +129,7 @@
     "notUploaded": "Not uploaded",
     "medicalReport": "Medical Report",
     "noMedicalReport": "No medical report attached",
+    "membershipType": "Membership Type",
     "approveMembership": "Approve {{type}} Membership",
     "approving": "Approving...",
     "close": "Close"

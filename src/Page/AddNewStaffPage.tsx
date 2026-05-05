@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Save, Check, Copy } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Save, Check, Copy, UploadCloud, X, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -191,6 +191,147 @@ const STATIC_STAFF_TYPES: StaffType[] = [
   { id: 20, code: "SPORT_SPECIALIST", name_en: "Sport Activity Specialist", name_ar: "أخصائي الأنشطة الرياضية" },
 ];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf", "image/webp", "image/bmp", "image/heic"];
+
+interface DocumentUploadCardProps {
+  id: string;
+  label: string;
+  badgeType: "required" | "optional" | "conditional";
+  badgeText?: string;
+  warningText?: string;
+  file: File | null;
+  onFileChange: (id: string, file: File | null) => void;
+  error?: string | null;
+  highlightError?: boolean;
+}
+
+function DocumentUploadCard({
+  id, label, badgeType, badgeText, warningText, file, onFileChange, error, highlightError
+}: DocumentUploadCardProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleFile = (f: File) => {
+    setLocalError(null);
+    if (f.size > MAX_FILE_SIZE) {
+      setLocalError("حجم الملف يتجاوز 10 ميجابايت");
+      return;
+    }
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      setLocalError("نوع الملف غير مدعوم");
+      return;
+    }
+    onFileChange(id, f);
+  };
+
+  const badgeColors = {
+    required: "bg-red-100 text-red-700 border-red-200",
+    optional: "bg-gray-100 text-gray-700 border-gray-200",
+    conditional: "bg-amber-100 text-amber-700 border-amber-200",
+  };
+
+  const defaultBadgeText = {
+    required: "مطلوب",
+    optional: "اختياري",
+    conditional: "مشروط",
+  };
+
+  const finalBadgeText = badgeText || defaultBadgeText[badgeType];
+
+  const ringClass = highlightError ? "ring-2 ring-red-500 ring-offset-2 bg-red-50/10 rounded-xl p-1" : "";
+
+  return (
+    <div id={`doc-card-${id}`} className={`flex flex-col space-y-2 ${ringClass} transition-all`}>
+      <div className="flex items-center justify-between">
+        <Label className="font-semibold text-sm">{label}</Label>
+        <span className={`text-[10px] px-2 py-0.5 rounded border font-medium ${badgeColors[badgeType]}`}>
+          {finalBadgeText}
+        </span>
+      </div>
+      
+      {warningText && (
+        <div className="flex items-start gap-1.5 text-amber-600 bg-amber-50 p-2 rounded text-xs border border-amber-200">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p>{warningText}</p>
+        </div>
+      )}
+
+      {!file ? (
+        <div 
+          className={`
+            border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors
+            ${dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"}
+            ${(error || localError) ? "border-red-400 bg-red-50/50" : ""}
+          `}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".jpg,.jpeg,.png,.pdf,.webp,.bmp,.heic"
+            onChange={handleChange}
+          />
+          <UploadCloud className="w-8 h-8 text-muted-foreground mb-2" />
+          <p className="text-sm font-medium text-foreground">انقر للرفع أو اسحب الملف هنا</p>
+          <p className="text-xs text-muted-foreground mt-1" dir="ltr">JPEG, PNG, PDF, WEBP (Max 10MB)</p>
+        </div>
+      ) : (
+        <div className="border rounded-lg p-3 flex items-center justify-between bg-card">
+          <div className="flex flex-col overflow-hidden max-w-[200px]">
+            <span className="text-sm font-medium truncate" dir="ltr">{file.name}</span>
+            <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+          </div>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0 ml-2 h-8 w-8"
+            onClick={(e) => { e.stopPropagation(); onFileChange(id, null); }}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+      {(error || localError) && (
+        <p className="text-xs text-red-500 font-medium mt-1">{error || localError}</p>
+      )}
+    </div>
+  );
+}
+
 // Arabic display names for privilege module codes sent by the backend
 const MODULE_NAMES_AR: Record<string, string> = {
   MEMBERS: "الأعضاء",
@@ -227,6 +368,7 @@ export default function AddNewStaffPage() {
     reset,
     setValue,
     watch,
+    trigger,
   } = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
@@ -243,6 +385,39 @@ export default function AddNewStaffPage() {
   });
 
   const staffTypeId = watch("staff_type_id");
+
+  // Stepper & Gender State
+  const [step, setStep] = useState(1);
+  const [gender, setGender] = useState("ذكر");
+
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({
+    academic_certificate: null,
+    national_id_front: null,
+    military_service_doc: null,
+    criminal_record: null,
+    employer_approval_letter: null,
+    employment_status_statement: null,
+    good_conduct_certificate: null,
+    personal_photo: null,
+    personal_info_form: null,
+    experience_certificates: null,
+  });
+
+  const handleFileChange = useCallback((id: string, file: File | null) => {
+    setDocumentFiles((prev) => ({ ...prev, [id]: file }));
+  }, []);
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [softValidationPending, setSoftValidationPending] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<StaffFormData | null>(null);
+  const [isManualSubmitting, setIsManualSubmitting] = useState(false);
+
+  const handleNextStep = async () => {
+    const isValid = await trigger();
+    if (isValid) {
+      setStep(2);
+    }
+  };
 
   // Package & Privilege State
   const [backendPackages, setBackendPackages] = useState<PackageApiItem[]>([]);
@@ -507,8 +682,49 @@ export default function AddNewStaffPage() {
 
 
   const onSubmit = async (data: StaffFormData) => {
+      // PART A: Validation
+      const hardRequiredDocs = [
+        "academic_certificate", "national_id_front", "personal_photo",
+        "personal_info_form", "employer_approval_letter"
+      ];
+      if (gender === "ذكر") hardRequiredDocs.push("military_service_doc");
+
+    const softRequiredDocs = [
+      "criminal_record", "employment_status_statement", "good_conduct_certificate"
+    ];
+
+    const missingHardDocs = hardRequiredDocs.filter(id => !documentFiles[id]);
+    const missingSoftDocs = softRequiredDocs.filter(id => !documentFiles[id]);
+
+    if (missingHardDocs.length > 0) {
+      setValidationErrors(missingHardDocs);
+      const firstMissing = document.getElementById(`doc-card-${missingHardDocs[0]}`);
+      if (firstMissing) {
+        firstMissing.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      toast({
+        title: "نواقص في المستندات",
+        description: "يرجى إرفاق جميع المستندات المطلوبة (المظللة باللون الأحمر)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setValidationErrors([]); // Clear errors if any
+
+    if (missingSoftDocs.length > 0) {
+      setPendingSubmitData(data);
+      setSoftValidationPending(true);
+      return;
+    }
+
+    await executeSubmit(data);
+  };
+
+  const executeSubmit = async (data: StaffFormData) => {
+    setIsManualSubmitting(true);
     try {
-      const staffTypeIdNum = Number(data.staff_type_id);
+      setSoftValidationPending(false);
 
       const selectedBackendPackageIds = selectedPackages
         .filter((pkg) => pkg.backendId !== null)
@@ -516,21 +732,34 @@ export default function AddNewStaffPage() {
 
       const extraPrivileges = selectedExtraPrivilegeIds;
 
-      const payload = {
-        first_name_en: data.first_name_en,
-        first_name_ar: data.first_name_ar,
-        last_name_en: data.last_name_en,
-        last_name_ar: data.last_name_ar || undefined,
-        national_id: data.national_id,
-        phone: data.phone,
-        address: data.address || undefined,
-        staff_type_id: staffTypeIdNum,
-        employment_start_date: data.employment_start_date,
-        // Note: status is set by backend based on who is creating
-      };
+      // PART B: Switch to FormData
+      const formData = new FormData();
+      const token = localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
 
-      const response = await StaffService.registerStaff(payload);
-      // Backend returns { success, staff_id, account_id, email }
+      // text fields from react-hook-form:
+      Object.entries(data).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          formData.append(key, String(val));
+        }
+      });
+
+      // files:
+      Object.entries(documentFiles).forEach(([field, file]) => {
+        if (file) formData.append(field, file);
+      });
+
+      const res = await fetch("/api/staff/register", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+        // NO Content-Type header — browser sets it automatically with boundary
+      });
+
+      if (!res.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const response = await res.json();
       const newStaffId = response?.staff_id;
 
       if (!newStaffId) {
@@ -572,6 +801,20 @@ export default function AddNewStaffPage() {
 
       // Clear Form
       reset();
+      setStep(1);
+      setGender("ذكر");
+      setDocumentFiles({
+        academic_certificate: null,
+        national_id_front: null,
+        military_service_doc: null,
+        criminal_record: null,
+        employer_approval_letter: null,
+        employment_status_statement: null,
+        good_conduct_certificate: null,
+        personal_photo: null,
+        personal_info_form: null,
+        experience_certificates: null,
+      });
       setSelectedPackageKeys([]);
       setSelectedExtraPrivilegeIds([]);
       setExcludedPackagePrivilegeIds([]);
@@ -582,11 +825,13 @@ export default function AddNewStaffPage() {
         description: "حدث خطأ أثناء محاولة تسجيل الموظف",
         variant: "destructive",
       });
+    } finally {
+      setIsManualSubmitting(false);
     }
   };
 
   return (
-    <div className="h-full overflow-y-auto p-6 pb-8 space-y-6">
+    <div className="min-h-screen p-6 pb-8 space-y-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -596,14 +841,40 @@ export default function AddNewStaffPage() {
         <p className="text-muted-foreground mt-1">سجل موظفاً جديداً في النظام</p>
       </motion.div>
 
+      {/* STEPPER HEADER */}
+      <div className="flex items-center justify-center mb-8 mt-4 relative">
+        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -z-10 -translate-y-1/2 max-w-[200px] mx-auto"></div>
+        <div className="flex items-center gap-24 px-4">
+          <div className="flex flex-col items-center gap-2 z-10 bg-background px-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 transition-colors ${step >= 1 ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'}`}>1</div>
+            <span className={`text-sm font-medium ${step >= 1 ? 'text-foreground' : 'text-muted-foreground'}`}>البيانات الأساسية</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 z-10 bg-background px-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 transition-colors ${step >= 2 ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'}`}>2</div>
+            <span className={`text-sm font-medium ${step >= 2 ? 'text-foreground' : 'text-muted-foreground'}`}>المستندات المطلوبة</span>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>بيانات الموظف</CardTitle>
+          <CardTitle>{step === 1 ? 'البيانات الأساسية' : 'المستندات المطلوبة'}</CardTitle>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={hookFormSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div>
                 <Label>الاسم الأول (EN) *</Label>
                 <Input
@@ -673,6 +944,19 @@ export default function AddNewStaffPage() {
               </div>
 
               <div>
+                <Label>النوع *</Label>
+                <Select value={gender} onValueChange={setGender}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر النوع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ذكر">ذكر</SelectItem>
+                    <SelectItem value="أنثى">أنثى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label>رقم الهاتف *</Label>
                 <Input
                   {...register("phone")}
@@ -738,10 +1022,10 @@ export default function AddNewStaffPage() {
                   <p className="text-red-500 text-xs mt-1">{errors.employment_start_date.message}</p>
                 )}
               </div>
-            </div>
+                </div>
 
             {/* Package Selection Section */}
-            <div className="md:col-span-2 pt-6 mt-2 border-t border-border space-y-4">
+            <div className="pt-6 mt-2 border-t border-border space-y-4">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <Label className="text-base font-semibold block text-primary">
                   صلاحيات النظام (Packages)
@@ -1017,22 +1301,138 @@ export default function AddNewStaffPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/staff/dashboard/admin/staff/list")}
-              >
-                إلغاء
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                <Save className="w-4 h-4 ml-2" />
-                {isSubmitting ? "جارٍ الحفظ..." : "حفظ الموظف"}
-              </Button>
-            </div>
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate("/staff/dashboard/admin/staff/list")}
+                  >
+                    إلغاء
+                  </Button>
+                  <Button type="button" onClick={handleNextStep}>
+                    التالي ←
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (() => {
+              const docsConfig = [
+                { id: "academic_certificate", labelAr: "شهادة المؤهل الدراسي", required: true, badgeType: "required" as const },
+                { id: "national_id_front", labelAr: "صورة الرقم القومي", required: true, badgeType: "required" as const },
+                { id: "military_service_doc", labelAr: "الموقف من التجنيد", required: true, badgeType: "required" as const },
+                { id: "criminal_record", labelAr: "الفيش الجنائي", required: false, badgeText: "لغير العاملين بالجامعة", badgeType: "conditional" as const },
+                { id: "employer_approval_letter", labelAr: "موافقة جهة العمل", required: true, badgeType: "required" as const },
+                { id: "employment_status_statement", labelAr: "بيان الحالة الوظيفية", required: false, badgeText: "للعاملين بجهات أخرى", badgeType: "conditional" as const },
+                { id: "good_conduct_certificate", labelAr: "شهادة حسن سير وسلوك", required: false, badgeText: "لغير العاملين بجهات أخرى", badgeType: "conditional" as const },
+                { id: "personal_photo", labelAr: "صورة شخصية حديثة", required: true, badgeType: "required" as const, warningText: "النظام يقبل صورة واحدة — يُسلَّم نسختان لـ HR" },
+                { id: "personal_info_form", labelAr: "نموذج وثيقة التعارف", required: true, badgeType: "required" as const },
+                { id: "experience_certificates", labelAr: "شهادات الخبرة والدورات", required: false, badgeText: "إن وجد", badgeType: "optional" as const },
+              ];
+
+              const visibleDocs = docsConfig.filter(doc => {
+                if (doc.id === 'military_service_doc' && gender !== 'ذكر') return false;
+                return true;
+              });
+
+              const requiredDocs = visibleDocs.filter(doc => doc.required);
+              const uploadedRequiredDocsCount = requiredDocs.filter(doc => documentFiles[doc.id]).length;
+              const progressPercentage = requiredDocs.length > 0 ? (uploadedRequiredDocsCount / requiredDocs.length) * 100 : 0;
+
+              return (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  {/* Progress Bar */}
+                  <div className="bg-muted/10 p-5 rounded-lg border space-y-3">
+                    <div className="flex items-center justify-between text-sm font-semibold">
+                      <span>نسبة إكمال المستندات المطلوبة</span>
+                      <span className={uploadedRequiredDocsCount === requiredDocs.length ? "text-emerald-600" : "text-muted-foreground"}>
+                        {uploadedRequiredDocsCount} من {requiredDocs.length} مستندات مرفوعة
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ease-out ${uploadedRequiredDocsCount === requiredDocs.length ? 'bg-emerald-500' : 'bg-primary'}`}
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Documents Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {visibleDocs.map(doc => (
+                      <DocumentUploadCard
+                        key={doc.id}
+                        id={doc.id}
+                        label={doc.labelAr}
+                        badgeType={doc.badgeType}
+                        badgeText={doc.badgeText}
+                        warningText={doc.warningText}
+                        file={documentFiles[doc.id]}
+                        onFileChange={handleFileChange}
+                        highlightError={validationErrors.includes(doc.id)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-6 mt-4 border-t border-border">
+                    <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                      → السابق
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || isManualSubmitting}>
+                      <Save className="w-4 h-4 ml-2" />
+                      {isSubmitting || isManualSubmitting ? "جارٍ الحفظ..." : "حفظ الموظف"}
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })()}
+            </AnimatePresence>
           </form>
         </CardContent>
       </Card>
+
+      {/* Soft Validation Dialog */}
+      <Dialog open={softValidationPending} onOpenChange={setSoftValidationPending}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="w-5 h-5" />
+              مستندات غير مكتملة
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2 text-foreground">
+              هل أنت متأكد من المتابعة بدون هذه المستندات؟
+              <ul className="list-disc list-inside mt-3 text-sm text-muted-foreground space-y-1 text-right">
+                {pendingSubmitData && [
+                  { id: "criminal_record", label: "الفيش الجنائي" },
+                  { id: "employment_status_statement", label: "بيان الحالة الوظيفية" },
+                  { id: "good_conduct_certificate", label: "شهادة حسن سير وسلوك" }
+                ].filter(d => !documentFiles[d.id]).map(d => (
+                  <li key={d.id}>{d.label}</li>
+                ))}
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button type="button" variant="outline" onClick={() => setSoftValidationPending(false)}>
+              رجوع
+            </Button>
+            <Button 
+              type="button"
+              onClick={() => pendingSubmitData && executeSubmit(pendingSubmitData)}
+              disabled={isManualSubmitting}
+            >
+              {isManualSubmitting ? "جارٍ الحفظ..." : "تأكيد"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Credentials Display Dialog */}
       <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
@@ -1049,42 +1449,31 @@ export default function AddNewStaffPage() {
 
           {createdCredentials && (
             <div className="space-y-4 py-4">
-              {/* Email */}
-              <div className="p-4 bg-muted rounded-lg border space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">البريد الإلكتروني (للدخول)</Label>
-                  <div className="flex items-center justify-between bg-background p-2 rounded border mt-1" dir="ltr">
-                    <code className="text-sm font-mono tracking-tight">
-                      staff.{createdCredentials.national_id}@helwan-club.local
-                    </code>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">كلمة المرور الأولية (= الرقم القومي)</Label>
-                  <div className="flex items-center justify-between bg-background p-2 rounded border mt-1">
-                    <code className="text-sm font-mono tracking-widest">{createdCredentials.national_id}</code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        navigator.clipboard.writeText(createdCredentials.national_id);
-                        setCopiedNationalId(true);
-                        setTimeout(() => setCopiedNationalId(false), 1500);
+              <div className="p-4 bg-muted rounded-lg border">
+                <Label className="text-xs text-muted-foreground">كلمة المرور الأولية (= الرقم القومي)</Label>
+                <div className="flex items-center justify-between bg-background p-2 rounded border mt-1">
+                  <code className="text-sm font-mono tracking-widest">{createdCredentials.national_id}</code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdCredentials.national_id);
+                      setCopiedNationalId(true);
+                      setTimeout(() => setCopiedNationalId(false), 1500);
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        transition: "transform 0.15s ease, color 0.15s ease",
+                        transform: copiedNationalId ? "scale(0.7)" : "scale(1)",
+                        color: copiedNationalId ? "#16a34a" : undefined,
                       }}
                     >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          transition: "transform 0.15s ease, color 0.15s ease",
-                          transform: copiedNationalId ? "scale(0.7)" : "scale(1)",
-                          color: copiedNationalId ? "#16a34a" : undefined,
-                        }}
-                      >
-                        {copiedNationalId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      </span>
-                    </Button>
-                  </div>
+                      {copiedNationalId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </span>
+                  </Button>
                 </div>
               </div>
 

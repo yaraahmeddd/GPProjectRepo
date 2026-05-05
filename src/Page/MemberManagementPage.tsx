@@ -420,6 +420,8 @@ const fmtDateShort = (v?: string | null) => {
 
 
 
+
+
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 
@@ -521,9 +523,12 @@ type PanelProps = {
 
 function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, onDelete }: PanelProps) {
     const { t, i18n } = useTranslation('MemberManagementPage');
+    const isRTL = i18n.language === 'ar';
     const d = details;
     const nameAr = `${row.firstNameAr} ${row.lastNameAr}`.trim();
     const nameEn = `${row.firstNameEn} ${row.lastNameEn}`.trim();
+    const displayName = isRTL ? (nameAr || nameEn) : (nameEn || nameAr);
+    const subtitleName = isRTL ? nameEn : nameAr;
     const [detailTab, setDetailTab] = React.useState<'info' | 'sports' | 'photos'>('info');
 
     const Field = ({ label, value, ltr = false }: { label: string; value?: string | null; ltr?: boolean }) => (
@@ -563,9 +568,9 @@ function DetailPanel({ row, details, loading, sports, onEdit, onChangeStatus, on
 
                     <div className="flex-1 min-w-0">
 
-                        <h2 className="text-lg font-bold leading-tight truncate">{nameAr || '—'}</h2>
+                        <h2 className="text-lg font-bold leading-tight truncate">{displayName || '—'}</h2>
 
-                        <p className="text-xs text-muted-foreground" dir="ltr">{nameEn}</p>
+                        {subtitleName && <p className="text-xs text-muted-foreground" dir={isRTL ? 'ltr' : undefined}>{subtitleName}</p>}
 
                         <div className="flex flex-wrap items-center gap-2 mt-2">
 
@@ -938,7 +943,14 @@ const getFileUrl = (f?: string | null): string => {
 
 export default function MemberManagementPage() {
     const { t, i18n } = useTranslation('MemberManagementPage');
+    const isRTL = i18n.language === 'ar';
     const { toast } = useToast();
+
+    const getMemberDisplayName = useCallback((row: Pick<MemberRow, "firstNameAr" | "lastNameAr" | "firstNameEn" | "lastNameEn">) => {
+        const ar = `${row.firstNameAr} ${row.lastNameAr}`.trim();
+        const en = `${row.firstNameEn} ${row.lastNameEn}`.trim();
+        return isRTL ? (ar || en) : (en || ar);
+    }, [isRTL]);
 
 
 
@@ -2406,14 +2418,18 @@ export default function MemberManagementPage() {
                                                         <div className="min-w-0">
 
                                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                                <p className="font-semibold leading-tight truncate max-w-[160px] text-xs">{nameAr || "-"}</p>
+                                                                <p className="font-semibold leading-tight truncate max-w-[160px] text-xs">{getMemberDisplayName(row) || "-"}</p>
                                                                 <PaymentBadge
                                                                     memberId={Number(row.id)}
                                                                     memberType={row.isTeamPlayer ? "team_member" : "member"}
                                                                 />
                                                             </div>
 
-                                                            <p className="text-[10px] text-muted-foreground truncate max-w-[160px]" dir="ltr">{nameEn}</p>
+                                                            {((isRTL && nameEn) || (!isRTL && nameAr)) && (
+                                                                <p className="text-[10px] text-muted-foreground truncate max-w-[160px]" dir={isRTL ? "ltr" : undefined}>
+                                                                    {isRTL ? nameEn : nameAr}
+                                                                </p>
+                                                            )}
 
                                                         </div>
 
@@ -2905,7 +2921,7 @@ export default function MemberManagementPage() {
 
                                 {t('deleteModal.areYouSure')}{" "}
 
-                                <strong>{selectedRow ? `${selectedRow.firstNameAr} ${selectedRow.lastNameAr}` : t('deleteModal.thisMember')}</strong>?
+                                <strong>{selectedRow ? getMemberDisplayName(selectedRow) : t('deleteModal.thisMember')}</strong>?
 
                                 <br />
 

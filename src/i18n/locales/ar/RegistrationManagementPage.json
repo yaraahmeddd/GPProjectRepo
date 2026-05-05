@@ -129,6 +129,7 @@
     "notUploaded": "لم يتم الرفع",
     "medicalReport": "التقرير الطبي",
     "noMedicalReport": "لم يتم إرفاق تقرير طبي",
+    "membershipType": "نوع العضوية",
     "approveMembership": "اعتماد عضوية {{type}}",
     "approving": "جارٍ الاعتماد...",
     "close": "إغلاق"

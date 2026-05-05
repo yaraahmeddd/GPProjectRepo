@@ -69,6 +69,11 @@ export default function RegistrationManagementPage() {
     });
 
     const isRTL = i18n.language === 'ar';
+    const getDisplayName = (m: Pick<RegistrationRecord, 'first_name_ar' | 'last_name_ar' | 'first_name_en' | 'last_name_en'>) => {
+        const ar = `${m.first_name_ar || ''} ${m.last_name_ar || ''}`.trim();
+        const en = `${m.first_name_en || ''} ${m.last_name_en || ''}`.trim();
+        return isRTL ? (ar || en) : (en || ar);
+    };
     const locale = isRTL ? 'ar-EG' : 'en-US';
 
     const toggleLanguage = () => {
@@ -379,10 +384,10 @@ export default function RegistrationManagementPage() {
                                         <td className="px-4 py-3 text-sm text-muted-foreground font-mono align-middle">{idx + 1}</td>
 
                                         <td className="px-4 py-3 align-middle">
-                                            <p className="font-semibold leading-tight">{record.first_name_ar} {record.last_name_ar}</p>
-                                            {(record.first_name_en || record.last_name_en) && (
-                                                <p className="text-[11px] text-muted-foreground/70 italic tracking-wide">
-                                                    {record.first_name_en} {record.last_name_en}
+                                            <p className="font-semibold leading-tight">{getDisplayName(record)}</p>
+                                            {((isRTL && (record.first_name_en || record.last_name_en)) || (!isRTL && (record.first_name_ar || record.last_name_ar))) && (
+                                                <p className="text-[11px] text-muted-foreground/70 italic tracking-wide" dir={isRTL ? 'ltr' : undefined}>
+                                                    {isRTL ? `${record.first_name_en || ''} ${record.last_name_en || ''}` : `${record.first_name_ar || ''} ${record.last_name_ar || ''}`}
                                                 </p>
                                             )}
                                         </td>
@@ -595,7 +600,7 @@ export default function RegistrationManagementPage() {
                             <div className={`col-span-9 space-y-6 z-10 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                                 <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                     <span className="font-bold min-w-[80px]">{t('print.name')}:</span>
-                                    <div className="flex-1 border-b border-dotted border-black px-2">{selectedRecord?.first_name_ar} {selectedRecord?.last_name_ar}</div>
+                                    <div className="flex-1 border-b border-dotted border-black px-2">{getDisplayName(selectedRecord!)}</div>
                                 </div>
                                 <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                     <span className="font-bold min-w-[80px]">{t('print.birthDate')}:</span>
@@ -736,9 +741,11 @@ export default function RegistrationManagementPage() {
                                         )}
                                     </div>
                                     <div className="flex-1 space-y-1">
-                                        <h3 className="text-xl font-bold">{selectedRecord?.first_name_ar} {selectedRecord?.last_name_ar}</h3>
-                                        {(selectedRecord?.first_name_en || selectedRecord?.last_name_en) && (
-                                            <p className="text-sm text-muted-foreground italic">{selectedRecord?.first_name_en} {selectedRecord?.last_name_en}</p>
+                                        <h3 className="text-xl font-bold">{getDisplayName(selectedRecord!)}</h3>
+                                        {((isRTL && (selectedRecord?.first_name_en || selectedRecord?.last_name_en)) || (!isRTL && (selectedRecord?.first_name_ar || selectedRecord?.last_name_ar))) && (
+                                            <p className="text-sm text-muted-foreground italic" dir={isRTL ? 'ltr' : undefined}>
+                                                {isRTL ? `${selectedRecord?.first_name_en || ''} ${selectedRecord?.last_name_en || ''}` : `${selectedRecord?.first_name_ar || ''} ${selectedRecord?.last_name_ar || ''}`}
+                                            </p>
                                         )}
                                         <div className="flex flex-wrap gap-2 mt-1">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${selectedRecord?.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
@@ -829,10 +836,6 @@ export default function RegistrationManagementPage() {
                                             <p className="text-sm font-semibold">
                                                 {selectedRecord?.memberType === 'team_member' ? t('review.sportsTeamMember') : t('review.socialMember')}
                                             </p>
-                                        </div>
-                                        <div className="bg-background border border-border rounded-lg px-4 py-2.5">
-                                            <p className="text-[11px] text-muted-foreground font-medium mb-0.5">{t('review.job')}</p>
-                                            <p className="text-sm font-semibold">{selectedRecord?.job || t('common.notAvailable')}</p>
                                         </div>
                                         {selectedRecord?.memberType === 'team_member' && selectedRecord.teams && selectedRecord.teams.length > 0 && (
                                             <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
