@@ -58,20 +58,22 @@ const MemberSportPaymentPage: React.FC = () => {
 
     const handleBack = async () => {
         if (paymentData.isBooking) {
-            navigate("/member/dashboard?tab=courts");
+            navigate("/member/dashboard?tab=courts", { replace: true });
             return;
         }
 
         // If user leaves payment before paying, cancel the pending subscription draft.
         if (paymentData.subscriptionId > 0) {
             try {
-                await api.patch(`/member-subscriptions/${paymentData.subscriptionId}/cancel`);
+                await api.patch(`/member-subscriptions/${paymentData.subscriptionId}/cancel`, {
+                    reason: "Cancelled from member payment page",
+                });
             } catch {
                 // Best-effort only; navigation should not be blocked.
             }
         }
 
-        navigate("/member/dashboard/subscribe");
+        navigate("/member/dashboard/subscribe", { replace: true });
     };
 
     const handleCopyLink = () => {

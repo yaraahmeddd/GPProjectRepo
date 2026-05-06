@@ -115,7 +115,6 @@ router.patch(
 router.patch(
   '/:subscriptionId/cancel',
   authenticate,
-  authorizePrivilege('APPROVE_SPORT_SUBSCRIPTION'),
   (req, res) => MemberSubscriptionController.cancelSportSubscription(req as AuthenticatedRequest, res)
 );
 

@@ -96,6 +96,7 @@
     "loadingSports": "Loading sports...",
     "loadError": "Failed to load sports from server",
     "joinError": "Failed to subscribe to sport",
+    "maxSports": "You cannot join more than {{max}} sports",
     "alreadyJoined": "You are already subscribed to this team",
     "warningTitle": "Warning",
     "errorTitle": "Error"

@@ -9,6 +9,7 @@ import { PaymentService } from '../services/PaymentService';
 
 const teamMemberSubscriptionService = new TeamMemberSubscriptionService();
 const paymentService = new PaymentService();
+const MAX_SPORTS_PER_MEMBER = 4;
 
 const toNumber = (value: unknown): number => {
     const parsed = Number(value);
@@ -549,6 +550,109 @@ export class TeamMemberSubscriptionController {
     }
 
     /**
+     * @route   PATCH /api/team-member-subscriptions/subscriptions/:subscriptionId/cancel
+     * @desc    Cancel a team member subscription draft or active subscription
+     * @access  Authenticated team members (own draft) or staff
+     */
+    static async cancelTeamMemberSubscription(req: Request, res: Response): Promise<void> {
+        try {
+            const user = (req as unknown as { user?: Record<string, unknown> }).user;
+            const subscriptionId = parseInt(req.params.subscriptionId, 10);
+            const body = req.body as Record<string, unknown>;
+            const reason = typeof body.reason === 'string' ? body.reason : undefined;
+
+            if (isNaN(subscriptionId)) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Invalid subscriptionId',
+                });
+                return;
+            }
+
+            const subscriptionRepo = AppDataSource.getRepository(TeamMemberTeam);
+            const subscription = await subscriptionRepo.findOne({
+                where: { id: subscriptionId },
+            });
+
+            if (!subscription) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Subscription not found',
+                });
+                return;
+            }
+
+            const authenticatedTeamMemberId = user?.team_member_id ? Number(user.team_member_id) : undefined;
+            const isStaff = !!user?.staff_id;
+            if (authenticatedTeamMemberId && !isStaff && authenticatedTeamMemberId !== subscription.team_member_id) {
+                res.status(403).json({
+                    success: false,
+                    message: 'You are not allowed to cancel this subscription',
+                });
+                return;
+            }
+
+            const normalizedStatus = String(subscription.status || '').toLowerCase();
+            const normalizedSubscriptionStatus = String(subscription.subscription_status || '').toLowerCase();
+            const isPendingPaymentDraft =
+                normalizedStatus === 'pending' &&
+                normalizedSubscriptionStatus === 'pending_payment';
+            const isApprovedLike =
+                normalizedStatus === 'approved' ||
+                normalizedStatus === 'active' ||
+                normalizedSubscriptionStatus === 'approved' ||
+                normalizedSubscriptionStatus === 'active';
+
+            if (!isStaff && !isPendingPaymentDraft) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Only unpaid pending subscriptions can be cancelled from the payment page',
+                });
+                return;
+            }
+
+            if (!isPendingPaymentDraft && !isApprovedLike) {
+                res.status(400).json({
+                    success: false,
+                    message: `Cannot cancel subscription with status: ${subscription.status}`,
+                });
+                return;
+            }
+
+            if (isPendingPaymentDraft && subscription.payment_reference) {
+                try {
+                    await paymentService.cancelPayment(
+                        subscription.payment_reference,
+                        reason || 'Subscription cancelled before payment was completed'
+                    );
+                } catch (paymentError) {
+                    console.warn('Failed to cancel pending payment for team member subscription:', paymentError);
+                }
+            }
+
+            subscription.status = 'cancelled';
+            subscription.subscription_status = 'cancelled';
+            await subscriptionRepo.save(subscription);
+
+            res.status(200).json({
+                success: true,
+                message: isPendingPaymentDraft
+                    ? 'Pending team member subscription cancelled successfully'
+                    : 'Team member subscription cancelled successfully',
+                data: subscription,
+            });
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to cancel subscription';
+            console.error('Error cancelling team member subscription:', error);
+            res.status(500).json({
+                success: false,
+                message: errorMessage,
+                error: errorMessage,
+            });
+        }
+    }
+
+    /**
      * @route   POST /api/team-members/subscribe
      * @desc    Team member can subscribe themselves to a team
      * @access  Authenticated team members
@@ -629,6 +733,37 @@ export class TeamMemberSubscriptionController {
                 res.status(400).json({
                     success: false,
                     message: `Cannot subscribe with status: ${teamMember.status}`,
+                });
+                return;
+            }
+
+            const existingSportSubscriptions = await AppDataSource.query(`
+                SELECT DISTINCT t.sport_id
+                FROM team_member_teams tmt
+                INNER JOIN teams t ON t.id = tmt.team_id
+                WHERE tmt.team_member_id = $1
+                  AND tmt.status NOT IN ('cancelled', 'declined')
+                  AND t.sport_id IS NOT NULL
+            `, [teamMemberId]);
+
+            const existingSportIds = new Set(
+                existingSportSubscriptions
+                    .map((row: Record<string, unknown>) => Number(row.sport_id))
+                    .filter((sportId: number) => Number.isFinite(sportId) && sportId > 0)
+            );
+
+            const requestedSportId = Number(team.sport?.id || team.sport_id || 0);
+            const isNewSport = requestedSportId > 0 && !existingSportIds.has(requestedSportId);
+
+            if (isNewSport && existingSportIds.size >= MAX_SPORTS_PER_MEMBER) {
+                res.status(400).json({
+                    success: false,
+                    message: `Team member can join only ${MAX_SPORTS_PER_MEMBER} sports`,
+                    code: 'MAX_SPORTS_LIMIT_REACHED',
+                    data: {
+                        max_sports: MAX_SPORTS_PER_MEMBER,
+                        current_sports: existingSportIds.size,
+                    },
                 });
                 return;
             }

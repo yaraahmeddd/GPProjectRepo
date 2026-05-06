@@ -10,6 +10,7 @@ import { PaymentService } from '../services/PaymentService';
 
 const auditLogService = new AuditLogService();
 const paymentService = new PaymentService();
+const MAX_SPORTS_PER_MEMBER = 4;
 
 /**
  * MemberSubscriptionController - Handles admin approval/rejection of member sport subscriptions
@@ -319,7 +320,35 @@ export class MemberSubscriptionController {
         });
       }
 
-      if (subscription.status !== 'approved') {
+      const authenticatedMemberId = req.user?.member_id ? Number(req.user.member_id) : undefined;
+      const isStaff = !!req.user?.staff_id;
+
+      if (authenticatedMemberId && !isStaff && authenticatedMemberId !== subscription.member_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not allowed to cancel this subscription',
+        });
+      }
+
+      const normalizedStatus = String(subscription.status || '').toLowerCase();
+      const normalizedSubscriptionStatus = String(subscription.subscription_status || '').toLowerCase();
+      const isPendingPaymentDraft =
+        normalizedStatus === 'pending' &&
+        normalizedSubscriptionStatus === 'pending_payment';
+      const isApprovedLike =
+        normalizedStatus === 'approved' ||
+        normalizedStatus === 'active' ||
+        normalizedSubscriptionStatus === 'approved' ||
+        normalizedSubscriptionStatus === 'active';
+
+      if (!isStaff && !isPendingPaymentDraft) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only unpaid pending subscriptions can be cancelled from the payment page',
+        });
+      }
+
+      if (!isPendingPaymentDraft && !isApprovedLike) {
         return res.status(400).json({
           success: false,
           message: `Cannot cancel subscription with status: ${subscription.status}`,
@@ -328,7 +357,19 @@ export class MemberSubscriptionController {
 
       const oldValue = { ...subscription } as unknown as Record<string, unknown>;
 
+      if (isPendingPaymentDraft && subscription.payment_reference) {
+        try {
+          await paymentService.cancelPayment(
+            subscription.payment_reference,
+            reason || 'Subscription cancelled before payment was completed'
+          );
+        } catch (paymentError) {
+          console.warn('Failed to cancel pending payment for member subscription:', paymentError);
+        }
+      }
+
       subscription.status = 'cancelled';
+      subscription.subscription_status = 'cancelled';
       await MemberSubscriptionController.memberTeamRepo.save(subscription);
 
       const newValue = { ...subscription } as unknown as Record<string, unknown>;
@@ -343,7 +384,9 @@ export class MemberSubscriptionController {
 
       return res.json({
         success: true,
-        message: 'Member sport subscription cancelled successfully',
+        message: isPendingPaymentDraft
+          ? 'Pending member sport subscription cancelled successfully'
+          : 'Member sport subscription cancelled successfully',
         data: subscription,
       });
     } catch (error: unknown) {
@@ -445,6 +488,36 @@ export class MemberSubscriptionController {
         return res.status(400).json({
           success: false,
           message: `Cannot subscribe member with status: ${member.status}`,
+        });
+      }
+
+      const existingSportSubscriptions = await AppDataSource.query(`
+        SELECT DISTINCT t.sport_id
+        FROM member_teams mt
+        INNER JOIN teams t ON t.id = mt.team_id
+        WHERE mt.member_id = $1
+          AND mt.status NOT IN ('cancelled', 'declined')
+          AND t.sport_id IS NOT NULL
+      `, [member_id]);
+
+      const existingSportIds = new Set(
+        existingSportSubscriptions
+          .map((row: Record<string, unknown>) => Number(row.sport_id))
+          .filter((sportId: number) => Number.isFinite(sportId) && sportId > 0)
+      );
+
+      const requestedSportId = Number(team.sport?.id || team.sport_id || 0);
+      const isNewSport = requestedSportId > 0 && !existingSportIds.has(requestedSportId);
+
+      if (isNewSport && existingSportIds.size >= MAX_SPORTS_PER_MEMBER) {
+        return res.status(400).json({
+          success: false,
+          message: `Member can join only ${MAX_SPORTS_PER_MEMBER} sports`,
+          code: 'MAX_SPORTS_LIMIT_REACHED',
+          data: {
+            max_sports: MAX_SPORTS_PER_MEMBER,
+            current_sports: existingSportIds.size,
+          },
         });
       }
 

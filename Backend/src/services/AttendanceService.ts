@@ -129,10 +129,21 @@ export class AttendanceService {
    */
   async getJoinedSports(id: number, type: 'member' | 'team_member') {
     if (type === 'member') {
-      const joined = await this.memberTeamRepository.find({
-        where: { member_id: id },
-        relations: ['team', 'team.sport', 'team.training_schedules', 'team.training_schedules.field'],
-      });
+      const joined = await this.memberTeamRepository
+        .createQueryBuilder('mt')
+        .leftJoinAndSelect('mt.team', 'team')
+        .leftJoinAndSelect('team.sport', 'sport')
+        .leftJoinAndSelect('team.training_schedules', 'schedule')
+        .leftJoinAndSelect('schedule.field', 'field')
+        .addSelect(['mt.start_date', 'mt.end_date', 'mt.subscription_status'])
+        .where('mt.member_id = :memberId', { memberId: id })
+        .andWhere('mt.team_id IS NOT NULL')
+        .andWhere("COALESCE(mt.subscription_status, 'pending_admin_approval') <> :pendingPayment", {
+          pendingPayment: 'pending_payment',
+        })
+        .andWhere('mt.status NOT IN (:...excludedStatuses)', { excludedStatuses: ['cancelled', 'declined'] })
+        .orderBy('mt.created_at', 'DESC')
+        .getMany();
       return joined.map(j => ({
         id: j.team.id,
         name: j.team.name_en,

@@ -32,6 +32,16 @@ router.post(
 );
 
 /**
+ * PATCH /api/team-member-subscriptions/subscriptions/:subscriptionId/cancel
+ * Cancel an unpaid subscription draft from the payment page
+ */
+router.patch(
+  '/subscriptions/:subscriptionId/cancel',
+  authenticate,
+  TeamMemberSubscriptionController.cancelTeamMemberSubscription
+);
+
+/**
  * POST /api/team-members/:teamMemberId/subscriptions/teams/:teamId
  * Staff subscribes a team member to a team
  * Access: Staff only

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import { Btn } from "../features/dashboard/DashboardComponents";
@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&q=80";
+const MAX_SPORTS = 4;
 
 function getFullUrl(path?: string | null) {
     if (!path || path === "null") return null;
@@ -419,6 +420,11 @@ export default function MemberSubscribePage() {
         }
     }, [selectedSport]);
 
+    const joinedSportsCount = useMemo(
+        () => sports.filter((sport) => sport.joined || !!sport.pendingPayment).length,
+        [sports]
+    );
+
     const handleJoin = async () => {
         if (!selectedSport) return;
         
@@ -488,6 +494,15 @@ export default function MemberSubscribePage() {
 
         if (!selectedSlot || !selectedSlot.teamId) return;
 
+        if (joinedSportsCount >= MAX_SPORTS) {
+            toast({
+                title: tm("subscribePage.warningTitle"),
+                description: tm("subscribePage.maxSports", { max: MAX_SPORTS }),
+                variant: "default",
+            });
+            return;
+        }
+
         setJoining(true);
         try {
             const response = await api.post(subscribeEndpoint, {
@@ -524,9 +539,13 @@ export default function MemberSubscribePage() {
             console.error("Failed to join sport:", error);
             
             // Check for duplicate subscription error (usually 409 or specific error message)
-            const axiosError = error as { response?: { data?: { message?: string }; status?: number } };
+            const axiosError = error as { response?: { data?: { message?: string; code?: string }; status?: number } };
             const errorMessage = axiosError?.response?.data?.message || "";
-            if (errorMessage.includes("already subscribed") || axiosError?.response?.status === 409) {
+            const errorCode = axiosError?.response?.data?.code || "";
+            if (errorCode === "MAX_SPORTS_LIMIT_REACHED" || errorMessage.includes("only 4 sports")) {
+                toast({ title: tm("subscribePage.warningTitle"), description: tm("subscribePage.maxSports", { max: MAX_SPORTS }), variant: "default" });
+                loadSports();
+            } else if (errorMessage.includes("already subscribed") || axiosError?.response?.status === 409) {
                 toast({ title: tm("subscribePage.warningTitle"), description: tm("subscribePage.alreadyJoined"), variant: "default" });
                 loadSports(); // Reload to get actual joined status
             } else {
@@ -687,7 +706,16 @@ export default function MemberSubscribePage() {
                                 <div className="w-[190px]">
                                     <Btn
                                         onClick={handleJoin}
-                                        disabled={selectedSport.joined || joining || (!selectedSport.pendingPayment && (!selectedSlotId || actionSlot?.spots === 0))}
+                                        disabled={
+                                            selectedSport.joined ||
+                                            joining ||
+                                            (
+                                                !selectedSport.pendingPayment &&
+                                                !selectedSport.joined &&
+                                                joinedSportsCount >= MAX_SPORTS
+                                            ) ||
+                                            (!selectedSport.pendingPayment && (!selectedSlotId || actionSlot?.spots === 0))
+                                        }
                                         variant={selectedSport.joined ? "ghost" : selectedSport.pendingPayment ? "primary" : "primary"}
                                         fullWidth
                                         className="py-3.5 text-[14px] rounded-xl font-bold shadow-md hover:shadow-lg transition-all"

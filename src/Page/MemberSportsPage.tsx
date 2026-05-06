@@ -69,21 +69,6 @@ function SportIcon({ name, size = "md" }: { name: string; size?: "sm" | "md" }) 
     return <Trophy className={cls} />;
 }
 
-/* â”€â”€â”€ localStorage helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function loadPendingFromStorage(userId: number | string | undefined | null): SportSubscription[] {
-    if (!userId) return [];
-    try {
-        // Migration: Check for the old generic key and clear it if it exists to avoid "ghost" data
-        if (localStorage.getItem(LS_KEY)) {
-            localStorage.removeItem(LS_KEY);
-        }
-
-        const raw = localStorage.getItem(`${LS_KEY}_${userId}`);
-        if (!raw) return [];
-        return JSON.parse(raw) as SportSubscription[];
-    } catch { return []; }
-}
-
 function savePendingToStorage(userId: number | string | undefined | null, list: SportSubscription[]) {
     if (!userId) return;
     try { localStorage.setItem(`${LS_KEY}_${userId}`, JSON.stringify(list)); }
@@ -96,6 +81,7 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
     const displayName = isRtl
         ? (sport.nameAr || sport.nameEn || sport.name)
         : (sport.nameEn || sport.nameAr || sport.name);
+    const sessionDays = localizeDays(sport.nextDay || "-", isRtl);
     const locale = isRtl ? "ar-EG" : "en-US";
     const pct = sport.total > 0 ? Math.round((sport.attended / sport.total) * 100) : 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -122,8 +108,8 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
             style={{ animationDelay: `${delay}ms` }}
         >
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-3 mb-3">
+                <div className="flex items-start gap-3 min-w-0">
                     <div
                         className="w-[50px] h-[50px] rounded-lg flex items-center justify-center text-[26px] overflow-hidden relative shrink-0"
                         style={{ background: (sport.color || "#1E6FB9") + "15" }}
@@ -134,33 +120,41 @@ const TrainingCard: React.FC<{ sport: SportSubscription; delay: number }> = ({ s
                             <SportIcon name={displayName} />
                         )}
                     </div>
-                    <div>
-                        <div className="font-extrabold text-[16px] mb-0.5 leading-tight">{displayName}</div>
-                        <div className="flex items-center gap-2">
-                        <Badge label={t(`sports.status.${sport.status === "Ù†Ø´Ø·" ? "active" : sport.status === "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±" ? "pending" : "upcoming"}`)} color={statusColor(sport.status)} />
-                        {(sport.startDate || (sport as any).start_date) && (
-                            <span className="text-[10px] text-ds-text-muted font-bold">
-                                {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
-                            </span>
-                        )}
-                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="font-extrabold text-[16px] mb-1 leading-tight break-words">{displayName}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge label={t(`sports.status.${sport.status === "Ù†Ø´Ø·" ? "active" : sport.status === "Ù‚ÙŠØ¯ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±" ? "pending" : "upcoming"}`)} color={statusColor(sport.status)} />
+                            {(sport.startDate || (sport as any).start_date) && (
+                                <span className="text-[10px] text-ds-text-muted font-bold break-words">
+                                    {(sport.startDate || (sport as any).start_date).split('T')[0]} - {subEndDate?.toISOString().split('T')[0]}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {/* Next session pill */}
                 <div
-                    className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 flex-wrap max-w-[340px] border-[1.5px] border-dashed"
+                    className="w-full rounded-xl px-3 py-2 border-[1.5px] border-dashed"
                     style={{
                         background: (sport.color || "#1E6FB9") + "0D",
                         borderColor: (sport.color || "#1E6FB9") + "55"
                     }}
                 >
-                    <span className="text-[10px] text-ds-text-muted ml-1.5 shrink-0">{t("my_sports.next_session")}</span>
-                    <span className="font-bold text-[12px] shrink-0" style={{ color: sport.color || "#1E6FB9" }}>{localizeDays(sport.nextDay || "-", isRtl)}</span>
-                    <span className="text-ds-border">Â·</span>
-                    <span className="font-semibold text-[12px] shrink-0">{sport.nextTime || "-"}</span>
-                    <span className="text-ds-border">Â·</span>
-                    <span className="font-semibold text-[12px] shrink-0">{sport.court || "-"}</span>
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                        <span className="text-[10px] text-ds-text-muted">{t("my_sports.next_session")}</span>
+                        <span
+                            className="font-bold text-[12px] leading-5 break-words whitespace-normal"
+                            style={{ color: sport.color || "#1E6FB9" }}
+                        >
+                            {sessionDays}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+                            <span className="font-semibold break-words">{sport.nextTime || "-"}</span>
+                            <span className="text-ds-border">Â·</span>
+                            <span className="font-semibold break-words">{sport.court || "-"}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -490,21 +484,10 @@ export default function MemberSportsPage() {
                 setServerBookings([]);
             }
 
-            /* Load pending from localStorage, then reconcile */
-            const storedPending = loadPendingFromStorage(memberId);
-
-            /* Remove any pending entries that now appear as approved (auto-reconcile) */
-            const approvedIds = new Set(approvedList.map((a) => a.id));
-            const approvedNames = new Set(approvedList.map((a) => a.nameAr));
-            const reconciled = storedPending.filter(
-                (p) => !approvedIds.has(p.id) && !approvedNames.has(p.nameAr)
-            );
-
-            if (reconciled.length !== storedPending.length) {
-                savePendingToStorage(memberId, reconciled);
-                savePendingToStorage(memberId, reconciled);
-            }
-            setPendingSports(reconciled);
+            // Clear legacy browser-side pending cache so cancelled payment drafts
+            // cannot reappear here after the server has removed them.
+            savePendingToStorage(memberId, []);
+            setPendingSports([]);
         } catch {
             setError("ÙØ´Ù„ ÙÙŠ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙŠØ§Ø¶Ø§Øª. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.");
         } finally {

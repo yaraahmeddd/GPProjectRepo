@@ -30,6 +30,7 @@ const TeamMemberSportPaymentPage: React.FC = () => {
     const { t, i18n } = useTranslation("team");
     const { user } = useAuth();
     const [processing, setProcessing] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -204,8 +205,28 @@ const TeamMemberSportPaymentPage: React.FC = () => {
         }
     };
 
-    const handleBack = () => {
-        navigate("/team-member/dashboard");
+    const handleBack = async () => {
+        // If there is a pending subscription created by the join flow, cancel it
+        // so the sport is not left as "added" when the member clicks Cancel.
+        const subscriptionId = paymentData.subscriptionId;
+        if (subscriptionId > 0 && !paymentData.isBooking) {
+            setCancelling(true);
+            try {
+                try {
+                    await api.patch(`/team-member-subscriptions/subscriptions/${subscriptionId}/cancel`, {
+                        reason: "Cancelled from team member payment page",
+                    });
+                } catch {
+                    try {
+                        await api.patch(`/team-members/subscriptions/${subscriptionId}/cancel`);
+                    } catch { /* ignore – navigate regardless */ }
+                }
+            } finally {
+                setCancelling(false);
+            }
+        }
+        // Navigate back to the explore-sports tab instead of the dashboard root
+        navigate("/team-member/dashboard?tab=explore-sports", { replace: true });
     };
 
     const handleCopyLink = () => {
@@ -390,10 +411,10 @@ const TeamMemberSportPaymentPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={handleBack}
-                        disabled={processing}
+                        disabled={processing || cancelling}
                         className="flex-1 h-11 rounded-lg border border-ds-border text-ds-text-primary font-bold hover:bg-gray-50 disabled:opacity-60"
                     >
-                        {t("payment.actions.back")}
+                        {cancelling ? t("explore_sports.actions.sending") : t("payment.actions.back")}
                     </button>
                 </div>
             </div>
