@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Search, RefreshCw, Trophy, ChevronRight, ChevronLeft, Loader2, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,11 @@ import {
 import api from "../services/api";
 import { useToast } from "../hooks/use-toast";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
-type SportItem = { id: number; name: string };
+type Language = "ar" | "en";
+
+type SportItem = { id: number; name: string; nameAr?: string; nameEn?: string };
 
 type SportApiItem = {
   id: number;
@@ -76,10 +79,44 @@ const MAX_SPORTS_PER_MEMBER = 4;
 
 const isActiveStatus = (status: string) => status === "active";
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const getLanguage = (language?: string): Language =>
+  (language ?? "ar").split("-")[0] === "en" ? "en" : "ar";
+
+const getSportApiName = (
+  sport: { name?: string; name_ar?: string; name_en?: string },
+  language: Language
+) =>
+  language === "en"
+    ? sport.name_en || sport.name_ar || sport.name || ""
+    : sport.name_ar || sport.name_en || sport.name || "";
+
+const getSportName = (sport: SportItem, language: Language) =>
+  language === "en"
+    ? sport.nameEn || sport.nameAr || sport.name
+    : sport.nameAr || sport.nameEn || sport.name;
+
+const getMemberDisplayName = (member: MemberRow, language: Language) => {
+  const arabicName = `${member.firstNameAr} ${member.lastNameAr}`.trim();
+  const englishName = `${member.firstNameEn} ${member.lastNameEn}`.trim();
+  return language === "en" ? englishName || arabicName : arabicName || englishName;
+};
+
+const getMemberSecondaryName = (member: MemberRow, language: Language) => {
+  const arabicName = `${member.firstNameAr} ${member.lastNameAr}`.trim();
+  const englishName = `${member.firstNameEn} ${member.lastNameEn}`.trim();
+  return language === "en" ? arabicName : englishName;
+};
+
+const getTeamName = (team: { name_ar?: string; name_en?: string }, language: Language) =>
+  language === "en" ? team.name_en || team.name_ar || "" : team.name_ar || team.name_en || "";
+
+// Component
 
 export default function SportsMembersPage() {
   const { toast } = useToast();
+  const { t, i18n } = useTranslation("SportsMembersPage");
+  const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+  const isRTL = language === "ar";
 
   const [memberTab, setMemberTab] = useState<"members" | "team-members">("members");
 
@@ -102,28 +139,28 @@ export default function SportsMembersPage() {
   const [memberSports, setMemberSports] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
 
-  // sport_id → list of teams for that sport (loaded on demand)
+  // Teams cached by sport id
   const [sportTeams, setSportTeams] = useState<Record<number, { id: string; name_ar: string; name_en: string }[]>>({});
-  // sport_id → selected team uuid
+  // Selected team uuid by sport id
   const [selectedTeams, setSelectedTeams] = useState<Record<number, string>>({});
 
-  // ── Assign-team modal state ───────────────────────────────────────────────
+  // Assign-team modal state
   const [assignModal, setAssignModal] = useState<{
     open: boolean;
     member: MemberRow | null;
     step: 1 | 2;
     selectedSport: SportItem | null;
-    selectedTeam: { id: string; name_ar: string } | null;
+    selectedTeam: { id: string; name_ar: string; name_en?: string } | null;
   }>({ open: false, member: null, step: 1, selectedSport: null, selectedTeam: null });
 
   const [assignTeams, setAssignTeams] = useState<{
-    list: { id: string; name_ar: string; max_participants: number }[];
+    list: { id: string; name_ar: string; name_en?: string; max_participants: number }[];
     loading: boolean;
   }>({ list: [], loading: false });
 
   const [assignSaving, setAssignSaving] = useState(false);
 
-  // ── Load sports master list ONCE ──────────────────────────────────────────
+  // Load sports master list
   useEffect(() => {
     api
       .get<{ data?: SportApiItem[] }>("/sports")
@@ -132,16 +169,22 @@ export default function SportsMembersPage() {
         setAllSports(
           list.map((item) => ({
             id: item.id,
-            name: item.name_ar || item.name_en || item.name || "",
+            name: getSportApiName(item, language),
+            nameAr: item.name_ar,
+            nameEn: item.name_en,
           }))
         );
       })
       .catch(() => {
-        toast({ title: "تحذير", description: "فشل تحميل قائمة الرياضات", variant: "destructive" });
+        toast({
+          title: t("toasts.loadSportsFailed.title"),
+          description: t("toasts.loadSportsFailed.description"),
+          variant: "destructive",
+        });
       });
-  }, [toast]);
+  }, [language, t, toast]);
 
-  // ── Fetch one page of ACTIVE members ─────────────────────────────────────
+  // Fetch one page of active members
   const fetchPage = useCallback(
     async (page: number, searchTerm: string, tab: "members" | "team-members") => {
       setIsLoading(true);
@@ -188,7 +231,9 @@ export default function SportsMembersPage() {
                     if (sub.team?.sport?.id) {
                       const sport = {
                         id: sub.team.sport.id,
-                        name: sub.team.sport.name_ar || sub.team.sport.name_en || sub.team.sport.name || ""
+                        name: getSportApiName(sub.team.sport, language),
+                        nameAr: sub.team.sport.name_ar,
+                        nameEn: sub.team.sport.name_en,
                       };
                       console.log(`[SportsMembersPage] Extracted sport:`, sport);
                       return sport;
@@ -201,7 +246,7 @@ export default function SportsMembersPage() {
                 console.log(`[SportsMembersPage] Member ${item.id} final sports list:`, memberSportList);
               } catch (error) {
                 console.error(`Error fetching subscriptions for member ${item.id}:`, error);
-                // Non-fatal — member may have no subscriptions
+                // Non-fatal: member may have no subscriptions
               }
               return {
                 id: item.id,
@@ -270,22 +315,21 @@ export default function SportsMembersPage() {
         }
       } catch {
         toast({
-          title: "خطأ",
-          description: "فشل تحميل قائمة الأعضاء",
+          title: t("toasts.loadMembersFailed.title"),
+          description: t("toasts.loadMembersFailed.description"),
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     },
-    [toast]
+    [language, t, toast]
   );
 
   // Reload when page, tab, or search changes
   useEffect(() => {
     void fetchPage(currentPage, search, memberTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, search, memberTab]);
+  }, [currentPage, fetchPage, memberTab, search]);
 
   // Reset to page 1 when tab or confirmed search changes
   const handleTabChange = (tab: "members" | "team-members") => {
@@ -302,21 +346,20 @@ export default function SportsMembersPage() {
     }, 300);
   };
 
-  // ── Pagination ────────────────────────────────────────────────────────────
+  // Pagination
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // ── Sports dialog filtering ───────────────────────────────────────────────
+  // Sports dialog filtering
   const filteredSports = useMemo(() => {
     let list = allSports;
     if (sportSearch.trim()) {
-      list = list.filter((s) => s.name.toLowerCase().includes(sportSearch.toLowerCase()));
+      list = list.filter((s) => getSportName(s, language).toLowerCase().includes(sportSearch.toLowerCase()));
     }
     if (sportTab === "subscribed") list = list.filter((s) => memberSports.has(s.id));
     if (sportTab === "unsubscribed") list = list.filter((s) => !memberSports.has(s.id));
     return list;
-  }, [allSports, sportSearch, sportTab, memberSports]);
+  }, [allSports, language, sportSearch, sportTab, memberSports]);
 
-  // ── Open edit dialog ──────────────────────────────────────────────────────
   const openEdit = useCallback((member: MemberRow) => {
     setSelectedMember(member);
     setMemberSports(new Set(member.sports.map((s) => s.id)));
@@ -324,71 +367,80 @@ export default function SportsMembersPage() {
     setSportSearch("");
     setShowModal(true);
     toast({
-      title: "تعديل رياضات",
-      description: `تم فتح نافذة تعديل رياضات ${member.firstNameAr} ${member.lastNameAr}`,
+      title: t("toasts.editOpened.title"),
+      description: t("toasts.editOpened.description", { member: getMemberDisplayName(member, language) }),
     });
-  }, [toast]);
+  }, [language, t, toast]);
 
-  // ── Toggle sport checkbox ─────────────────────────────────────────────────
   const toggleSport = useCallback(
     (sport: SportItem) => {
       setMemberSports((prev) => {
         const next = new Set(prev);
+        const sportName = getSportName(sport, language);
+
         if (next.has(sport.id)) {
           next.delete(sport.id);
-          // Remove team selection for this sport
-          setSelectedTeams(st => { const n = { ...st }; delete n[sport.id]; return n; });
-          toast({ title: "تمت الإزالة", description: `تم إلغاء تحديد "${sport.name}"` });
+          setSelectedTeams((st) => {
+            const n = { ...st };
+            delete n[sport.id];
+            return n;
+          });
+          toast({
+            title: t("toasts.sportRemoved.title"),
+            description: t("toasts.sportRemoved.description", { sport: sportName }),
+          });
         } else {
           if (next.size >= MAX_SPORTS_PER_MEMBER) {
             toast({
-              title: "الحد الأقصى",
-              description: `لا يمكن إضافة أكثر من ${MAX_SPORTS_PER_MEMBER} رياضات لكل عضو`,
+              title: t("toasts.maxSports.title"),
+              description: t("toasts.maxSports.description", { max: MAX_SPORTS_PER_MEMBER }),
               variant: "destructive",
             });
             return prev;
           }
+
           next.add(sport.id);
-          // Fetch teams for this sport if not cached and member is a regular member
           if (!selectedMember?.isTeamPlayer && !sportTeams[sport.id]) {
             api.get<{ data?: { id: string; name_ar: string; name_en: string }[] }>(`/teams?sport_id=${sport.id}`)
-              .then(res => {
+              .then((res) => {
                 const raw = res?.data as Record<string, unknown>;
                 const data = Array.isArray(raw?.data)
                   ? (raw.data as { id: string; name_ar: string; name_en: string }[])
                   : Array.isArray(raw) ? (raw as { id: string; name_ar: string; name_en: string }[]) : [];
-                setSportTeams(prev2 => ({ ...prev2, [sport.id]: data }));
+                setSportTeams((prev2) => ({ ...prev2, [sport.id]: data }));
               })
               .catch(() => {
-                setSportTeams(prev2 => ({ ...prev2, [sport.id]: [] }));
+                setSportTeams((prev2) => ({ ...prev2, [sport.id]: [] }));
               });
           }
-          toast({ title: "تمت الإضافة", description: `تم تحديد "${sport.name}"` });
+          toast({
+            title: t("toasts.sportAdded.title"),
+            description: t("toasts.sportAdded.description", { sport: sportName }),
+          });
         }
         return next;
       });
     },
-    [toast, sportTeams, selectedMember]
+    [language, selectedMember, sportTeams, t, toast]
   );
 
-  // ── Save sport assignments ────────────────────────────────────────────────
   const saveAssignments = async () => {
     if (!selectedMember) return;
-    // Safety guard — should never happen due to toggleSport guard, but be defensive
+
     if (memberSports.size > MAX_SPORTS_PER_MEMBER) {
       toast({
-        title: "خطأ في التحقق",
-        description: `عدد الرياضات المختارة (${memberSports.size}) يتجاوز الحد الأقصى (${MAX_SPORTS_PER_MEMBER})`,
+        title: t("toasts.validationError.title"),
+        description: t("toasts.validationError.description", { count: memberSports.size, max: MAX_SPORTS_PER_MEMBER }),
         variant: "destructive",
       });
       return;
     }
+
     setIsSaving(true);
     try {
       const currentSportIds = new Set(selectedMember.sports.map((s) => s.id));
       const sportsToAdd = Array.from(memberSports).filter((id) => !currentSportIds.has(id));
       const sportsToRemove = Array.from(currentSportIds).filter((id) => !memberSports.has(id));
-
       const errors: string[] = [];
 
       if (selectedMember.isTeamPlayer) {
@@ -396,14 +448,14 @@ export default function SportsMembersPage() {
           try {
             await api.delete(`/team-members/${selectedMember.id}/sports/${sportId}`);
           } catch {
-            errors.push(`فشل إزالة الرياضة ${sportId}`);
+            errors.push(t("errors.removeSport", { id: sportId }));
           }
         }
         for (const sportId of sportsToAdd) {
           try {
             await api.post(`/team-members/${selectedMember.id}/sports`, { sportIds: [sportId] });
           } catch {
-            errors.push(`فشل إضافة الرياضة ${sportId}`);
+            errors.push(t("errors.addSport", { id: sportId }));
           }
         }
       } else {
@@ -411,15 +463,15 @@ export default function SportsMembersPage() {
           try {
             await api.delete(`/member-teams/member/${selectedMember.id}/remove-sport/${teamId}`);
           } catch {
-            errors.push(`فشل إزالة الرياضة ${teamId}`);
+            errors.push(t("errors.removeSport", { id: teamId }));
           }
         }
         for (const sportId of sportsToAdd) {
           const teamId = selectedTeams[sportId];
           if (!teamId) {
             toast({
-              title: "يرجى اختيار الفريق",
-              description: "اختر فريق لكل رياضة قبل الحفظ",
+              title: t("toasts.selectTeam.title"),
+              description: t("toasts.selectTeam.description"),
               variant: "destructive",
             });
             setIsSaving(false);
@@ -428,12 +480,11 @@ export default function SportsMembersPage() {
           try {
             await api.post(`/member-teams/member/${selectedMember.id}/choose-sport`, { team_id: teamId });
           } catch {
-            errors.push(`فشل إضافة الرياضة ${sportId}`);
+            errors.push(t("errors.addSport", { id: sportId }));
           }
         }
       }
 
-      // Update local member row immediately
       const updatedSports = allSports.filter((s) => memberSports.has(s.id));
       setMembers((prev) =>
         prev.map((m) => (m.id === selectedMember.id ? { ...m, sports: updatedSports } : m))
@@ -441,22 +492,22 @@ export default function SportsMembersPage() {
 
       if (errors.length > 0) {
         toast({
-          title: "تم الحفظ جزئياً",
-          description: `تم الحفظ مع ${errors.length} خطأ: ${errors[0]}`,
+          title: t("toasts.partialSave.title"),
+          description: t("toasts.partialSave.description", { count: errors.length, error: errors[0] }),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "تم الحفظ ✓",
-          description: `تم تحديث الرياضات لـ ${selectedMember.firstNameAr} بنجاح`,
+          title: t("toasts.saveSuccess.title"),
+          description: t("toasts.saveSuccess.description", { member: getMemberDisplayName(selectedMember, language) }),
         });
       }
 
       setShowModal(false);
     } catch {
       toast({
-        title: "خطأ",
-        description: "فشل في حفظ التعديلات، حاول مرة أخرى",
+        title: t("toasts.saveFailed.title"),
+        description: t("toasts.saveFailed.description"),
         variant: "destructive",
       });
     } finally {
@@ -464,7 +515,6 @@ export default function SportsMembersPage() {
     }
   };
 
-  // ── Assign-team modal handlers ────────────────────────────────────────────
   const openAssignModal = (member: MemberRow) => {
     setAssignModal({ open: true, member, step: 1, selectedSport: null, selectedTeam: null });
     setAssignTeams({ list: [], loading: false });
@@ -477,34 +527,64 @@ export default function SportsMembersPage() {
   };
 
   const handleAssignSportSelect = (sport: SportItem) => {
-    setAssignModal(prev => ({ ...prev, step: 2, selectedSport: sport, selectedTeam: null }));
+    setAssignModal((prev) => ({ ...prev, step: 2, selectedSport: sport, selectedTeam: null }));
     setAssignTeams({ list: [], loading: true });
-    // Reuse exact same pattern as line 338
-    api.get<{ data?: { id: string; name_ar: string; max_participants: number }[] }>(`/teams?sport_id=${sport.id}`)
-      .then(res => {
+    api.get<{ data?: { id: string; name_ar: string; name_en?: string; max_participants: number }[] }>(`/teams?sport_id=${sport.id}`)
+      .then((res) => {
         const raw = res?.data as Record<string, unknown>;
         const data = Array.isArray(raw?.data)
-          ? (raw.data as { id: string; name_ar: string; max_participants: number }[])
-          : Array.isArray(raw) ? (raw as { id: string; name_ar: string; max_participants: number }[]) : [];
+          ? (raw.data as { id: string; name_ar: string; name_en?: string; max_participants: number }[])
+          : Array.isArray(raw) ? (raw as { id: string; name_ar: string; name_en?: string; max_participants: number }[]) : [];
         setAssignTeams({ list: data, loading: false });
       })
       .catch(() => setAssignTeams({ list: [], loading: false }));
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col" dir="rtl">
+  const handleAssignTeam = async () => {
+    if (!assignModal.member || !assignModal.selectedSport || !assignModal.selectedTeam) return;
+    setAssignSaving(true);
+    try {
+      if (assignModal.member.isTeamPlayer) {
+        await api.post(`/team-members/${assignModal.member.id}/sports`, {
+          sport_id: assignModal.selectedSport.id,
+          team_id: assignModal.selectedTeam.id,
+        });
+      } else {
+        await api.post(`/member-teams/member/${assignModal.member.id}/choose-sport`, {
+          team_id: assignModal.selectedTeam.id,
+        });
+      }
+      toast({
+        title: t("toasts.assignTeamSuccess.title"),
+        description: t("toasts.assignTeamSuccess.description", {
+          member: getMemberDisplayName(assignModal.member, language),
+          team: getTeamName(assignModal.selectedTeam, language),
+        }),
+      });
+      closeAssignModal();
+      void fetchPage(currentPage, search, memberTab);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      toast({
+        title: t("toasts.assignTeamFailed.title"),
+        description: e?.response?.data?.message ?? e?.message ?? t("common.unexpectedError"),
+        variant: "destructive",
+      });
+      setAssignSaving(false);
+    }
+  };
 
-      {/* ── Header ── */}
+  return (
+    <div className="h-[calc(100vh-4rem)] flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
       <div className="px-6 py-4 border-b border-border bg-background shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Trophy className="w-6 h-6 text-primary" />
-              تعيين الرياضات
+              {t("header.title")}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              الأعضاء النشطون فقط — الصفحة {currentPage} من {totalPages} ({totalCount} عضو)
+              {t("header.subtitle", { page: currentPage, totalPages, count: totalCount })}
             </p>
           </div>
           <button
@@ -513,11 +593,10 @@ export default function SportsMembersPage() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm text-muted-foreground disabled:opacity-40"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-            تحديث
+            {t("header.refresh")}
           </button>
         </div>
 
-        {/* Member type tabs */}
         <div className="flex items-center gap-1 mt-3">
           <button
             onClick={() => handleTabChange("members")}
@@ -527,7 +606,7 @@ export default function SportsMembersPage() {
               }`}
           >
             <Users className="w-3.5 h-3.5" />
-            أعضاء النادي
+            {t("tabs.members")}
           </button>
           <button
             onClick={() => handleTabChange("team-members")}
@@ -537,51 +616,48 @@ export default function SportsMembersPage() {
               }`}
           >
             <Trophy className="w-3.5 h-3.5" />
-            اللاعبيين
+            {t("tabs.teamMembers")}
           </button>
         </div>
       </div>
 
-      {/* ── Toolbar ── */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/20 shrink-0 flex-wrap">
-        {/* Search */}
         <div className="relative w-full sm:w-80 md:w-96">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none`} />
           <Input
-            placeholder="ابحث بالاسم أو الرقم القومي..."
+            placeholder={t("toolbar.searchPlaceholder")}
             defaultValue={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pr-9 h-10"
+            className={`${isRTL ? "pr-9" : "pl-9"} h-10`}
           />
         </div>
         <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
-          {totalCount} نتيجة
+          {t("toolbar.results", { count: totalCount })}
         </Badge>
 
         <div className="flex-1" />
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1 || isLoading}
               className="p-2 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-40"
-              aria-label="الصفحة السابقة"
+              aria-label={t("pagination.previous")}
             >
-              <ChevronRight className="w-4 h-4" />
+              {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-              .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+              .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
                 acc.push(p);
                 return acc;
               }, [])
               .map((p, i) =>
-                p === "…" ? (
-                  <span key={`el-${i}`} className="px-1.5 text-muted-foreground text-xs">…</span>
+                p === "..." ? (
+                  <span key={`el-${i}`} className="px-1.5 text-muted-foreground text-xs">...</span>
                 ) : (
                   <button
                     key={p}
@@ -600,14 +676,14 @@ export default function SportsMembersPage() {
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || isLoading}
               className="p-2 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-40"
-              aria-label="الصفحة التالية"
+              aria-label={t("pagination.next")}
             >
-              <ChevronLeft className="w-4 h-4" />
+              {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
           </div>
         )}
       </div>
-      {/* ── Table area ── */}
+
       <div
         className="flex-1 overflow-auto [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none" }}
@@ -615,7 +691,7 @@ export default function SportsMembersPage() {
         {isLoading ? (
           <div className="py-20 text-center text-muted-foreground">
             <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-3" />
-            <p className="text-sm">جارٍ تحميل الأعضاء النشطين...</p>
+            <p className="text-sm">{t("table.loading")}</p>
           </div>
         ) : members.length === 0 ? (
           <div className="py-20 text-center text-muted-foreground">
@@ -623,99 +699,84 @@ export default function SportsMembersPage() {
               <Users className="h-12 w-12 text-muted-foreground/50" />
             </div>
             <h3 className="text-base font-semibold text-foreground mb-1">
-              لا يوجد أعضاء نشطون
+              {t("table.emptyTitle")}
             </h3>
             <p className="text-sm">
-              {search ? `لا توجد نتائج مطابقة لـ "${search}"` : "لم يتم العثور على أعضاء نشطين"}
+              {search ? t("table.emptySearch", { search }) : t("table.emptyDescription")}
             </p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-muted/70 backdrop-blur border-b border-border z-10">
               <tr>
-                <th className="text-right px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle w-10">#</th>
-                <th className="text-right pr-4 pl-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الاسم</th>
-                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الحالة</th>
-                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الرياضات</th>
-                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">الإجراءات</th>
+                <th className={`${isRTL ? "text-right" : "text-left"} px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle w-10`}>#</th>
+                <th className={`${isRTL ? "text-right" : "text-left"} px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle`}>{t("table.name")}</th>
+                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t("table.status")}</th>
+                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t("table.sports")}</th>
+                <th className="text-center px-4 py-3 font-semibold text-xs text-muted-foreground whitespace-nowrap align-middle">{t("table.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {members.map((member, idx) => (
-                <tr
-                  key={member.id}
-                  className="transition-colors hover:bg-muted/40"
-                >
-                  {/* # */}
-                  <td className="px-4 py-3 text-sm text-muted-foreground font-mono align-middle">
-                    {(currentPage - 1) * PAGE_SIZE + idx + 1}
-                  </td>
-
-                  {/* Name */}
-                  <td className="px-4 py-3 align-middle">
-                    <p className="font-semibold leading-tight">
-                      {member.firstNameAr} {member.lastNameAr}
-                    </p>
-                    {(member.firstNameEn || member.lastNameEn) && (
-                      <p className="text-[11px] text-muted-foreground/70 italic tracking-wide">
-                        {member.firstNameEn} {member.lastNameEn}
-                      </p>
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3 text-center align-middle">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${isActiveStatus(member.status)
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-800"
-                      }`}>
-                      {isActiveStatus(member.status) ? "نشط" : member.status}
-                    </span>
-                  </td>
-
-                  {/* Sports count */}
-                  <td className="px-4 py-3 text-center align-middle">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${member.sports.length >= MAX_SPORTS_PER_MEMBER
-                      ? "text-amber-600 font-semibold"
-                      : "text-muted-foreground"
-                      }`}>
-                      <Trophy className="w-3 h-3" />
-                      {member.sports.length} / {MAX_SPORTS_PER_MEMBER}
-                    </span>
-                  </td>
-
-                  {/* Action */}
-                  <td className="px-4 py-3 align-middle text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-3 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
-                        onClick={() => openEdit(member)}
+              {members.map((member, idx) => {
+                const secondaryName = getMemberSecondaryName(member, language);
+                return (
+                  <tr key={member.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-4 py-3 text-sm text-muted-foreground font-mono align-middle">
+                      {(currentPage - 1) * PAGE_SIZE + idx + 1}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <p className="font-semibold leading-tight">{getMemberDisplayName(member, language)}</p>
+                      {secondaryName && (
+                        <p className="text-[11px] text-muted-foreground/70 italic tracking-wide">{secondaryName}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center align-middle">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${isActiveStatus(member.status)
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-800"
+                        }`}
                       >
-                        تعديل الرياضات
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-3 gap-1.5 border-amber-400/60 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                        onClick={() => openAssignModal(member)}
+                        {isActiveStatus(member.status) ? t("status.active") : member.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center align-middle">
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${member.sports.length >= MAX_SPORTS_PER_MEMBER
+                        ? "text-amber-600 font-semibold"
+                        : "text-muted-foreground"
+                        }`}
                       >
-                        تعيين فريق
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <Trophy className="w-3 h-3" />
+                        {member.sports.length} / {MAX_SPORTS_PER_MEMBER}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-middle text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => openEdit(member)}
+                        >
+                          {t("actions.editSports")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3 gap-1.5 border-amber-400/60 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                          onClick={() => openAssignModal(member)}
+                        >
+                          {t("actions.assignTeam")}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* ── Pagination ── */}
-
-
-      {/* ── Sports Assignment Modal ── */}
       <Dialog open={showModal} onOpenChange={(open) => {
         if (!isSaving) {
           setShowModal(open);
@@ -725,21 +786,22 @@ export default function SportsMembersPage() {
           }
         }
       }}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
           <DialogHeader>
             <DialogTitle>
               {selectedMember
-                ? `تعيين رياضات — ${selectedMember.firstNameAr} ${selectedMember.lastNameAr}`
-                : "تعيين الرياضات"}
+                ? t("sportsModal.titleWithMember", { member: getMemberDisplayName(selectedMember, language) })
+                : t("sportsModal.title")}
             </DialogTitle>
             <DialogDescription>
-              اختر الرياضات التي تريد تعيينها. التغييرات تُطبَّق عند الضغط على "حفظ".
-              <span className="block mt-0.5 text-amber-600 font-medium">الحد الأقصى {MAX_SPORTS_PER_MEMBER} رياضات لكل عضو</span>
+              {t("sportsModal.description")}
+              <span className="block mt-0.5 text-amber-600 font-medium">
+                {t("sportsModal.maxSports", { max: MAX_SPORTS_PER_MEMBER })}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Sport tabs */}
             <div className="flex gap-2 border-b border-border">
               {(["all", "subscribed", "unsubscribed"] as const).map((tab) => (
                 <button
@@ -751,26 +813,24 @@ export default function SportsMembersPage() {
                     }`}
                 >
                   {tab === "all"
-                    ? "جميع الرياضات"
+                    ? t("sportsModal.tabs.all")
                     : tab === "subscribed"
-                      ? `المشترك فيها (${memberSports.size})`
-                      : "غير مشترك فيها"}
+                      ? t("sportsModal.tabs.subscribed", { count: memberSports.size })
+                      : t("sportsModal.tabs.unsubscribed")}
                 </button>
               ))}
             </div>
 
-            {/* Search */}
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
               <Input
-                placeholder="ابحث عن رياضة..."
+                placeholder={t("sportsModal.searchPlaceholder")}
                 value={sportSearch}
                 onChange={(e) => setSportSearch(e.target.value)}
-                className="pr-10"
+                className={isRTL ? "pr-10" : "pl-10"}
               />
             </div>
 
-            {/* Sports list */}
             <div className="space-y-1 max-h-72 overflow-y-auto border border-border rounded-lg p-2 bg-muted/10">
               {filteredSports.length > 0 ? (
                 filteredSports.map((sport) => {
@@ -780,10 +840,10 @@ export default function SportsMembersPage() {
                     <label
                       key={sport.id}
                       className={`flex flex-col gap-1 p-2.5 rounded-md transition-colors ${disableUnchecked
-                          ? "opacity-40 cursor-not-allowed"
-                          : checked
-                            ? "bg-primary/8 hover:bg-primary/12 cursor-pointer"
-                            : "hover:bg-muted/60 cursor-pointer"
+                        ? "opacity-40 cursor-not-allowed"
+                        : checked
+                          ? "bg-primary/8 hover:bg-primary/12 cursor-pointer"
+                          : "hover:bg-muted/60 cursor-pointer"
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -794,30 +854,31 @@ export default function SportsMembersPage() {
                           onChange={() => toggleSport(sport)}
                           className="w-4 h-4 rounded border-border accent-primary disabled:cursor-not-allowed"
                         />
-                        <span className={`text-sm font-medium flex-1 ${disableUnchecked ? "text-muted-foreground" : ""}`}>{sport.name}</span>
+                        <span className={`text-sm font-medium flex-1 ${disableUnchecked ? "text-muted-foreground" : ""}`}>
+                          {getSportName(sport, language)}
+                        </span>
                         {checked && (
                           <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                            مضاف
+                            {t("sportsModal.added")}
                           </span>
                         )}
                       </div>
-                      {/* Team selector for regular (non-team-player) members */}
                       {checked && selectedMember && !selectedMember.isTeamPlayer && (
-                        <div className="mr-7">
+                        <div className={isRTL ? "mr-7" : "ml-7"}>
                           <Select
                             value={selectedTeams[sport.id] ?? ""}
-                            onValueChange={(v) => setSelectedTeams(prev => ({ ...prev, [sport.id]: v }))}
+                            onValueChange={(v) => setSelectedTeams((prev) => ({ ...prev, [sport.id]: v }))}
                           >
                             <SelectTrigger className="h-8 text-xs w-48">
-                              <SelectValue placeholder="اختر الفريق" />
+                              <SelectValue placeholder={t("sportsModal.selectTeamPlaceholder")} />
                             </SelectTrigger>
                             <SelectContent>
                               {(sportTeams[sport.id] ?? []).length === 0 ? (
-                                <SelectItem value="__loading" disabled>جاري التحميل...</SelectItem>
+                                <SelectItem value="__loading" disabled>{t("common.loading")}</SelectItem>
                               ) : (
-                                (sportTeams[sport.id] ?? []).map(team => (
+                                (sportTeams[sport.id] ?? []).map((team) => (
                                   <SelectItem key={team.id} value={team.id}>
-                                    {team.name_ar || team.name_en}
+                                    {getTeamName(team, language)}
                                   </SelectItem>
                                 ))
                               )}
@@ -831,21 +892,21 @@ export default function SportsMembersPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   {sportTab === "subscribed"
-                    ? "لا توجد رياضات مشترك فيها حالياً"
+                    ? t("sportsModal.empty.subscribed")
                     : sportTab === "unsubscribed"
-                      ? "جميع الرياضات مشترك فيها بالفعل"
-                      : "لا توجد رياضات مطابقة"}
+                      ? t("sportsModal.empty.unsubscribed")
+                      : t("sportsModal.empty.all")}
                 </div>
               )}
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className={`text-xs font-semibold ${memberSports.size >= MAX_SPORTS_PER_MEMBER
                 ? "text-amber-600"
                 : "text-muted-foreground"
-                }`}>
-                {memberSports.size} / {MAX_SPORTS_PER_MEMBER} رياضات مختارة
+                }`}
+              >
+                {t("sportsModal.selectedCount", { count: memberSports.size, max: MAX_SPORTS_PER_MEMBER })}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -853,7 +914,7 @@ export default function SportsMembersPage() {
                   onClick={() => setShowModal(false)}
                   disabled={isSaving}
                 >
-                  إلغاء
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={() => void saveAssignments()}
@@ -863,10 +924,10 @@ export default function SportsMembersPage() {
                   {isSaving ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      جارٍ الحفظ...
+                      {t("common.saving")}
                     </>
                   ) : (
-                    "حفظ"
+                    t("common.save")
                   )}
                 </Button>
               </div>
@@ -875,147 +936,111 @@ export default function SportsMembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Assign-Team Modal (2-step) ── */}
       <Dialog
         open={assignModal.open}
-        onOpenChange={open => { if (!open) closeAssignModal(); }}
+        onOpenChange={(open) => { if (!open) closeAssignModal(); }}
       >
-        <DialogContent className="max-w-lg" dir="rtl">
+        <DialogContent className="max-w-lg" dir={isRTL ? "rtl" : "ltr"}>
           <DialogHeader>
             <DialogTitle>
               {assignModal.step === 1
-                ? "تعيين فريق — اختر الرياضة"
-                : `تعيين فريق — اختر الفريق`}
+                ? t("assignTeamModal.titleStepSport")
+                : t("assignTeamModal.titleStepTeam")}
             </DialogTitle>
             <DialogDescription>
               {assignModal.member
-                ? `العضو: ${assignModal.member.firstNameAr} ${assignModal.member.lastNameAr}`
+                ? t("assignTeamModal.member", { member: getMemberDisplayName(assignModal.member, language) })
                 : ""}
             </DialogDescription>
           </DialogHeader>
 
-          {/* ── STEP 1: Sport selection ── */}
           {assignModal.step === 1 && (
             <div className="space-y-3 py-2">
               {allSports.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">لا توجد رياضات متاحة</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t("assignTeamModal.noSports")}</div>
               ) : (
                 <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-                  {allSports.map(sport => (
+                  {allSports.map((sport) => (
                     <button
                       key={sport.id}
                       onClick={() => handleAssignSportSelect(sport)}
                       className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/20 p-4 hover:border-primary hover:bg-primary/5 transition-all duration-150 text-center"
                     >
-                      <span className="text-sm font-semibold">{sport.name}</span>
+                      <span className="text-sm font-semibold">{getSportName(sport, language)}</span>
                     </button>
                   ))}
                 </div>
               )}
               <div className="flex justify-end pt-2 border-t border-border">
-                <Button variant="outline" onClick={closeAssignModal}>إلغاء</Button>
+                <Button variant="outline" onClick={closeAssignModal}>{t("common.cancel")}</Button>
               </div>
             </div>
           )}
 
-          {/* ── STEP 2: Team selection ── */}
           {assignModal.step === 2 && (
             <div className="space-y-3 py-2">
-              {/* Breadcrumb */}
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <button
-                  onClick={() => setAssignModal(prev => ({ ...prev, step: 1, selectedTeam: null }))}
+                  onClick={() => setAssignModal((prev) => ({ ...prev, step: 1, selectedTeam: null }))}
                   className="hover:text-primary transition-colors"
                 >
-                  الرياضات
+                  {t("assignTeamModal.sportsBreadcrumb")}
                 </button>
                 <span>/</span>
-                <span className="text-foreground font-medium">{assignModal.selectedSport?.name}</span>
+                <span className="text-foreground font-medium">
+                  {assignModal.selectedSport ? getSportName(assignModal.selectedSport, language) : ""}
+                </span>
               </div>
 
-              {/* Teams list */}
               {assignTeams.loading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">جاري تحميل الفرق...</span>
+                  <span className="text-sm">{t("assignTeamModal.loadingTeams")}</span>
                 </div>
               ) : assignTeams.list.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">لا توجد فرق لهذه الرياضة</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t("assignTeamModal.noTeams")}</div>
               ) : (
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                  {assignTeams.list.map(team => {
+                  {assignTeams.list.map((team) => {
                     const isSelected = assignModal.selectedTeam?.id === team.id;
                     return (
                       <button
                         key={team.id}
-                        onClick={() => setAssignModal(prev => ({ ...prev, selectedTeam: { id: team.id, name_ar: team.name_ar } }))}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all duration-150 text-right ${
-                          isSelected
-                            ? "border-primary bg-primary/8 text-primary"
-                            : "border-border bg-background hover:border-primary/50 hover:bg-muted/40"
-                        }`}
+                        onClick={() => setAssignModal((prev) => ({ ...prev, selectedTeam: { id: team.id, name_ar: team.name_ar, name_en: team.name_en } }))}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all duration-150 ${isRTL ? "text-right" : "text-left"} ${isSelected
+                          ? "border-primary bg-primary/8 text-primary"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-muted/40"
+                          }`}
                       >
-                        <span className="font-medium text-sm">{team.name_ar}</span>
-                        <span className="text-xs text-muted-foreground">{team.max_participants} مشارك</span>
+                        <span className="font-medium text-sm">{getTeamName(team, language)}</span>
+                        <span className="text-xs text-muted-foreground">{t("assignTeamModal.participants", { count: team.max_participants })}</span>
                       </button>
                     );
                   })}
                 </div>
               )}
 
-              {/* Footer */}
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <Button
                   variant="outline"
-                  onClick={() => setAssignModal(prev => ({ ...prev, step: 1, selectedTeam: null }))}
+                  onClick={() => setAssignModal((prev) => ({ ...prev, step: 1, selectedTeam: null }))}
                 >
-                  رجوع
+                  {t("common.back")}
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={closeAssignModal} disabled={assignSaving}>إلغاء</Button>
+                  <Button variant="outline" onClick={closeAssignModal} disabled={assignSaving}>{t("common.cancel")}</Button>
                   <Button
                     disabled={!assignModal.selectedTeam || assignSaving}
                     className="gap-2"
-                    onClick={async () => {
-                      if (!assignModal.member || !assignModal.selectedSport || !assignModal.selectedTeam) return;
-                      setAssignSaving(true);
-                      try {
-                        if (assignModal.member.isTeamPlayer) {
-                          // Team player — reuse exact same pattern as line 388
-                          await api.post(`/team-members/${assignModal.member.id}/sports`, {
-                            sport_id: assignModal.selectedSport.id,
-                            team_id: assignModal.selectedTeam.id,
-                          });
-                        } else {
-                          // Club member — reuse exact same pattern as line 413
-                          await api.post(`/member-teams/member/${assignModal.member.id}/choose-sport`, {
-                            team_id: assignModal.selectedTeam.id,
-                          });
-                        }
-                        toast({
-                          title: "تم التعيين ✓",
-                          description: `تم تعيين ${assignModal.member.firstNameAr} إلى فريق «${assignModal.selectedTeam.name_ar}» بنجاح`,
-                        });
-                        closeAssignModal();
-                        void fetchPage(currentPage, search, memberTab);
-                      } catch (err) {
-                        const e = err as { response?: { data?: { message?: string } }; message?: string };
-                        toast({
-                          title: "فشل التعيين",
-                          description: e?.response?.data?.message ?? e?.message ?? "حدث خطأ غير متوقع",
-                          variant: "destructive",
-                        });
-                        setAssignSaving(false);
-                      }
-                    }}
+                    onClick={() => void handleAssignTeam()}
                   >
                     {assignSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        جارٍ التعيين...
+                        {t("assignTeamModal.assigning")}
                       </>
                     ) : (
-                      "تعيين"
+                      t("common.assign")
                     )}
                   </Button>
                 </div>
@@ -1024,7 +1049,6 @@ export default function SportsMembersPage() {
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

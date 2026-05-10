@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import {
     Table,
@@ -46,20 +47,22 @@ import {
 import { fetchActiveSports, type Sport } from "../services/sportsApi";
 import { Switch } from "../Component/StaffPagesComponents/ui/switch";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-// ─── Empty form state ─────────────────────────────────────────────────────────
+type FieldStatus = Field["status"];
 
 const emptyForm = () => ({
     name_ar: "",
     name_en: "",
     sportId: "" as string | number,
     capacity: "",
-    status: "active" as "active" | "inactive" | "maintenance",
+    status: "active" as FieldStatus,
     isAvailableForBooking: true,
 });
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+const STATUS_OPTIONS: Array<{ key: FieldStatus; labelKey: string; color: string }> = [
+    { key: "active", labelKey: "status.active", color: "text-emerald-700" },
+    { key: "inactive", labelKey: "status.inactive", color: "text-rose-700" },
+    { key: "maintenance", labelKey: "status.maintenance", color: "text-amber-700" },
+];
 
 export default function CourtsManagementPage() {
     const [fields, setFields] = useState<Field[]>([]);
@@ -78,8 +81,15 @@ export default function CourtsManagementPage() {
     const [form, setForm] = useState(emptyForm());
 
     const { toast } = useToast();
+    const { t, i18n } = useTranslation("CourtsManagementPage");
+    const language = (i18n.resolvedLanguage ?? i18n.language ?? "ar").startsWith("en") ? "en" : "ar";
+    const isRTL = language === "ar";
 
-    // ─── Load Data ────────────────────────────────────────────────────────────
+    const getFieldName = (field: Field) =>
+        language === "en" ? (field.name_en || field.name_ar) : (field.name_ar || field.name_en);
+
+    const getSportName = (sport?: Sport | Field["sport"]) =>
+        sport ? (language === "en" ? (sport.name_en || sport.name_ar) : (sport.name_ar || sport.name_en)) : "";
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -92,30 +102,30 @@ export default function CourtsManagementPage() {
                 setFields(fieldsData);
                 setSports(sportsData);
             } catch (error) {
-                console.error('Error loading data:', error);
+                console.error("Error loading data:", error);
                 toast({
-                    title: "خطأ",
-                    description: "فشل تحميل البيانات. يرجى المحاولة مرة أخرى.",
+                    title: t("toast.errorTitle"),
+                    description: t("toast.loadFailed"),
                     variant: "destructive",
                 });
             } finally {
                 setLoading(false);
             }
         };
-        loadInitialData();
-    }, [toast]);
-
-    // ─── Derived / Filtered ───────────────────────────────────────────────────
+        void loadInitialData();
+    }, [toast, t]);
 
     const uniqueSports = Array.from(
-        new Map(fields.map((f) => [f.sport_id, f.sport?.name_ar || ''])).entries()
-    ).map(([id, nameAr]) => ({ id, nameAr }));
+        new Map(fields.map((f) => [f.sport_id, getSportName(f.sport)])).entries()
+    ).map(([id, name]) => ({ id, name }));
 
     const filtered = fields.filter((f) => {
-        const matchSearch = search
-            ? f.name_ar.includes(search) ||
-            f.name_en.includes(search) ||
-            (f.sport?.name_ar || '').includes(search)
+        const normalizedSearch = search.trim().toLowerCase();
+        const matchSearch = normalizedSearch
+            ? f.name_ar.toLowerCase().includes(normalizedSearch) ||
+            f.name_en.toLowerCase().includes(normalizedSearch) ||
+            (f.sport?.name_ar || "").toLowerCase().includes(normalizedSearch) ||
+            (f.sport?.name_en || "").toLowerCase().includes(normalizedSearch)
             : true;
         const matchSport =
             filterSports.length === 0 ? true : filterSports.includes(f.sport_id);
@@ -124,13 +134,9 @@ export default function CourtsManagementPage() {
         return matchSearch && matchSport && matchStatus;
     });
 
-    // ─── Stats ────────────────────────────────────────────────────────────────
-
     const totalCount = fields.length;
-    const activeCount = fields.filter((f) => f.status === 'active').length;
+    const activeCount = fields.filter((f) => f.status === "active").length;
     const bookingCount = fields.filter((f) => f.is_available_for_booking).length;
-
-    // ─── Dialog Handlers ──────────────────────────────────────────────────────
 
     const openAdd = () => {
         setEditField(null);
@@ -154,32 +160,32 @@ export default function CourtsManagementPage() {
     const handleSave = async () => {
         if (!form.name_ar.trim()) {
             toast({
-                title: "بيانات ناقصة",
-                description: "الاسم بالعربي مطلوب.",
+                title: t("toast.validationTitle"),
+                description: t("validation.nameArRequired"),
                 variant: "destructive"
             });
             return;
         }
         if (!form.name_en.trim()) {
             toast({
-                title: "بيانات ناقصة",
-                description: "الاسم بالإنجليزي مطلوب.",
+                title: t("toast.validationTitle"),
+                description: t("validation.nameEnRequired"),
                 variant: "destructive"
             });
             return;
         }
         if (!form.sportId) {
             toast({
-                title: "بيانات ناقصة",
-                description: "يرجى اختيار الرياضة.",
+                title: t("toast.validationTitle"),
+                description: t("validation.sportRequired"),
                 variant: "destructive"
             });
             return;
         }
         if (form.capacity && Number(form.capacity) < 1) {
             toast({
-                title: "بيانات ناقصة",
-                description: "يرجى إدخال سعة صحيحة.",
+                title: t("toast.validationTitle"),
+                description: t("validation.capacityInvalid"),
                 variant: "destructive"
             });
             return;
@@ -187,9 +193,9 @@ export default function CourtsManagementPage() {
 
         try {
             setSaving(true);
+            const displayName = language === "en" ? form.name_en.trim() : form.name_ar.trim();
 
             if (editField) {
-                // Update existing field
                 const updated = await updateField(editField.id, {
                     name_ar: form.name_ar.trim(),
                     name_en: form.name_en.trim(),
@@ -198,7 +204,6 @@ export default function CourtsManagementPage() {
                     status: form.status,
                 });
 
-                // Update booking settings separately
                 await updateBookingSettings(editField.id, {
                     is_available_for_booking: form.isAvailableForBooking,
                 });
@@ -208,11 +213,10 @@ export default function CourtsManagementPage() {
                 );
 
                 toast({
-                    title: "تم التحديث",
-                    description: `تم تحديث "${form.name_ar}" بنجاح.`
+                    title: t("toast.updateSuccessTitle"),
+                    description: t("toast.updateSuccessDescription", { name: displayName })
                 });
             } else {
-                // Create new field
                 const newField = await createField({
                     name_ar: form.name_ar.trim(),
                     name_en: form.name_en.trim(),
@@ -225,17 +229,17 @@ export default function CourtsManagementPage() {
                 setFields((prev) => [...prev, newField]);
 
                 toast({
-                    title: "تمت الإضافة",
-                    description: `تمت إضافة "${form.name_ar}" بنجاح.`
+                    title: t("toast.createSuccessTitle"),
+                    description: t("toast.createSuccessDescription", { name: displayName })
                 });
             }
 
             setDialogOpen(false);
         } catch (error) {
-            console.error('Error saving field:', error);
-            const message = error instanceof Error ? error.message : 'فشل حفظ الملعب';
+            console.error("Error saving field:", error);
+            const message = error instanceof Error ? error.message : t("toast.saveFailed");
             toast({
-                title: "خطأ",
+                title: t("toast.errorTitle"),
                 description: message,
                 variant: "destructive",
             });
@@ -249,7 +253,7 @@ export default function CourtsManagementPage() {
             const field = fields.find((f) => f.id === id);
             if (!field) return;
 
-            const newStatus = field.status === 'active' ? 'inactive' : 'active';
+            const newStatus = field.status === "active" ? "inactive" : "active";
             const updated = await updateFieldStatus(id, newStatus);
 
             setFields((prev) =>
@@ -257,70 +261,65 @@ export default function CourtsManagementPage() {
             );
 
             toast({
-                title: newStatus === 'active' ? "تم التفعيل" : "تم التعطيل",
-                description: `"${field.name_ar}" ${newStatus === 'active' ? "نشط الآن" : "معطّل الآن"}.`,
+                title: newStatus === "active" ? t("toast.activatedTitle") : t("toast.deactivatedTitle"),
+                description: t(newStatus === "active" ? "toast.activatedDescription" : "toast.deactivatedDescription", {
+                    name: getFieldName(field),
+                }),
             });
         } catch (error) {
-            console.error('Error toggling status:', error);
-            const message = error instanceof Error ? error.message : 'فشل تحديث الحالة';
+            console.error("Error toggling status:", error);
+            const message = error instanceof Error ? error.message : t("toast.statusUpdateFailed");
             toast({
-                title: "خطأ",
+                title: t("toast.errorTitle"),
                 description: message,
                 variant: "destructive",
             });
         }
     };
 
-    // ─── Render ───────────────────────────────────────────────────────────────
-
     return (
-        <div className="h-full overflow-y-auto p-6 pb-8 space-y-6" dir="rtl">
-            {/* ─── Header ──────────────────────────────────────────────────────── */}
+        <div className="h-full overflow-y-auto p-6 pb-8 space-y-6" dir={isRTL ? "rtl" : "ltr"}>
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">إدارة الملاعب والفيلدات</h1>
+                    <h1 className="text-2xl font-bold">{t("header.title")}</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        إجمالي الملاعب:{" "}
+                        {t("header.totalCourts")}{" "}
                         <span className="font-semibold text-foreground">{totalCount}</span>
                     </p>
                 </div>
                 <RoleGuard privilege="CREATE_FIELD">
                     <Button onClick={openAdd} className="gap-2 shrink-0">
                         <Plus className="h-4 w-4" />
-                        إضافة ملعب
+                        {t("header.addCourt")}
                     </Button>
                 </RoleGuard>
             </div>
 
-            {/* ─── Stats Row ────────────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard label="إجمالي الملاعب" value={totalCount} color="default" />
-                <StatCard label="ملاعب نشطة" value={activeCount} color="green" />
-                <StatCard label="تحتاج حجز" value={bookingCount} color="blue" />
+                <StatCard label={t("stats.total")} value={totalCount} color="default" />
+                <StatCard label={t("stats.active")} value={activeCount} color="green" />
+                <StatCard label={t("stats.bookable")} value={bookingCount} color="blue" />
             </div>
 
-            {/* ─── Filter Bar ───────────────────────────────────────────────────── */}
             <div className="flex flex-wrap items-center gap-3">
-                {/* Search */}
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none`} />
                     <Input
-                        dir="rtl"
-                        placeholder="بحث باسم الملعب أو الرياضة..."
+                        dir={isRTL ? "rtl" : "ltr"}
+                        placeholder={t("filters.searchPlaceholder")}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pr-9"
+                        className={isRTL ? "pr-9" : "pl-9"}
                     />
                 </div>
 
-                {/* Sport filter */}
                 <Popover open={sportPopoverOpen} onOpenChange={setSportPopoverOpen}>
                     <PopoverTrigger asChild>
                         <button className={`flex items-center gap-1.5 h-10 px-3 rounded-md border text-sm transition-colors
                             ${filterSports.length > 0
                                 ? "border-primary bg-primary/5 text-primary"
                                 : "border-input bg-background text-muted-foreground hover:bg-muted"}`}>
-                            كل الرياضات
+                            {t("filters.allSports")}
                             {filterSports.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
                                     {filterSports.length}
@@ -328,7 +327,7 @@ export default function CourtsManagementPage() {
                             )}
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="w-48 p-0" dir="rtl">
+                    <PopoverContent align="start" className="w-48 p-0" dir={isRTL ? "rtl" : "ltr"}>
                         <div className="py-1 max-h-64 overflow-y-auto">
                             {uniqueSports.map((s) => {
                                 const checked = filterSports.includes(Number(s.id));
@@ -347,8 +346,8 @@ export default function CourtsManagementPage() {
                                             }}
                                             className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                                         />
-                                        <span className="text-xs font-medium">{s.nameAr}</span>
-                                        <span className="mr-auto text-[10px] text-muted-foreground">{count}</span>
+                                        <span className="text-xs font-medium">{s.name || t("common.notAvailable")}</span>
+                                        <span className="ms-auto text-[10px] text-muted-foreground">{count}</span>
                                     </label>
                                 );
                             })}
@@ -359,14 +358,13 @@ export default function CourtsManagementPage() {
                                     onClick={() => { setFilterSports([]); setSportPopoverOpen(false); }}
                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                 >
-                                    مسح
+                                    {t("filters.clear")}
                                 </button>
                             </div>
                         )}
                     </PopoverContent>
                 </Popover>
 
-                {/* Status filter */}
                 <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
                     <PopoverTrigger asChild>
                         <button className={`flex items-center gap-1.5 h-10 px-3 rounded-md border text-sm transition-colors
@@ -374,7 +372,7 @@ export default function CourtsManagementPage() {
                                 ? "border-primary bg-primary/5 text-primary"
                                 : "border-input bg-background text-muted-foreground hover:bg-muted"}`}>
                             <Filter className="w-3.5 h-3.5" />
-                            الحالة
+                            {t("filters.status")}
                             {filterStatuses.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
                                     {filterStatuses.length}
@@ -382,13 +380,9 @@ export default function CourtsManagementPage() {
                             )}
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="w-48 p-0" dir="rtl">
+                    <PopoverContent align="start" className="w-48 p-0" dir={isRTL ? "rtl" : "ltr"}>
                         <div className="py-1">
-                            {([
-                                { key: "active", label: "نشط", color: "text-emerald-700" },
-                                { key: "inactive", label: "معطّل", color: "text-rose-700" },
-                                { key: "maintenance", label: "صيانة", color: "text-amber-700" },
-                            ] as const).map(({ key, label, color }) => {
+                            {STATUS_OPTIONS.map(({ key, labelKey, color }) => {
                                 const checked = filterStatuses.includes(key);
                                 const count = fields.filter(f => f.status === key).length;
                                 return (
@@ -405,8 +399,8 @@ export default function CourtsManagementPage() {
                                             }}
                                             className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                                         />
-                                        <span className={`text-xs font-medium ${color}`}>{label}</span>
-                                        <span className="mr-auto text-[10px] text-muted-foreground">{count}</span>
+                                        <span className={`text-xs font-medium ${color}`}>{t(labelKey)}</span>
+                                        <span className="ms-auto text-[10px] text-muted-foreground">{count}</span>
                                     </label>
                                 );
                             })}
@@ -417,7 +411,7 @@ export default function CourtsManagementPage() {
                                     onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }}
                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                 >
-                                    مسح
+                                    {t("filters.clear")}
                                 </button>
                             </div>
                         )}
@@ -425,18 +419,17 @@ export default function CourtsManagementPage() {
                 </Popover>
             </div>
 
-            {/* ─── Table ────────────────────────────────────────────────────────── */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="shadow-sm rounded-lg overflow-hidden border border-border">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-10 text-center">#</TableHead>
-                            <TableHead>اسم الملعب</TableHead>
-                            <TableHead>الرياضة</TableHead>
-                            <TableHead className="text-center">السعة</TableHead>
-                            <TableHead className="text-center">يحتاج حجز</TableHead>
-                            <TableHead className="text-center">الحالة</TableHead>
-                            <TableHead className="text-center">الإجراءات</TableHead>
+                            <TableHead>{t("table.colCourtName")}</TableHead>
+                            <TableHead>{t("table.colSport")}</TableHead>
+                            <TableHead className="text-center">{t("table.colCapacity")}</TableHead>
+                            <TableHead className="text-center">{t("table.colRequiresBooking")}</TableHead>
+                            <TableHead className="text-center">{t("table.colStatus")}</TableHead>
+                            <TableHead className="text-center">{t("table.colActions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -446,19 +439,19 @@ export default function CourtsManagementPage() {
                                     <TableCell colSpan={7} className="text-center py-12">
                                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                             <Loader2 className="h-5 w-5 animate-spin" />
-                                            <span>جاري التحميل...</span>
+                                            <span>{t("table.loading")}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : filtered.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-                                        لا توجد ملاعب تطابق معايير البحث
+                                        {t("table.noResults")}
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filtered.map((field, index) => {
-                                    const isActive = field.status === 'active';
+                                    const isActive = field.status === "active";
                                     return (
                                         <motion.tr
                                             key={field.id}
@@ -467,51 +460,44 @@ export default function CourtsManagementPage() {
                                             exit={{ opacity: 0 }}
                                             className="border-b border-border transition-colors duration-200 hover:bg-accent/10"
                                         >
-                                            {/* # */}
                                             <TableCell className="text-center text-muted-foreground text-sm font-mono">
                                                 {index + 1}
                                             </TableCell>
 
-                                            {/* Name */}
-                                            <TableCell className="font-medium">{field.name_ar}</TableCell>
+                                            <TableCell className="font-medium">{getFieldName(field)}</TableCell>
 
-                                            {/* Sport */}
-                                            <TableCell className="text-muted-foreground">{field.sport?.name_ar || '-'}</TableCell>
+                                            <TableCell className="text-muted-foreground">{getSportName(field.sport) || t("common.notAvailable")}</TableCell>
 
-                                            {/* Capacity */}
-                                            <TableCell className="text-center font-mono">{field.capacity || '-'}</TableCell>
+                                            <TableCell className="text-center font-mono">{field.capacity || t("common.notAvailable")}</TableCell>
 
-                                            {/* Requires Booking */}
                                             <TableCell className="text-center">
                                                 {field.is_available_for_booking ? (
                                                     <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 gap-1">
-                                                        <Check className="h-3 w-3" /> نعم
+                                                        <Check className="h-3 w-3" /> {t("common.yes")}
                                                     </Badge>
                                                 ) : (
                                                     <Badge variant="outline" className="text-muted-foreground gap-1">
-                                                        <X className="h-3 w-3" /> لا
+                                                        <X className="h-3 w-3" /> {t("common.no")}
                                                     </Badge>
                                                 )}
                                             </TableCell>
 
-                                            {/* Status */}
                                             <TableCell className="text-center">
                                                 {isActive ? (
                                                     <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
-                                                        نشط
+                                                        {t("status.active")}
                                                     </Badge>
-                                                ) : field.status === 'maintenance' ? (
+                                                ) : field.status === "maintenance" ? (
                                                     <Badge className="bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-100">
-                                                        صيانة
+                                                        {t("status.maintenance")}
                                                     </Badge>
                                                 ) : (
                                                     <Badge className="bg-red-100 text-red-700 border border-red-200 hover:bg-red-100">
-                                                        معطّل
+                                                        {t("status.inactive")}
                                                     </Badge>
                                                 )}
                                             </TableCell>
 
-                                            {/* Actions */}
                                             <TableCell className="text-center whitespace-nowrap">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <RoleGuard privilege="UPDATE_FIELD">
@@ -521,7 +507,7 @@ export default function CourtsManagementPage() {
                                                             onClick={() => openEdit(field)}
                                                             className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground"
                                                         >
-                                                            <Pencil className="h-3 w-3" /> تعديل
+                                                            <Pencil className="h-3 w-3" /> {t("actions.edit")}
                                                         </Button>
                                                     </RoleGuard>
                                                     <RoleGuard privilege="MANAGE_FIELD_STATUS">
@@ -536,9 +522,9 @@ export default function CourtsManagementPage() {
                                                             }
                                                         >
                                                             {isActive ? (
-                                                                <><X className="h-3 w-3" /> تعطيل</>
+                                                                <><X className="h-3 w-3" /> {t("actions.disable")}</>
                                                             ) : (
-                                                                <><Check className="h-3 w-3" /> تفعيل</>
+                                                                <><Check className="h-3 w-3" /> {t("actions.enable")}</>
                                                             )}
                                                         </Button>
                                                     </RoleGuard>
@@ -553,39 +539,37 @@ export default function CourtsManagementPage() {
                 </Table>
             </motion.div>
 
-            {/* ─── Add/Edit Dialog ──────────────────────────────────────────────── */}
             <Dialog
                 open={dialogOpen}
                 onOpenChange={(open) => {
                     if (!open) setDialogOpen(false);
                 }}
             >
-                <DialogContent className="w-[95vw] max-w-lg" dir="rtl">
+                <DialogContent className="w-[95vw] max-w-lg" dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle>{editField ? "تعديل ملعب" : "إضافة ملعب جديد"}</DialogTitle>
+                        <DialogTitle>{editField ? t("dialog.editTitle") : t("dialog.addTitle")}</DialogTitle>
                         <DialogDescription>
-                            {editField ? "قم بتعديل بيانات الملعب" : "أدخل بيانات الملعب الجديد"}
+                            {editField ? t("dialog.editDescription") : t("dialog.addDescription")}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        {/* Name Arabic */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="field-name-ar">اسم الملعب (عربي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="field-name-ar">{t("dialog.fields.nameAr")} <span className="text-destructive">*</span></Label>
                             <Input
                                 id="field-name-ar"
-                                placeholder='مثال: "ملعب بادل 1"'
+                                placeholder={t("dialog.placeholders.nameAr")}
                                 value={form.name_ar}
                                 onChange={(e) => setForm({ ...form, name_ar: e.target.value })}
+                                dir="rtl"
                             />
                         </div>
 
-                        {/* Name English */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="field-name-en">اسم الملعب (إنجليزي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="field-name-en">{t("dialog.fields.nameEn")} <span className="text-destructive">*</span></Label>
                             <Input
                                 id="field-name-en"
-                                placeholder='e.g. "Padel Court 1"'
+                                placeholder={t("dialog.placeholders.nameEn")}
                                 value={form.name_en}
                                 onChange={(e) => setForm({ ...form, name_en: e.target.value })}
                                 dir="ltr"
@@ -593,34 +577,32 @@ export default function CourtsManagementPage() {
                             />
                         </div>
 
-                        {/* Sport */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="field-sport">الرياضة <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="field-sport">{t("dialog.fields.sport")} <span className="text-destructive">*</span></Label>
                             <Select
                                 value={form.sportId ? String(form.sportId) : ""}
                                 onValueChange={(val) => setForm({ ...form, sportId: Number(val) })}
                             >
                                 <SelectTrigger id="field-sport" className="w-full">
-                                    <SelectValue placeholder="اختر الرياضة" />
+                                    <SelectValue placeholder={t("dialog.placeholders.sport")} />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent dir={isRTL ? "rtl" : "ltr"}>
                                     {sports.map((s) => (
                                         <SelectItem key={s.id} value={String(s.id)}>
-                                            {s.name_ar}
+                                            {getSportName(s)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {/* Capacity */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="field-capacity">السعة (عدد اللاعبين)</Label>
+                            <Label htmlFor="field-capacity">{t("dialog.fields.capacity")}</Label>
                             <Input
                                 id="field-capacity"
                                 type="number"
                                 min={1}
-                                placeholder="مثال: 22"
+                                placeholder={t("dialog.placeholders.capacity")}
                                 value={form.capacity}
                                 onChange={(e) => setForm({ ...form, capacity: e.target.value })}
                                 dir="ltr"
@@ -628,14 +610,13 @@ export default function CourtsManagementPage() {
                             />
                         </div>
 
-                        {/* Availability for Booking Toggle */}
                         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
                             <div className="flex flex-col gap-0.5">
                                 <Label htmlFor="field-booking" className="cursor-pointer font-medium text-sm">
-                                    متاح للحجز
+                                    {t("dialog.fields.booking")}
                                 </Label>
                                 <span className="text-xs text-muted-foreground">
-                                    {form.isAvailableForBooking ? "يمكن للأعضاء حجز هذا الملعب أونلاين" : "غير متاح للحجز الإلكتروني"}
+                                    {form.isAvailableForBooking ? t("dialog.booking.availableHint") : t("dialog.booking.unavailableHint")}
                                 </span>
                             </div>
                             <Switch
@@ -647,38 +628,37 @@ export default function CourtsManagementPage() {
                             />
                         </div>
 
-                        {/* Status Switch */}
                         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
                             <div className="flex flex-col gap-0.5">
                                 <Label htmlFor="field-status" className="cursor-pointer font-medium text-sm">
-                                    الحالة
+                                    {t("dialog.fields.status")}
                                 </Label>
                                 <span className="text-xs text-muted-foreground">
-                                    {form.status === 'active' ? "الملعب نشط ومتاح" : form.status === 'maintenance' ? "صيانة" : "الملعب معطّل وغير متاح"}
+                                    {form.status === "active" ? t("dialog.status.activeHint") : form.status === "maintenance" ? t("dialog.status.maintenanceHint") : t("dialog.status.inactiveHint")}
                                 </span>
                             </div>
                             <Select
                                 value={form.status}
-                                onValueChange={(val: 'active' | 'inactive' | 'maintenance') => setForm({ ...form, status: val })}
+                                onValueChange={(val) => setForm({ ...form, status: val as FieldStatus })}
                             >
                                 <SelectTrigger id="field-status" className="w-32">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="active">نشط</SelectItem>
-                                    <SelectItem value="inactive">معطّل</SelectItem>
-                                    <SelectItem value="maintenance">صيانة</SelectItem>
+                                <SelectContent dir={isRTL ? "rtl" : "ltr"}>
+                                    <SelectItem value="active">{t("status.active")}</SelectItem>
+                                    <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
+                                    <SelectItem value="maintenance">{t("status.maintenance")}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
-                    <DialogFooter className="gap-2 flex-row-reverse sm:justify-start">
+                    <DialogFooter className={`gap-2 ${isRTL ? "flex-row-reverse sm:justify-start" : "sm:justify-end"}`}>
                         <Button onClick={handleSave} className="gap-1" disabled={saving}>
                             {saving ? (
-                                <><Loader2 className="h-4 w-4 animate-spin" /> جاري الحفظ...</>
+                                <><Loader2 className="h-4 w-4 animate-spin" /> {t("dialog.buttons.saving")}</>
                             ) : (
-                                <><Check className="h-4 w-4" /> {editField ? "حفظ التعديلات" : "إضافة الملعب"}</>
+                                <><Check className="h-4 w-4" /> {editField ? t("dialog.buttons.saveChanges") : t("dialog.buttons.addCourt")}</>
                             )}
                         </Button>
                         <Button
@@ -686,7 +666,7 @@ export default function CourtsManagementPage() {
                             onClick={() => setDialogOpen(false)}
                             disabled={saving}
                         >
-                            إلغاء
+                            {t("dialog.buttons.cancel")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -694,8 +674,6 @@ export default function CourtsManagementPage() {
         </div>
     );
 }
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({
     label,

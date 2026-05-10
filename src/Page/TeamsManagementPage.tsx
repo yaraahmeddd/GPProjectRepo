@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import {
     Table, TableHeader, TableBody,
@@ -98,12 +99,12 @@ const emptyForm = (): TeamFormState => ({
 const isArabicOnly = (s: string) => /^[\u0600-\u06FF\s\-.,;:!?()«»]*$/.test(s);
 const isEnglishOnly = (s: string) => /^[a-zA-Z0-9\s\-.,;:!?()]*$/.test(s);
 
-const statusLabel = (s: TeamStatus) => {
+const statusLabel = (s: TeamStatus, t: any) => {
     switch (s) {
-        case "active": return "نشط";
-        case "inactive": return "غير نشط";
-        case "suspended": return "موقوف";
-        case "archived": return "مؤرشف";
+        case "active": return t('status.active', { defaultValue: "نشط" });
+        case "inactive": return t('status.inactive', { defaultValue: "غير نشط" });
+        case "suspended": return t('status.suspended', { defaultValue: "موقوف" });
+        case "archived": return t('status.archived', { defaultValue: "مؤرشف" });
     }
 };
 
@@ -132,16 +133,16 @@ const TIME_SLOTS: { value: string; label: string }[] = Array.from({ length: 26 }
 });
 
 const TimeSlotPicker = ({
-    value, onChange, placeholder, lockedValue,
+    value, onChange, placeholder, lockedValue, title
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder: string;
     lockedValue?: string;
+    title: string;
 }) => {
     const [open, setOpen] = useState(false);
     const selected = TIME_SLOTS.find(s => s.value === value);
-    const title = placeholder === "من" ? "وقت البداية" : "وقت النهاية";
     return (
         <Popover open={open} onOpenChange={setOpen} modal>
             <PopoverTrigger asChild>
@@ -194,6 +195,8 @@ const TimeSlotPicker = ({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TeamsManagementPage() {
+    const { t, i18n } = useTranslation('TeamsManagementPage');
+    const isRTL = i18n.language === 'ar';
     const { toast } = useToast();
 
     // ── Data ────────────────────────────────────────────────────────────────────
@@ -224,11 +227,11 @@ export default function TeamsManagementPage() {
     useEffect(() => {
         api.get<{ data: Sport[] }>("/sports")
             .then(res => setSports(Array.isArray(res?.data?.data) ? res.data.data : []))
-            .catch(() => toast({ title: "تحذير", description: "فشل تحميل الرياضات", variant: "destructive" }));
+            .catch(() => toast({ title: t('toast.warning'), description: t('toast.loadSportsFailed'), variant: "destructive" }));
         api.get<{ data: Field[] }>("/fields")
             .then(res => setFields(Array.isArray(res?.data?.data) ? res.data.data : []))
             .catch(() => { /* non-fatal */ });
-    }, [toast]);
+    }, [toast, t]);
 
     // ── Fetch teams ─────────────────────────────────────────────────────────────
     const fetchTeams = useCallback(async () => {
@@ -237,11 +240,11 @@ export default function TeamsManagementPage() {
             const res = await api.get<{ data: ApiTeam[] }>("/teams");
             setTeams(Array.isArray(res?.data?.data) ? res.data.data : []);
         } catch {
-            toast({ title: "خطأ", description: "فشل تحميل الفرق", variant: "destructive" });
+            toast({ title: t('toast.saveFailedTitle', { defaultValue: "خطأ" }), description: t('toast.loadTeamsFailed'), variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [toast, t]);
 
     useEffect(() => { void fetchTeams(); }, [fetchTeams]);
 
@@ -288,15 +291,15 @@ export default function TeamsManagementPage() {
 
     // ── Validation ───────────────────────────────────────────────────────────────
     const validate = (): string => {
-        if (!form.nameAr.trim()) return "اسم الفريق بالعربية مطلوب";
-        if (!form.nameEn.trim()) return "اسم الفريق بالإنجليزية مطلوب";
-        if (!editTeam && !form.sportId) return "يجب اختيار الرياضة";
-        if (!form.maxParticipants || Number(form.maxParticipants) <= 0) return "الحد الأقصى للمشاركين مطلوب ويجب أن يكون أكبر من صفر";
-        if (form.training.selectedDays.length === 0) return "يجب اختيار يوم تدريب واحد على الأقل";
-        if (!form.training.startTime) return "وقت البداية مطلوب";
-        if (!form.training.endTime) return "وقت النهاية مطلوب";
-        if (!isValidTimeRange(form.training.startTime, form.training.endTime)) return "وقت النهاية يجب أن يكون بعد وقت البداية";
-        if (!form.training.trainingFee.trim()) return "رسوم التدريب مطلوبة";
+        if (!form.nameAr.trim()) return t('validation.nameArRequired');
+        if (!form.nameEn.trim()) return t('validation.nameEnRequired');
+        if (!editTeam && !form.sportId) return t('validation.sportRequired');
+        if (!form.maxParticipants || Number(form.maxParticipants) <= 0) return t('validation.maxParticipantsRequired');
+        if (form.training.selectedDays.length === 0) return t('validation.daysRequired');
+        if (!form.training.startTime) return t('validation.startTimeRequired');
+        if (!form.training.endTime) return t('validation.endTimeRequired');
+        if (!isValidTimeRange(form.training.startTime, form.training.endTime)) return t('validation.timeRangeInvalid');
+        if (!form.training.trainingFee.trim()) return t('validation.trainingFeeRequired');
         return "";
     };
 
@@ -326,7 +329,7 @@ export default function TeamsManagementPage() {
                     price: form.price !== "" ? Number(form.price) : undefined,
                     training: trainingBody,
                 });
-                toast({ title: "✓ تم التحديث", description: "تم تحديث الفريق بنجاح" });
+                toast({ title: t('toast.updateSuccessTitle'), description: t('toast.updateSuccess') });
             } else {
                 await api.post("/teams", {
                     sport_id: Number(form.sportId),
@@ -338,7 +341,7 @@ export default function TeamsManagementPage() {
                     price: form.price !== "" ? Number(form.price) : undefined,
                     training: trainingBody,
                 });
-                toast({ title: "✓ تمت الإضافة", description: "تم إضافة الفريق بنجاح" });
+                toast({ title: t('toast.addSuccessTitle'), description: t('toast.addSuccess') });
             }
             setIsAddOpen(false);
             setEditTeam(null);
@@ -346,7 +349,7 @@ export default function TeamsManagementPage() {
             await fetchTeams();
         } catch (err) {
             const e = err as { message?: string };
-            toast({ title: "فشل الحفظ", description: e?.message ?? "حدث خطأ غير متوقع", variant: "destructive" });
+            toast({ title: t('toast.saveFailedTitle'), description: e?.message ?? t('toast.saveFailed'), variant: "destructive" });
         } finally {
             setSaveLoading(false);
         }
@@ -358,11 +361,11 @@ export default function TeamsManagementPage() {
         setDeleteLoading(true);
         try {
             await api.delete(`/teams/${deleteId}`);
-            toast({ title: "✓ تم الحذف", description: "تم حذف الفريق بنجاح" });
+            toast({ title: t('toast.deleteSuccessTitle'), description: t('toast.deleteSuccess') });
             setDeleteId(null);
             await fetchTeams();
         } catch {
-            toast({ title: "فشل الحذف", variant: "destructive" });
+            toast({ title: t('toast.deleteFailed'), variant: "destructive" });
         } finally {
             setDeleteLoading(false);
         }
@@ -387,7 +390,7 @@ export default function TeamsManagementPage() {
 
     // ─── Render ──────────────────────────────────────────────────────────────────
     return (
-        <div className="h-full flex flex-col overflow-hidden" dir="rtl">
+        <div className="h-full flex flex-col overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
 
             {/* ── Header ── */}
             <div className="px-6 py-4 border-b border-border bg-background shrink-0">
@@ -395,24 +398,24 @@ export default function TeamsManagementPage() {
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                             <Users className="w-6 h-6 text-primary" />
-                            إدارة الفرق
+                            {t('header.title')}
                         </h1>
                         <div className="flex items-center gap-4 mt-1">
                             <p className="text-sm text-muted-foreground">
-                                إجمالي الفرق: <strong>{teams.length}</strong>
+                                {t('header.totalTeams')} <strong>{teams.length}</strong>
                             </p>
                             <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
-                                {teams.filter(t => t.status === "active").length} نشط
+                                {t('header.activeTeams', { count: teams.filter(t => t.status === "active").length })}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
-                                {teams.filter(t => t.status !== "active").length} غير نشط
+                                {t('header.inactiveTeams', { count: teams.filter(t => t.status !== "active").length })}
                             </span>
                         </div>
                     </div>
                     <RoleGuard privilege="CREATE_TEAM">
                         <Button onClick={openAdd} className="gap-2">
                             <Plus className="h-4 w-4" />
-                            إضافة فريق
+                            {t('actions.addTeam')}
                         </Button>
                     </RoleGuard>
                 </div>
@@ -423,10 +426,10 @@ export default function TeamsManagementPage() {
                 {/* Search */}
                 <div className="relative flex-1 max-w-sm">
                     <Input
-                        placeholder="ابحث عن فريق..."
+                        placeholder={t('toolbar.searchPlaceholder')}
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="h-9 pl-7 pr-3"
+                        className={`h-9 ${isRTL ? 'pl-7 pr-3' : 'pr-7 pl-3'}`}
                     />
                     {search && (
                         <button onClick={() => setSearch("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -441,15 +444,15 @@ export default function TeamsManagementPage() {
                         <button className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs transition-colors ${
                             filterStatuses.length > 0 ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
                             <Filter className="w-3.5 h-3.5" />
-                            الحالة
+                            {t('toolbar.statusFilter')}
                             {filterStatuses.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">{filterStatuses.length}</span>
                             )}
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="w-52 p-0" dir="rtl">
+                    <PopoverContent align="start" className="w-52 p-0" dir={isRTL ? 'rtl' : 'ltr'}>
                         <div className="py-1">
-                            {([{ key: "active" as TeamStatus, label: "نشط", color: "text-emerald-700" }, { key: "inactive" as TeamStatus, label: "غير نشط", color: "text-rose-700" }, { key: "suspended" as TeamStatus, label: "موقوف", color: "text-amber-700" }, { key: "archived" as TeamStatus, label: "مؤرشف", color: "text-slate-600" }]).map(({ key, label, color }) => (
+                            {([{ key: "active" as TeamStatus, label: t('status.active'), color: "text-emerald-700" }, { key: "inactive" as TeamStatus, label: t('status.inactive'), color: "text-rose-700" }, { key: "suspended" as TeamStatus, label: t('status.suspended'), color: "text-amber-700" }, { key: "archived" as TeamStatus, label: t('status.archived'), color: "text-slate-600" }]).map(({ key, label, color }) => (
                                 <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors">
                                     <input type="checkbox" checked={filterStatuses.includes(key)}
                                         onChange={() => setFilterStatuses(prev => prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key])}
@@ -461,7 +464,7 @@ export default function TeamsManagementPage() {
                         </div>
                         {filterStatuses.length > 0 && (
                             <div className="flex justify-end px-3 py-2 border-t border-border">
-                                <button onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">مسح</button>
+                                <button onClick={() => { setFilterStatuses([]); setStatusPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t('toolbar.clearFilter')}</button>
                             </div>
                         )}
                     </PopoverContent>
@@ -472,7 +475,7 @@ export default function TeamsManagementPage() {
                     <PopoverTrigger asChild>
                         <button className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-xs transition-colors ${
                             filterSports.length > 0 ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>
-                            الرياضة
+                            {t('toolbar.sportFilter')}
                             {filterSports.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">{filterSports.length}</span>
                             )}
@@ -485,24 +488,24 @@ export default function TeamsManagementPage() {
                                     <input type="checkbox" checked={filterSports.includes(s.id)}
                                         onChange={() => setFilterSports(prev => prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id])}
                                         className="w-3.5 h-3.5 rounded accent-primary cursor-pointer" />
-                                    <span className="text-xs font-medium">{s.name_ar}</span>
+                                    <span className="text-xs font-medium">{isRTL ? s.name_ar : (s.name_en || s.name_ar)}</span>
                                     <span className="mr-auto text-[10px] text-muted-foreground">{teams.filter(t => t.sport_id === s.id).length}</span>
                                 </label>
                             ))}
                         </div>
                         {filterSports.length > 0 && (
                             <div className="flex justify-end px-3 py-2 border-t border-border">
-                                <button onClick={() => { setFilterSports([]); setSportPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">مسح</button>
+                                <button onClick={() => { setFilterSports([]); setSportPopoverOpen(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t('toolbar.clearFilter')}</button>
                             </div>
                         )}
                     </PopoverContent>
                 </Popover>
 
                 <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-xs text-muted-foreground">{filtered.length} نتيجة</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-xs text-muted-foreground">{filtered.length} {t('toolbar.results')}</span>
                 {hasFilters && (
                     <button onClick={() => { setFilterSports([]); setFilterStatuses([]); setSearch(""); void fetchTeams(); }} className="text-xs text-primary hover:underline">
-                        مسح الفلاتر ×
+                        {t('toolbar.clearAll')}
                     </button>
                 )}
             </div>
@@ -517,13 +520,13 @@ export default function TeamsManagementPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-10">#</TableHead>
-                            <TableHead>اسم الفريق</TableHead>
-                            <TableHead>الرياضة</TableHead>
-                            <TableHead>مواعيد التدريب</TableHead>
-                            <TableHead>الحد الأقصى</TableHead>
-                            <TableHead className="whitespace-nowrap">الحالة</TableHead>
-                            <TableHead className="w-[200px] text-center">الإجراءات</TableHead>
+                            <TableHead className="w-10">{t('table.colIndex')}</TableHead>
+                            <TableHead>{t('table.colName')}</TableHead>
+                            <TableHead>{t('table.colSport')}</TableHead>
+                            <TableHead>{t('table.colSchedule')}</TableHead>
+                            <TableHead>{t('table.colMaxParticipants')}</TableHead>
+                            <TableHead className="whitespace-nowrap">{t('table.colStatus')}</TableHead>
+                            <TableHead className="w-[200px] text-center">{t('table.colActions')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -533,7 +536,7 @@ export default function TeamsManagementPage() {
                                     <TableCell colSpan={7} className="text-center py-12">
                                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                             <Loader2 className="h-5 w-5 animate-spin" />
-                                            <span>جاري التحميل...</span>
+                                            <span>{t('table.loading')}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -542,7 +545,7 @@ export default function TeamsManagementPage() {
                                     <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
                                         <div className="flex flex-col items-center gap-2">
                                             <Users className="w-8 h-8 opacity-30" />
-                                            <span>{hasFilters ? "لا توجد فرق تطابق الفلاتر المحددة" : "لا توجد فرق مسجلة بعد"}</span>
+                                            <span>{hasFilters ? t('table.noResultsFiltered') : t('table.noResultsEmpty')}</span>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -562,19 +565,21 @@ export default function TeamsManagementPage() {
                                         >
                                             <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
                                             <TableCell className="font-medium">
-                                                <span>{team.name_ar}</span>
-                                                {team.name_en && (
-                                                    <span className="block text-[11px] text-muted-foreground/70 italic">{team.name_en}</span>
+                                                <span>{isRTL ? team.name_ar : (team.name_en || team.name_ar)}</span>
+                                                {((isRTL ? team.name_en : team.name_ar)) && (
+                                                    <span className={`block text-[11px] text-muted-foreground/70 italic ${isRTL ? 'text-left' : 'text-right'}`} dir={isRTL ? 'ltr' : 'rtl'}>
+                                                        {isRTL ? team.name_en : team.name_ar}
+                                                    </span>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{team.sport?.name_ar ?? "—"}</TableCell>
+                                            <TableCell>{(isRTL ? team.sport?.name_ar : team.sport?.name_en) ?? "—"}</TableCell>
                                             <TableCell className="text-sm text-muted-foreground max-w-[200px]">
                                                 <span className="line-clamp-2">{schedStr}</span>
                                             </TableCell>
                                             <TableCell>{team.max_participants}</TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusClass(team.status)}`}>
-                                                    {statusLabel(team.status)}
+                                                    {statusLabel(team.status, t)}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-center">
@@ -585,7 +590,7 @@ export default function TeamsManagementPage() {
                                                             className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground"
                                                             onClick={() => openEdit(team)}
                                                         >
-                                                            <Pencil className="h-3 w-3" /> تعديل
+                                                            <Pencil className="h-3 w-3" /> {t('actions.edit')}
                                                         </Button>
                                                     </RoleGuard>
                                                     <RoleGuard privilege="DELETE_TEAM">
@@ -594,7 +599,7 @@ export default function TeamsManagementPage() {
                                                             className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
                                                             onClick={() => setDeleteId(team.id)}
                                                         >
-                                                            <Trash2 className="h-3 w-3" /> حذف
+                                                            <Trash2 className="h-3 w-3" /> {t('actions.delete')}
                                                         </Button>
                                                     </RoleGuard>
                                                 </div>
@@ -609,16 +614,13 @@ export default function TeamsManagementPage() {
             </motion.div>
             </div>
             {/* ══ Add / Edit Dialog — same structure as SportsPage dialog ══ */}
-            <Dialog
-                open={isAddOpen}
-                onOpenChange={open => { if (!saveLoading) { setIsAddOpen(open); if (!open) setEditTeam(null); } }}
-            >
-                <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] p-0 flex flex-col overflow-hidden" dir="rtl">
+            <Dialog open={isAddOpen} onOpenChange={val => { if (!val) { setIsAddOpen(false); setEditTeam(null); setForm(emptyForm()); } }}>
+                <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] p-0 flex flex-col overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
                     <div className="flex min-h-0 flex-1 flex-col p-6 overflow-hidden">
                         <DialogHeader className="shrink-0">
-                            <DialogTitle>{isEdit ? "تعديل فريق" : "إضافة فريق جديد"}</DialogTitle>
+                            <DialogTitle>{isEdit ? t('form.editTitle') : t('form.addTitle')}</DialogTitle>
                             <DialogDescription>
-                                {isEdit ? "قم بتعديل بيانات الفريق — جميع الحقول قابلة للتعديل" : "أدخل بيانات الفريق الجديد"}
+                                {isEdit ? t('form.editDescription') : t('form.addDescription')}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -626,48 +628,49 @@ export default function TeamsManagementPage() {
 
                             {/* Sport selector — shown on both create and edit; disabled on edit */}
                             <div>
-                                <Label>الرياضة <span className="text-destructive">*</span></Label>
+                                <Label>{t('form.sportLabel')} <span className="text-destructive">*</span></Label>
                                 <Select
                                     value={form.sportId}
                                     onValueChange={v => { if (!isEdit) setForm(p => ({ ...p, sportId: v })); }}
                                     disabled={isEdit}
                                 >
                                     <SelectTrigger className={isEdit ? "opacity-60 cursor-not-allowed" : ""}>
-                                        <SelectValue placeholder="اختر الرياضة" />
+                                        <SelectValue placeholder={t('form.sportPlaceholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {sports.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name_ar}</SelectItem>)}
+                                        {sports.map(s => <SelectItem key={s.id} value={String(s.id)}>{isRTL ? s.name_ar : (s.name_en || s.name_ar)}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                {isEdit && <p className="text-[11px] text-muted-foreground mt-1">لا يمكن تغيير الرياضة بعد إنشاء الفريق</p>}
+                                {isEdit && <p className="text-[11px] text-muted-foreground mt-1">{t('form.sportLockedNote')}</p>}
                             </div>
 
                             {/* Name row */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label>اسم الفريق (AR) <span className="text-destructive">*</span></Label>
+                                    <Label>{t('form.nameArLabel')} <span className="text-destructive">*</span></Label>
                                     <Input
                                         value={form.nameAr}
-                                        placeholder="مثال: فريق تحت 18 سنة"
+                                        placeholder={t('form.nameArPlaceholder')}
                                         maxLength={100}
                                         onChange={e => {
                                             const v = e.target.value;
                                             if (v === "" || isArabicOnly(v)) setForm(p => ({ ...p, nameAr: v }));
-                                            else toast({ title: "تنبيه", description: "الاسم العربي يقبل عربي فقط", variant: "destructive" });
+                                            else toast({ title: t('toast.nameArOnlyTitle'), description: t('toast.nameArOnly'), variant: "destructive" });
                                         }}
+                                        dir="rtl"
                                     />
                                 </div>
                                 <div>
-                                    <Label>Team Name (EN) <span className="text-destructive">*</span></Label>
+                                    <Label>{t('form.nameEnLabel')} <span className="text-destructive">*</span></Label>
                                     <Input
-                                        dir="ltr" className="text-left"
+                                        dir="ltr" className={`text-left ${isRTL ? '' : 'text-left'}`}
                                         value={form.nameEn}
-                                        placeholder="e.g. Under 18 Team"
+                                        placeholder={t('form.nameEnPlaceholder')}
                                         maxLength={100}
                                         onChange={e => {
                                             const v = e.target.value;
                                             if (v === "" || isEnglishOnly(v)) setForm(p => ({ ...p, nameEn: v }));
-                                            else toast({ title: "تنبيه", description: "English name only", variant: "destructive" });
+                                            else toast({ title: t('toast.nameEnOnlyTitle'), description: t('toast.nameEnOnly'), variant: "destructive" });
                                         }}
                                     />
                                 </div>
@@ -676,22 +679,22 @@ export default function TeamsManagementPage() {
                             {/* Max participants + Status */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label>الحد الأقصى للمشاركين <span className="text-destructive">*</span></Label>
+                                    <Label>{t('form.maxParticipantsLabel')} <span className="text-destructive">*</span></Label>
                                     <Input
-                                        type="number" min={1} placeholder="20"
+                                        type="number" min={1} placeholder={t('form.maxParticipantsPlaceholder')}
                                         value={form.maxParticipants}
                                         onChange={e => setForm(p => ({ ...p, maxParticipants: e.target.value }))}
                                     />
                                 </div>
                                 <div>
-                                    <Label>الحالة</Label>
+                                    <Label>{t('form.statusLabel')}</Label>
                                     <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as TeamStatus }))}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="active">نشط</SelectItem>
-                                            <SelectItem value="inactive">غير نشط</SelectItem>
-                                            <SelectItem value="suspended">موقوف</SelectItem>
-                                            <SelectItem value="archived">مؤرشف</SelectItem>
+                                            <SelectItem value="active">{t('status.active')}</SelectItem>
+                                            <SelectItem value="inactive">{t('status.inactive')}</SelectItem>
+                                            <SelectItem value="suspended">{t('status.suspended')}</SelectItem>
+                                            <SelectItem value="archived">{t('status.archived')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -700,21 +703,21 @@ export default function TeamsManagementPage() {
                             {/* Visibility + Price */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label>العضوية</Label>
+                                    <Label>{t('form.visibilityLabel')}</Label>
                                     <Select value={form.visibility || "none"} onValueChange={v => setForm(p => ({ ...p, visibility: v === "none" ? "" : v }))}>
-                                        <SelectTrigger><SelectValue placeholder="اختر العضوية" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder={t('form.visibilityPlaceholder')} /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="none" className="text-muted-foreground">— بدون تحديد —</SelectItem>
-                                            <SelectItem value="INTERNAL">داخلي</SelectItem>
-                                            <SelectItem value="EXTERNAL">خارجي</SelectItem>
-                                            <SelectItem value="BOTH">داخلي و خارجي</SelectItem>
+                                            <SelectItem value="none" className="text-muted-foreground">{t('form.visibilityNone')}</SelectItem>
+                                            <SelectItem value="INTERNAL">{t('form.visibilityInternal')}</SelectItem>
+                                            <SelectItem value="EXTERNAL">{t('form.visibilityExternal')}</SelectItem>
+                                            <SelectItem value="BOTH">{t('form.visibilityBoth')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label>السعر (ج.م)</Label>
+                                    <Label>{t('form.priceLabel')}</Label>
                                     <Input
-                                        type="number" min={0} placeholder="0"
+                                        type="number" min={0} placeholder={t('form.pricePlaceholder')}
                                         value={form.price}
                                         onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
                                     />
@@ -723,11 +726,11 @@ export default function TeamsManagementPage() {
 
                             {/* Training block — same card style as SportsPage */}
                             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-                                <span className="text-sm font-semibold text-primary">مواعيد التدريب</span>
+                                <span className="text-sm font-semibold text-primary">{t('form.training.sectionTitle')}</span>
 
                                 {/* Day chips */}
                                 <div>
-                                    <Label className="text-xs mb-1.5 block">أيام التدريب <span className="text-destructive">*</span></Label>
+                                    <Label className="text-xs mb-1.5 block">{t('form.training.daysLabel')} <span className="text-destructive">*</span></Label>
                                     <div className="flex flex-wrap gap-1.5">
                                         {DAYS.map(day => {
                                             const on = form.training.selectedDays.includes(day.ar);
@@ -739,7 +742,7 @@ export default function TeamsManagementPage() {
                                                             : "bg-background text-foreground border-border hover:border-primary/60"
                                                         }`}
                                                 >
-                                                    {day.ar}
+                                                    {isRTL ? day.ar : day.en}
                                                 </button>
                                             );
                                         })}
@@ -748,41 +751,43 @@ export default function TeamsManagementPage() {
 
                                 {/* Time pickers */}
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">من</Label>
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">{t('form.training.fromLabel')}</Label>
                                     <TimeSlotPicker
                                         value={form.training.startTime}
-                                        placeholder="من"
+                                        placeholder={t('form.training.fromLabel')}
+                                        title={t('form.training.timeStartTitle')}
                                         lockedValue={form.training.endTime}
                                         onChange={v => setForm(p => ({ ...p, training: { ...p.training, startTime: v } }))}
                                     />
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">إلى</Label>
+                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">{t('form.training.toLabel')}</Label>
                                     <TimeSlotPicker
                                         value={form.training.endTime}
-                                        placeholder="إلى"
+                                        placeholder={t('form.training.toLabel')}
+                                        title={t('form.training.timeEndTitle')}
                                         lockedValue={form.training.startTime}
                                         onChange={v => setForm(p => ({ ...p, training: { ...p.training, endTime: v } }))}
                                     />
                                 </div>
-                                {timeErr && <p className="text-[11px] text-destructive">وقت النهاية يجب أن يكون بعد وقت البداية</p>}
+                                {timeErr && <p className="text-[11px] text-destructive">{t('form.training.timeRangeError')}</p>}
 
                                 {/* Field selector */}
                                 <div>
-                                    <Label className="text-xs mb-1 block">الملعب <span className="text-destructive">*</span></Label>
+                                    <Label className="text-xs mb-1 block">{t('form.training.fieldLabel')} <span className="text-destructive">*</span></Label>
                                     {fields.length === 0 ? (
                                         <p className="text-xs text-amber-600 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-md px-3 py-2">
-                                            لا توجد ملاعب محملة من API — تأكد من اتصال الخادم
+                                            {t('form.training.fieldNoFields')}
                                         </p>
                                     ) : (
                                         <Select
                                             value={form.training.fieldId || "none"}
                                             onValueChange={val => setForm(p => ({ ...p, training: { ...p.training, fieldId: val === "none" ? "" : val } }))}
                                         >
-                                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="اختر ملعب" /></SelectTrigger>
+                                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('form.training.fieldPlaceholder')} /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="none" className="text-xs text-muted-foreground">اختر ملعب</SelectItem>
+                                                <SelectItem value="none" className="text-xs text-muted-foreground">{t('form.training.fieldPlaceholder')}</SelectItem>
                                                 {fields.map(f => (
                                                     <SelectItem key={f.id} value={f.id} className="text-xs">
-                                                        {f.name_ar}{f.name_en ? ` (${f.name_en})` : ""}
+                                                        {isRTL ? f.name_ar : (f.name_en || f.name_ar)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -792,7 +797,7 @@ export default function TeamsManagementPage() {
 
                                 {/* Training fee */}
                                 <div className="flex items-center gap-2">
-                                    <Label className="text-xs whitespace-nowrap shrink-0">رسوم التدريب (ج.م) <span className="text-destructive">*</span></Label>
+                                    <Label className="text-xs whitespace-nowrap shrink-0">{t('form.training.trainingFeeLabel')} <span className="text-destructive">*</span></Label>
                                     <input
                                         type="number" min={0} placeholder="200"
                                         value={form.training.trainingFee}
@@ -808,10 +813,10 @@ export default function TeamsManagementPage() {
 
                         <DialogFooter className="mt-4 border-t pt-4">
                             <Button variant="outline" onClick={() => { setIsAddOpen(false); setEditTeam(null); }} disabled={saveLoading}>
-                                إلغاء
+                                {t('form.buttons.cancel')}
                             </Button>
                             <Button onClick={() => void handleSave()} disabled={saveLoading}>
-                                {saveLoading ? <><Loader2 className="w-4 h-4 animate-spin ml-1" />جارٍ الحفظ...</> : "حفظ"}
+                                {saveLoading ? <><Loader2 className="w-4 h-4 animate-spin ml-1" />{t('form.buttons.saving')}</> : t('form.buttons.save')}
                             </Button>
                         </DialogFooter>
                     </div>
@@ -820,15 +825,15 @@ export default function TeamsManagementPage() {
 
             {/* ══ Delete Confirmation Dialog ══ */}
             <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-                <DialogContent>
+                <DialogContent dir={isRTL ? 'rtl' : 'ltr'}>
                     <DialogHeader>
-                        <DialogTitle>تأكيد الحذف</DialogTitle>
-                        <DialogDescription>هل أنت متأكد من حذف هذا الفريق؟ لا يمكن التراجع عن هذا الإجراء.</DialogDescription>
+                        <DialogTitle>{t('deleteDialog.title')}</DialogTitle>
+                        <DialogDescription>{t('deleteDialog.description')}</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteId(null)}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setDeleteId(null)}>{t('deleteDialog.cancel')}</Button>
                         <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
-                            {deleteLoading ? "جارٍ الحذف..." : "حذف"}
+                            {deleteLoading ? t('deleteDialog.confirming') : t('deleteDialog.confirm')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

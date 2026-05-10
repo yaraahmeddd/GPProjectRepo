@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { generateId } from "../utils/id";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import { Button } from "../Component/StaffPagesComponents/ui/button";
 import { Input } from "../Component/StaffPagesComponents/ui/input";
@@ -103,15 +104,74 @@ interface ApiCalendarDay {
     slots: ApiCalendarSlot[];
 }
 
-// ─── Helpers: API → Booking shape ────────────────────────────────────────────
+type Language = "ar" | "en";
 
-function slotToBooking(slot: ApiCalendarSlot, day: ApiCalendarDay, field: ApiField): Booking | null {
+const getLanguage = (language?: string): Language => (language ?? "ar").startsWith("en") ? "en" : "ar";
+const getLocale = (language: Language) => language === "en" ? "en-US" : "ar-EG";
+
+function getFieldName(field: ApiField | undefined, language: Language): string {
+    if (!field) return "";
+    return language === "en"
+        ? (field.name_en ?? field.name_ar ?? field.name ?? field.id)
+        : (field.name_ar ?? field.name_en ?? field.name ?? field.id);
+}
+
+function getSportName(field: ApiField | undefined, language: Language, fallback: string): string {
+    if (!field?.sport) return fallback;
+    return language === "en"
+        ? (field.sport.name_en ?? field.sport.name_ar ?? fallback)
+        : (field.sport.name_ar ?? field.sport.name_en ?? fallback);
+}
+
+function formatClockTime(value: string, language: Language): string {
+    const [hours, minutes] = value.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return new Intl.DateTimeFormat(getLocale(language), {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    }).format(date);
+}
+
+function formatDisplayDate(date: Date, language: Language): string {
+    return new Intl.DateTimeFormat(getLocale(language), {
+        day: "numeric",
+        month: "long",
+    }).format(date);
+}
+
+function formatFullDate(date: Date, language: Language): string {
+    return new Intl.DateTimeFormat(getLocale(language), {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    }).format(date);
+}
+
+function dayOfWeekLabel(date: Date, language: Language): string {
+    return new Intl.DateTimeFormat(getLocale(language), { weekday: "long" }).format(date);
+}
+
+function normalizeDigits(value: string): string {
+    const arabicDigits = "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669";
+    return value.replace(/[\u0660-\u0669]/g, (d) => String(arabicDigits.indexOf(d)));
+}
+
+function slotToBooking(
+    slot: ApiCalendarSlot,
+    day: ApiCalendarDay,
+    field: ApiField,
+    language: Language,
+    labels: { training: string; blocked: string; member: string }
+): Booking | null {
     if (slot.status === "available") return null;
 
     // Use actual booking times if available, otherwise fall back to slot times
     const from = slot.actual_booking_start ? slot.actual_booking_start.slice(0, 5) : slot.start_time.slice(0, 5);
     const to = slot.actual_booking_end ? slot.actual_booking_end.slice(0, 5) : slot.end_time.slice(0, 5);
-    const courtName = field.name_ar ?? field.name_en ?? field.name ?? field.id;
+    const courtName = getFieldName(field, language);
 
     const dateKey = day.date.split("T")[0];
 
@@ -125,7 +185,7 @@ function slotToBooking(slot: ApiCalendarSlot, day: ApiCalendarDay, field: ApiFie
             to,
             status: "blocked",
             isManual: false,
-            blockedReason: "حصة تدريبية",
+            blockedReason: labels.training,
         };
     }
 
@@ -139,7 +199,7 @@ function slotToBooking(slot: ApiCalendarSlot, day: ApiCalendarDay, field: ApiFie
             to,
             status: "blocked",
             isManual: true,
-            blockedReason: "محجوب",
+            blockedReason: labels.blocked,
         };
     }
 
@@ -154,10 +214,10 @@ function slotToBooking(slot: ApiCalendarSlot, day: ApiCalendarDay, field: ApiFie
         (raw?.name_ar as string) ||
         (raw?.full_name as string) ||
         [
-            raw?.first_name_ar ?? raw?.first_name_en ?? "",
-            raw?.last_name_ar ?? raw?.last_name_en ?? "",
+            language === "en" ? (raw?.first_name_en ?? raw?.first_name_ar ?? "") : (raw?.first_name_ar ?? raw?.first_name_en ?? ""),
+            language === "en" ? (raw?.last_name_en ?? raw?.last_name_ar ?? "") : (raw?.last_name_ar ?? raw?.last_name_en ?? ""),
         ].filter(Boolean).join(" ").trim() ||
-        "عضو";
+        labels.member;
 
     const memberId =
         (raw?.member_id as string) ??
@@ -208,26 +268,6 @@ const TIME_OPTIONS: { value: string; label: string }[] = Array.from({ length: 36
     return { value, label };
 });
 
-const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-
-const AR_MONTHS = [
-    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function toArabicNumerals(n: number): string {
-    return String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
-}
-
-function formatHour(slot: string): string {
-    const h = parseInt(slot.split(":")[0], 10);
-    const suffix = h < 12 ? "ص" : "م";
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-    return `${toArabicNumerals(h12)}${suffix}`;
-}
-
 function getWeekStart(date: Date): Date {
     const d = new Date(date);
     const day = d.getDay();
@@ -248,14 +288,6 @@ function toISODate(date: Date): string {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-}
-
-function formatDisplayDate(date: Date): string {
-    return `${toArabicNumerals(date.getDate())} ${AR_MONTHS[date.getMonth()]}`;
-}
-
-function dayOfWeekLabel(date: Date): string {
-    return AR_DAYS[date.getDay()];
 }
 
 // ─── Conflict Detection ───────────────────────────────────────────────────────
@@ -282,11 +314,12 @@ const hasConflict = (
 // ─── Status Badge ────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: BookingStatus }) {
+    const { t } = useTranslation("CourtBookingsPage");
     if (status === "confirmed")
-        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">مؤكد</Badge>;
+        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">{t("status.confirmed")}</Badge>;
     if (status === "blocked")
-        return <Badge className="bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100">محجوب</Badge>;
-    return <Badge variant="outline" className="text-muted-foreground">ملغي</Badge>;
+        return <Badge className="bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100">{t("status.blocked")}</Badge>;
+    return <Badge variant="outline" className="text-muted-foreground">{t("status.cancelled")}</Badge>;
 }
 
 // ─── Mini TimeSlotPicker ─────────────────────────────────────────────────────
@@ -305,6 +338,8 @@ function TimeSlotPicker({
     allowedOptions?: { value: string; label: string }[];
 }) {
     const [open, setOpen] = useState(false);
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
     const baseOptions = allowedOptions ?? TIME_OPTIONS;
     const selected = baseOptions.find((t) => t.value === value) ?? TIME_OPTIONS.find((t) => t.value === value);
     const filteredOptions = minValue
@@ -323,7 +358,7 @@ function TimeSlotPicker({
                         }`}
                 >
                     <Clock className="h-3.5 w-3.5 shrink-0" />
-                    {selected ? selected.label : <span className="opacity-60">{placeholder}</span>}
+                    {selected ? formatClockTime(selected.value, language) : <span className="opacity-60">{placeholder}</span>}
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-[17rem] p-4 rounded-2xl" align="start" side="bottom" dir="ltr">
@@ -339,11 +374,11 @@ function TimeSlotPicker({
                                     : "border-primary/30 bg-background text-primary hover:bg-primary hover:text-primary-foreground"
                                 }`}
                         >
-                            {slot.label}
+                            {formatClockTime(slot.value, language)}
                         </button>
                     ))}
                     {filteredOptions.length === 0 && (
-                        <p className="col-span-3 text-center text-xs text-muted-foreground py-4">لا توجد أوقات متاحة</p>
+                        <p className="col-span-3 text-center text-xs text-muted-foreground py-4">{t("timePicker.noTimes")}</p>
                     )}
                 </div>
             </PopoverContent>
@@ -379,44 +414,39 @@ function BookingDetailPanel({
 }) {
     const { toast } = useToast();
     const navigate = useNavigate();
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
     const copyPhone = () => {
         if (booking.member?.phone) {
             void navigator.clipboard.writeText(booking.member.phone);
-            toast({ title: "تم النسخ", description: "تم نسخ رقم الهاتف إلى الحافظة" });
+            toast({ title: t("toast.copiedTitle"), description: t("toast.phoneCopied") });
         }
     };
 
     const dateObj = new Date(booking.date);
-    const displayDate = `${dayOfWeekLabel(dateObj)} ${formatDisplayDate(dateObj)} ${dateObj.getFullYear()}`;
-
-    const fmtTime = (t: string) => {
-        const [hStr] = t.split(":");
-        const h = parseInt(hStr, 10);
-        const suffix = h < 12 ? "ص" : "م";
-        const h12 = h % 12 === 0 ? 12 : h % 12;
-        return `${toArabicNumerals(h12)}:٠٠ ${suffix}`;
-    };
+    const displayDate = formatFullDate(dateObj, language);
 
     return (
         <motion.div
-            initial={{ x: 400, opacity: 0 }}
+            initial={{ x: isRTL ? 400 : -400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
+            exit={{ x: isRTL ? 400 : -400, opacity: 0 }}
             transition={{ type: "spring", damping: 28, stiffness: 260 }}
-            className="fixed top-16 bottom-0 left-0 z-40 w-[360px] bg-background border-r border-border shadow-2xl flex flex-col overflow-hidden"
-            dir="rtl"
+            className={`fixed top-16 bottom-0 ${isRTL ? "left-0 border-r" : "right-0 border-l"} z-40 w-[360px] bg-background border-border shadow-2xl flex flex-col overflow-hidden`}
+            dir={isRTL ? "rtl" : "ltr"}
         >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
                 <div className="flex items-center gap-2">
                     <CalendarCheck className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-sm">تفاصيل الحجز</span>
+                    <span className="font-semibold text-sm">{t("detail.title")}</span>
                 </div>
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="إغلاق لوحة التفاصيل"
+                    aria-label={t("detail.closeAria")}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
                 >
                     <X className="h-4 w-4" />
@@ -426,17 +456,17 @@ function BookingDetailPanel({
             <div className="flex-1 overflow-y-auto">
                 {/* Booking Info */}
                 <div className="px-5 py-4 space-y-3 border-b border-border">
-                    <InfoRow label="الملعب" value={booking.courtName} />
-                    <InfoRow label="التاريخ" value={displayDate} />
-                    <InfoRow label="الوقت" value={`${fmtTime(booking.from)} — ${fmtTime(booking.to)}`} />
+                    <InfoRow label={t("detail.fields.court")} value={booking.courtName} />
+                    <InfoRow label={t("detail.fields.date")} value={displayDate} />
+                    <InfoRow label={t("detail.fields.time")} value={`${formatClockTime(booking.from, language)} - ${formatClockTime(booking.to, language)}`} />
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">الحالة</span>
+                        <span className="text-sm text-muted-foreground">{t("detail.fields.status")}</span>
                         <StatusBadge status={booking.status} />
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">النوع</span>
+                        <span className="text-sm text-muted-foreground">{t("detail.fields.type")}</span>
                         <Badge variant="outline" className="text-xs">
-                            {booking.isManual ? "يدوي — من الموظف" : "تلقائي — من التطبيق"}
+                            {booking.isManual ? t("bookingType.manual") : t("bookingType.automatic")}
                         </Badge>
                     </div>
                 </div>
@@ -444,7 +474,7 @@ function BookingDetailPanel({
                 {/* Blocked reason */}
                 {booking.status === "blocked" && booking.blockedReason && (
                     <div className="px-5 py-4 bg-rose-50 border-b border-rose-200">
-                        <p className="text-xs font-semibold text-rose-700 mb-1">سبب الحجب</p>
+                        <p className="text-xs font-semibold text-rose-700 mb-1">{t("detail.blockReason")}</p>
                         <p className="text-sm text-rose-800">{booking.blockedReason}</p>
                     </div>
                 )}
@@ -452,19 +482,19 @@ function BookingDetailPanel({
                 {/* Member Info */}
                 {booking.member ? (
                     <div className="px-5 py-4 space-y-3 border-b border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">بيانات العضو</p>
-                        <InfoRow label="الاسم" value={booking.member.nameAr} />
-                        <InfoRow label="رقم العضو" value={booking.member.memberId} />
-                        <InfoRow label="الهاتف" value={booking.member.phone} />
-                        <InfoRow label="الرقم القومي" value={`${booking.member.nationalId.slice(0, 6)}...`} />
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("detail.memberSection")}</p>
+                        <InfoRow label={t("detail.fields.name")} value={booking.member.nameAr} />
+                        <InfoRow label={t("detail.fields.memberId")} value={booking.member.memberId} />
+                        <InfoRow label={t("detail.fields.phone")} value={booking.member.phone} />
+                        <InfoRow label={t("detail.fields.nationalId")} value={`${booking.member.nationalId.slice(0, 6)}...`} />
                         <InfoRow
-                            label="نوع العضوية"
-                            value={booking.member.memberType === "member" ? "عضو اجتماعي" : "لاعب فريق"}
+                            label={t("detail.fields.memberType")}
+                            value={booking.member.memberType === "member" ? t("memberTypes.member") : t("memberTypes.teamMember")}
                         />
                     </div>
                 ) : (
                     <div className="px-5 py-4 border-b border-border">
-                        <p className="text-sm text-muted-foreground">لا توجد بيانات عضو لهذا الحجز</p>
+                        <p className="text-sm text-muted-foreground">{t("detail.noMember")}</p>
                     </div>
                 )}
             </div>
@@ -475,7 +505,7 @@ function BookingDetailPanel({
                     <div className="flex gap-2">
                         <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={copyPhone}>
                             <Phone className="h-3.5 w-3.5" />
-                            تواصل
+                            {t("detail.actions.contact")}
                         </Button>
                         <Button
                             size="sm"
@@ -487,7 +517,7 @@ function BookingDetailPanel({
                             }}
                         >
                             <User className="h-3.5 w-3.5" />
-                            عرض الملف
+                            {t("detail.actions.viewProfile")}
                         </Button>
                     </div>
                 )}
@@ -501,7 +531,7 @@ function BookingDetailPanel({
                             onClick={() => onEdit(booking)}
                         >
                             <Pencil className="h-3.5 w-3.5" />
-                            تعديل
+                            {t("detail.actions.edit")}
                         </Button>
                     </RoleGuard>
                 )}
@@ -515,7 +545,7 @@ function BookingDetailPanel({
                             onClick={() => onCancel(booking.id)}
                         >
                             <X className="h-3.5 w-3.5" />
-                            إلغاء الحجز
+                            {t("detail.actions.cancelBooking")}
                         </Button>
                     </RoleGuard>
                 )}
@@ -529,7 +559,7 @@ function BookingDetailPanel({
                             onClick={() => onUnblock(booking.id)}
                         >
                             <Lock className="h-3.5 w-3.5" />
-                            إلغاء الحجب
+                            {t("detail.actions.unblock")}
                         </Button>
                     </RoleGuard>
                 )}
@@ -588,6 +618,9 @@ function BookingFormDialog({
     isSubmitting?: boolean;
 }) {
     const isEdit = editBooking !== null;
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
     // ── Hooks first (Rules of Hooks: useState before any derived values) ──────
     const [form, setForm] = useState<BookingForm>(() =>
@@ -660,8 +693,12 @@ function BookingFormDialog({
                 const res = await api.get<{ success: boolean; data: { first_name_ar?: string; last_name_ar?: string; first_name_en?: string; last_name_en?: string; phone?: string; phone_number?: string; national_id?: string; name_ar?: string; full_name?: string } }>(endpoint);
                 const m = res?.data?.data;
                 if (m) {
+                    const localizedName =
+                        language === "en"
+                            ? `${m.first_name_en ?? m.first_name_ar ?? ""} ${m.last_name_en ?? m.last_name_ar ?? ""}`.trim()
+                            : `${m.first_name_ar ?? m.first_name_en ?? ""} ${m.last_name_ar ?? m.last_name_en ?? ""}`.trim();
                     const fullName =
-                        `${m.first_name_ar ?? m.first_name_en ?? ""} ${m.last_name_ar ?? m.last_name_en ?? ""}`.trim() ||
+                        localizedName ||
                         m.name_ar ||
                         m.full_name ||
                         "";
@@ -680,7 +717,7 @@ function BookingFormDialog({
             }
         }, 500);
         return () => clearTimeout(timer);
-    }, [form.memberId, form.memberType]);
+    }, [form.memberId, form.memberType, language]);
 
     useEffect(() => {
         if (!open) return;
@@ -704,23 +741,23 @@ function BookingFormDialog({
 
     const handleSave = () => {
         if (!form.courtId || !form.date || !form.from || !form.to || !form.memberId || !form.memberName) {
-            toast({ title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول المطلوبة.", variant: "destructive" });
+            toast({ title: t("toast.validationTitle"), description: t("validation.bookingRequired"), variant: "destructive" });
             return;
         }
         if (form.date < todayStr) {
-            toast({ title: "تاريخ غير صالح", description: "لا يمكن إضافة حجز في تاريخ ماضٍ.", variant: "destructive" });
+            toast({ title: t("validation.invalidDateTitle"), description: t("validation.pastDate"), variant: "destructive" });
             return;
         }
         if (form.date === todayStr && form.from <= nowTimeStr) {
-            toast({ title: "وقت مضى", description: "لا يمكن الحجز في وقت سبق الساعة الحالية.", variant: "destructive" });
+            toast({ title: t("validation.pastTimeTitle"), description: t("validation.pastTime"), variant: "destructive" });
             return;
         }
         if (form.from >= form.to) {
-            toast({ title: "توقيت خاطئ", description: "وقت النهاية يجب أن يكون بعد وقت البداية.", variant: "destructive" });
+            toast({ title: t("validation.invalidTimeTitle"), description: t("validation.endAfterStart"), variant: "destructive" });
             return;
         }
         if (hasConflict(bookings, form.courtId, form.date, form.from, form.to, editBooking?.id)) {
-            toast({ title: "تعارض في المواعيد", description: "هذا الوقت محجوز بالفعل.", variant: "destructive" });
+            toast({ title: t("validation.conflictTitle"), description: t("validation.timeConflict"), variant: "destructive" });
             return;
         }
         onSave(form);
@@ -730,36 +767,36 @@ function BookingFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] flex flex-col overflow-hidden p-0" dir="rtl">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] flex flex-col overflow-hidden p-0" dir={isRTL ? "rtl" : "ltr"}>
                 <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-                    <DialogTitle>{isEdit ? "تعديل الحجز" : "إضافة حجز يدوي"}</DialogTitle>
+                    <DialogTitle>{isEdit ? t("bookingDialog.editTitle") : t("bookingDialog.addTitle")}</DialogTitle>
                     <DialogDescription>
-                        {isEdit ? "عدّل بيانات الحجز ثم اضغط حفظ" : "أدخل بيانات الحجز الجديد"}
+                        {isEdit ? t("bookingDialog.editDescription") : t("bookingDialog.addDescription")}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                            تفاصيل الحجز
+                            {t("bookingDialog.sections.booking")}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5 sm:col-span-2">
-                                <Label>الملعب <span className="text-destructive">*</span></Label>
+                                <Label>{t("bookingDialog.fields.court")} <span className="text-destructive">*</span></Label>
                                 <Select value={form.courtId} onValueChange={(v) => setForm({ ...form, courtId: v })}>
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="اختر الملعب" />
+                                        <SelectValue placeholder={t("bookingDialog.placeholders.court")} />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent dir={isRTL ? "rtl" : "ltr"}>
                                         {courts.filter(c => c.status === "active" || c.is_active !== false).map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name_ar ?? c.name_en ?? c.name ?? c.id}</SelectItem>
+                                            <SelectItem key={c.id} value={c.id}>{getFieldName(c, language)}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label htmlFor="booking-date">التاريخ <span className="text-destructive">*</span></Label>
+                                <Label htmlFor="booking-date">{t("bookingDialog.fields.date")} <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="booking-date"
                                     type="date"
@@ -772,21 +809,21 @@ function BookingFormDialog({
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>من الساعة <span className="text-destructive">*</span></Label>
+                                <Label>{t("bookingDialog.fields.from")} <span className="text-destructive">*</span></Label>
                                 <TimeSlotPicker
                                     value={form.from}
                                     onChange={(v) => setForm({ ...form, from: v, to: form.to && form.to <= v ? "" : form.to })}
-                                    placeholder="البداية"
+                                    placeholder={t("bookingDialog.placeholders.from")}
                                     allowedOptions={availableFromTimes}
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label>إلى الساعة <span className="text-destructive">*</span></Label>
+                                <Label>{t("bookingDialog.fields.to")} <span className="text-destructive">*</span></Label>
                                 <TimeSlotPicker
                                     value={form.to}
                                     onChange={(v) => setForm({ ...form, to: v })}
-                                    placeholder="النهاية"
+                                    placeholder={t("bookingDialog.placeholders.to")}
                                     allowedOptions={availableToTimes}
                                 />
                             </div>
@@ -797,12 +834,12 @@ function BookingFormDialog({
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                            بيانات العضو
+                            {t("bookingDialog.sections.member")}
                         </p>
 
                         <div className="space-y-1.5 mb-4">
                             <Label htmlFor="booking-member-id">
-                                رقم العضو <span className="text-destructive">*</span>
+                                {t("bookingDialog.fields.memberId")} <span className="text-destructive">*</span>
                             </Label>
                             <div className="relative">
                                 <Input
@@ -824,24 +861,24 @@ function BookingFormDialog({
                                 )}
                             </div>
                             {lookupState === "notfound" && (
-                                <p className="text-[11px] text-destructive">لم يُعثر على عضو بهذا الرقم</p>
+                                <p className="text-[11px] text-destructive">{t("bookingDialog.lookup.notFound")}</p>
                             )}
                             {lookupState === "idle" && !form.memberId.trim() && (
-                                <p className="text-[11px] text-muted-foreground">أدخل الرقم النظامي للعضو — ستُملأ البيانات تلقائياً</p>
+                                <p className="text-[11px] text-muted-foreground">{t("bookingDialog.lookup.hint")}</p>
                             )}
                             {lookupState === "found" && (
-                                <p className="text-[11px] text-emerald-600">تم جلب بيانات العضو</p>
+                                <p className="text-[11px] text-emerald-600">{t("bookingDialog.lookup.found")}</p>
                             )}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5 sm:col-span-2">
                                 <Label htmlFor="booking-member-name">
-                                    اسم العضو <span className="text-destructive">*</span>
+                                    {t("bookingDialog.fields.memberName")} <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
                                     id="booking-member-name"
-                                    placeholder={memberIdEntered ? "الاسم بالعربية" : "—"}
+                                    placeholder={memberIdEntered ? t("bookingDialog.placeholders.memberName") : t("common.notAvailable")}
                                     disabled={!memberIdEntered}
                                     value={form.memberName}
                                     onChange={(e) => setForm({ ...form, memberName: e.target.value })}
@@ -850,12 +887,12 @@ function BookingFormDialog({
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label htmlFor="booking-phone">رقم الهاتف</Label>
+                                <Label htmlFor="booking-phone">{t("bookingDialog.fields.phone")}</Label>
                                 <Input
                                     id="booking-phone"
                                     dir="ltr"
                                     className={`text-left ${!memberIdEntered ? "bg-muted/50 cursor-not-allowed" : ""}`}
-                                    placeholder={memberIdEntered ? "01012345678" : "—"}
+                                    placeholder={memberIdEntered ? "01012345678" : t("common.notAvailable")}
                                     disabled={!memberIdEntered}
                                     value={form.phone}
                                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -863,12 +900,12 @@ function BookingFormDialog({
                             </div>
 
                             <div className="space-y-1.5">
-                                <Label htmlFor="booking-nid">الرقم القومي</Label>
+                                <Label htmlFor="booking-nid">{t("bookingDialog.fields.nationalId")}</Label>
                                 <Input
                                     id="booking-nid"
                                     dir="ltr"
                                     className={`text-left ${!memberIdEntered ? "bg-muted/50 cursor-not-allowed" : ""}`}
-                                    placeholder={memberIdEntered ? "30012345678901" : "—"}
+                                    placeholder={memberIdEntered ? "30012345678901" : t("common.notAvailable")}
                                     maxLength={14}
                                     disabled={!memberIdEntered}
                                     value={form.nationalId}
@@ -877,7 +914,7 @@ function BookingFormDialog({
                             </div>
 
                             <div className="space-y-1.5 sm:col-span-2">
-                                <Label>نوع العضو <span className="text-destructive">*</span></Label>
+                                <Label>{t("bookingDialog.fields.memberType")} <span className="text-destructive">*</span></Label>
                                 <Select
                                     value={form.memberType}
                                     onValueChange={(v) => {
@@ -889,9 +926,9 @@ function BookingFormDialog({
                                     <SelectTrigger className={`w-full ${!memberIdEntered ? "bg-muted/50 opacity-60" : ""}`}>
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="member">عضو اجتماعي</SelectItem>
-                                        <SelectItem value="team_member">لاعب فريق</SelectItem>
+                                    <SelectContent dir={isRTL ? "rtl" : "ltr"}>
+                                        <SelectItem value="member">{t("memberTypes.member")}</SelectItem>
+                                        <SelectItem value="team_member">{t("memberTypes.teamMember")}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -899,15 +936,15 @@ function BookingFormDialog({
                     </div>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t border-border shrink-0 gap-2 flex-row-reverse sm:justify-start">
+                <DialogFooter className={`px-6 py-4 border-t border-border shrink-0 gap-2 ${isRTL ? "flex-row-reverse sm:justify-start" : "sm:justify-end"}`}>
                     <Button type="button" onClick={handleSave} className="gap-1.5" disabled={isSubmitting}>
                         {isSubmitting ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" />{isEdit ? "جارٍ الحفظ..." : "جارٍ الإضافة..."}</>
+                            <><Loader2 className="h-4 w-4 animate-spin" />{isEdit ? t("bookingDialog.buttons.saving") : t("bookingDialog.buttons.adding")}</>
                         ) : (
-                            isEdit ? "حفظ التعديلات" : "إضافة الحجز"
+                            isEdit ? t("bookingDialog.buttons.saveChanges") : t("bookingDialog.buttons.addBooking")
                         )}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>إلغاء</Button>
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{t("common.cancel")}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -951,6 +988,9 @@ function BlockSlotDialog({
         reason: "",
     });
     const { toast } = useToast();
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
     useEffect(() => {
         if (!open) return;
@@ -960,15 +1000,15 @@ function BlockSlotDialog({
 
     const handleSave = () => {
         if (!form.courtId || !form.date || !form.from || !form.to) {
-            toast({ title: "بيانات ناقصة", description: "يرجى تحديد الملعب والتاريخ والوقت.", variant: "destructive" });
+            toast({ title: t("toast.validationTitle"), description: t("validation.blockRequired"), variant: "destructive" });
             return;
         }
         if (form.from >= form.to) {
-            toast({ title: "توقيت خاطئ", description: "وقت النهاية يجب أن يكون بعد وقت البداية.", variant: "destructive" });
+            toast({ title: t("validation.invalidTimeTitle"), description: t("validation.endAfterStart"), variant: "destructive" });
             return;
         }
         if (hasConflict(bookings, form.courtId, form.date, form.from, form.to)) {
-            toast({ title: "تعارض في المواعيد", description: "هذا الوقت محجوز بالفعل.", variant: "destructive" });
+            toast({ title: t("validation.conflictTitle"), description: t("validation.timeConflict"), variant: "destructive" });
             return;
         }
         onSave(form);
@@ -976,53 +1016,53 @@ function BlockSlotDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-md" dir="rtl">
+            <DialogContent className="w-[95vw] max-w-md" dir={isRTL ? "rtl" : "ltr"}>
                 <DialogHeader>
-                    <DialogTitle>حجب وقت</DialogTitle>
-                    <DialogDescription>سيتم منع الحجوزات في هذا الوقت</DialogDescription>
+                    <DialogTitle>{t("blockDialog.title")}</DialogTitle>
+                    <DialogDescription>{t("blockDialog.description")}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     <div className="space-y-1.5">
-                        <Label>الملعب</Label>
+                        <Label>{t("bookingDialog.fields.court")}</Label>
                         <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted/30 text-sm">
-                            {courts.find((c) => c.id === form.courtId)?.name_ar ?? courts.find((c) => c.id === form.courtId)?.name_en ?? "—"}
+                            {getFieldName(courts.find((c) => c.id === form.courtId), language) || t("common.notAvailable")}
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label>التاريخ</Label>
+                        <Label>{t("bookingDialog.fields.date")}</Label>
                         <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted/30 text-sm" dir="ltr">
                             {form.date}
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label>من</Label>
+                        <Label>{t("bookingDialog.fields.fromShort")}</Label>
                         <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted/30 text-sm" dir="ltr">
                             {form.from}
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label>إلى <span className="text-destructive">*</span></Label>
-                        <TimeSlotPicker value={form.to} onChange={(v) => setForm({ ...form, to: v })} placeholder="وقت النهاية" />
+                        <Label>{t("bookingDialog.fields.toShort")} <span className="text-destructive">*</span></Label>
+                        <TimeSlotPicker value={form.to} onChange={(v) => setForm({ ...form, to: v })} placeholder={t("bookingDialog.placeholders.toTime")} />
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label htmlFor="block-reason">السبب (اختياري)</Label>
+                        <Label htmlFor="block-reason">{t("blockDialog.reason")}</Label>
                         <Input
                             id="block-reason"
-                            placeholder='مثال: "صيانة", "بطولة داخلية"'
+                            placeholder={t("blockDialog.reasonPlaceholder")}
                             value={form.reason}
                             onChange={(e) => setForm({ ...form, reason: e.target.value })}
                         />
                     </div>
                 </div>
-                <DialogFooter className="gap-2 flex-row-reverse sm:justify-start">
+                <DialogFooter className={`gap-2 ${isRTL ? "flex-row-reverse sm:justify-start" : "sm:justify-end"}`}>
                     <Button onClick={handleSave} className="gap-1">
-                        <Lock className="h-3.5 w-3.5" /> حجب الوقت
+                        <Lock className="h-3.5 w-3.5" /> {t("blockDialog.buttons.block")}
                     </Button>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1041,6 +1081,9 @@ function ShareBookingDialog({
     shareUrl: string;
 }) {
     const [copied, setCopied] = useState(false);
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
     const copyToClipboard = async () => {
         try {
@@ -1074,14 +1117,14 @@ function ShareBookingDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-[400px] max-h-[90vh] overflow-y-auto" dir="rtl">
+            <DialogContent className="w-[95vw] max-w-[400px] max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
                 <DialogHeader className="text-center items-center pb-1 shrink-0">
                     <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100">
                         <Check className="h-6 w-6 text-emerald-600" />
                     </div>
-                    <DialogTitle className="text-base">تمت الإضافة بنجاح ✓</DialogTitle>
+                    <DialogTitle className="text-base">{t("shareDialog.title")}</DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground">
-                        شارك رابط الدعوة التوضيحي مع اللاعبين
+                        {t("shareDialog.description")}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -1102,14 +1145,14 @@ function ShareBookingDialog({
                                 }`}
                         >
                             {copied ? <Check className="h-5 w-5" /> : <Link2 className="h-5 w-5" />}
-                            {copied ? "تم النسخ بنجاح" : "نسخ الرابط"}
+                            {copied ? t("shareDialog.copied") : t("shareDialog.copy")}
                         </Button>
                     </div>
                 )}
 
                 <DialogFooter className="pt-1 shrink-0">
                     <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-                        إغلاق
+                        {t("common.close")}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -1146,6 +1189,9 @@ export default function CourtBookingsPage() {
     const [pendingShareUrl, setPendingShareUrl] = useState<string | null>(null);
 
     const { toast } = useToast();
+    const { t, i18n } = useTranslation("CourtBookingsPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
     // ── Fetch courts ──────────────────────────────────────────────────────────
 
@@ -1155,7 +1201,13 @@ export default function CourtBookingsPage() {
             const res = await api.get<{ success: boolean; data: ApiBookableSport[] }>("/members/bookings/sports");
             const sports = Array.isArray(res?.data?.data) ? res.data.data : [];
             const allFields = sports.flatMap((sport) =>
-                Array.isArray(sport.fields) ? sport.fields.map(f => ({ ...f, sport_id: sport.sport_id })) : []
+                Array.isArray(sport.fields)
+                    ? sport.fields.map(f => ({
+                        ...f,
+                        sport_id: sport.sport_id,
+                        sport: f.sport ?? { name_ar: sport.sport_name_ar, name_en: sport.sport_name_en },
+                    }))
+                    : []
             );
             const uniqueFields = Array.from(
                 new Map(allFields.filter((field) => field?.id).map((field) => [field.id, field])).values()
@@ -1169,11 +1221,11 @@ export default function CourtBookingsPage() {
                 setBookings([]);
             }
         } catch {
-            toast({ title: "تعذر تحميل الملاعب", variant: "destructive" });
+            toast({ title: t("toast.loadCourtsFailed"), variant: "destructive" });
         } finally {
             setCourtsLoading(false);
         }
-    }, [toast]);
+    }, [toast, t]);
 
     useEffect(() => { void fetchCourts(); }, [fetchCourts]);
 
@@ -1195,7 +1247,11 @@ export default function CourtBookingsPage() {
             const raw: Booking[] = [];
             for (const day of days) {
                 for (const slot of day.slots) {
-                    const b = field ? slotToBooking(slot, day, field) : null;
+                    const b = field ? slotToBooking(slot, day, field, language, {
+                        training: t("blockedReasons.training"),
+                        blocked: t("blockedReasons.blocked"),
+                        member: t("common.member"),
+                    }) : null;
                     if (b) raw.push(b);
                 }
             }
@@ -1220,7 +1276,7 @@ export default function CourtBookingsPage() {
         } finally {
             setCalendarLoading(false);
         }
-    }, [selectedCourtId, weekStart, courts]);
+    }, [selectedCourtId, weekStart, courts, language, t]);
 
 
     useEffect(() => { void fetchCalendar(); }, [fetchCalendar]);
@@ -1229,9 +1285,9 @@ export default function CourtBookingsPage() {
 
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
     const selectedCourt = courts.find((c) => c.id === selectedCourtId);
-    const selectedCourtName = selectedCourt?.name_ar ?? selectedCourt?.name_en ?? selectedCourt?.name ?? "";
+    const selectedCourtName = getFieldName(selectedCourt, language);
     const weekLabel = weekDays.length > 0
-        ? `${formatDisplayDate(weekDays[0])} — ${formatDisplayDate(weekDays[6])} ${weekDays[6].getFullYear()}`
+        ? `${formatDisplayDate(weekDays[0], language)} - ${formatDisplayDate(weekDays[6], language)} ${weekDays[6].getFullYear()}`
         : "";
 
     const filteredBookings = bookings.filter((b) => {
@@ -1245,7 +1301,7 @@ export default function CourtBookingsPage() {
 
     const courtsBySport: Record<string, ApiField[]> = {};
     for (const c of courts) {
-        const sportLabel = c.sport?.name_ar ?? c.sport?.name_en ?? "أخرى";
+        const sportLabel = getSportName(c, language, t("common.other"));
         if (!courtsBySport[sportLabel]) courtsBySport[sportLabel] = [];
         courtsBySport[sportLabel].push(c);
     }
@@ -1256,7 +1312,7 @@ export default function CourtBookingsPage() {
     const handleCancelBooking = async (id: string) => {
         const booking = bookings.find(b => b.id === id);
         if (booking?.status === "cancelled") {
-            toast({ title: "الحجز ملغي بالفعل", variant: "destructive" });
+            toast({ title: t("toast.alreadyCancelled"), variant: "destructive" });
             setActiveBooking(null);
             return;
         }
@@ -1264,8 +1320,8 @@ export default function CourtBookingsPage() {
         setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "cancelled" as BookingStatus } : b));
         setActiveBooking(null);
         try {
-            await api.delete(`/bookings/${id}`, { data: { reason: "إلغاء من الموظف" } });
-            toast({ title: "تم الإلغاء", description: "تم إلغاء الحجز بنجاح" });
+            await api.delete(`/bookings/${id}`, { data: { reason: t("apiReasons.cancelByStaff") } });
+            toast({ title: t("toast.cancelSuccessTitle"), description: t("toast.cancelSuccessDescription") });
             void fetchCalendar();
         } catch (err: unknown) {
             const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
@@ -1286,7 +1342,7 @@ export default function CourtBookingsPage() {
 
             // Real failure — show error and refresh
             void fetchCalendar();
-            toast({ title: "فشل إلغاء الحجز", description: serverMsg || "حدث خطأ غير متوقع", variant: "destructive" });
+            toast({ title: t("toast.cancelFailedTitle"), description: serverMsg || t("toast.unexpectedError"), variant: "destructive" });
         }
     };
 
@@ -1296,13 +1352,13 @@ export default function CourtBookingsPage() {
         setBookings((prev) => prev.filter((b) => b.id !== id));
         setActiveBooking(null);
         try {
-            await api.delete(`/bookings/${id}`, { data: { reason: "إلغاء الحجب من الموظف" } });
-            toast({ title: "تم إلغاء الحجب", description: "الوقت متاح الآن للحجز" });
+            await api.delete(`/bookings/${id}`, { data: { reason: t("apiReasons.unblockByStaff") } });
+            toast({ title: t("toast.unblockSuccessTitle"), description: t("toast.unblockSuccessDescription") });
             void fetchCalendar();
         } catch (err: unknown) {
             const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "فشل إلغاء الحجب";
-            toast({ title: "فشل إلغاء الحجب", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("toast.unblockFailedTitle");
+            toast({ title: t("toast.unblockFailedTitle"), description: msg, variant: "destructive" });
         }
     };
 
@@ -1310,17 +1366,15 @@ export default function CourtBookingsPage() {
     const handleAddBooking = async (form: BookingForm) => {
         setIsAddingBooking(true);
         const courtObj = courts.find((c) => c.id === form.courtId);
-        const normalizedMemberId = form.memberId
-            .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
-            .replace(/\D/g, "");
+        const normalizedMemberId = normalizeDigits(form.memberId).replace(/\D/g, "");
         const memberIdNum = Number(normalizedMemberId);
 
         if (!Number.isFinite(memberIdNum) || memberIdNum <= 0) {
-            toast({ title: "رقم العضو غير صالح", description: "يرجى إدخال رقم عضو صحيح.", variant: "destructive" });
+            toast({ title: t("validation.invalidMemberTitle"), description: t("validation.invalidMemberId"), variant: "destructive" });
             return;
         }
         if (!courtObj?.sport_id) {
-            toast({ title: "بيانات غير مكتملة", description: "لا يمكن تحديد النشاط لهذا الملعب.", variant: "destructive" });
+            toast({ title: t("validation.incompleteDataTitle"), description: t("validation.missingCourtSport"), variant: "destructive" });
             return;
         }
 
@@ -1331,7 +1385,7 @@ export default function CourtBookingsPage() {
             field_id: form.courtId,
             start_time: `${form.date}T${form.from}:00`,
             end_time: `${form.date}T${form.to}:00`,
-            notes: "حجز يدوي من الموظف",
+            notes: t("apiReasons.manualBookingByStaff"),
         };
 
         try {
@@ -1369,12 +1423,12 @@ export default function CourtBookingsPage() {
                 setPendingShareUrl(shareUrl);
                 setShareDialogOpen(true);
             } else {
-                toast({ title: "تمت الإضافة", description: `تم إضافة حجز "${form.memberName}" بنجاح.` });
+                toast({ title: t("toast.addSuccessTitle"), description: t("toast.addSuccessDescription", { name: form.memberName }) });
             }
         } catch (err: unknown) {
             const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "فشل إنشاء الحجز";
-            toast({ title: "فشل إنشاء الحجز", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("toast.createFailedTitle");
+            toast({ title: t("toast.createFailedTitle"), description: msg, variant: "destructive" });
         } finally {
             setIsAddingBooking(false);
         }
@@ -1386,21 +1440,19 @@ export default function CourtBookingsPage() {
         if (!editBooking) return;
         const courtObj = courts.find((c) => c.id === form.courtId);
         if (!courtObj?.sport_id) {
-            toast({ title: "بيانات غير مكتملة", description: "لا يمكن تحديد النشاط لهذا الملعب.", variant: "destructive" });
+            toast({ title: t("validation.incompleteDataTitle"), description: t("validation.missingCourtSport"), variant: "destructive" });
             return;
         }
-        const normalizedMemberId = form.memberId
-            .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
-            .replace(/\D/g, "");
+        const normalizedMemberId = normalizeDigits(form.memberId).replace(/\D/g, "");
         const memberIdNum = Number(normalizedMemberId);
         if (!Number.isFinite(memberIdNum) || memberIdNum <= 0) {
-            toast({ title: "رقم العضو غير صالح", description: "يرجى إدخال رقم عضو صحيح.", variant: "destructive" });
+            toast({ title: t("validation.invalidMemberTitle"), description: t("validation.invalidMemberId"), variant: "destructive" });
             return;
         }
         try {
             // Cancel old booking
             if (editBooking.status !== "cancelled") {
-                await api.delete(`/bookings/${editBooking.id}`, { data: { reason: "تعديل الحجز من الموظف" } });
+                await api.delete(`/bookings/${editBooking.id}`, { data: { reason: t("apiReasons.editBookingByStaff") } });
             }
             // Create replacement booking
             const res = await api.post<{ success: boolean; data: { id?: string; share_token?: string } }>("/bookings", {
@@ -1410,7 +1462,7 @@ export default function CourtBookingsPage() {
                 field_id: form.courtId,
                 start_time: `${form.date}T${form.from}:00`,
                 end_time: `${form.date}T${form.to}:00`,
-                notes: "تعديل يدوي من الموظف",
+                notes: t("apiReasons.manualEditByStaff"),
             });
             const newBookingId = res?.data?.data?.id;
             const shareToken = res?.data?.data?.share_token;
@@ -1437,15 +1489,15 @@ export default function CourtBookingsPage() {
                 }
             }
 
-            toast({ title: "تم التحديث", description: "تم تحديث بيانات الحجز بنجاح." });
+            toast({ title: t("toast.updateSuccessTitle"), description: t("toast.updateSuccessDescription") });
             void fetchCalendar();
             setActiveBooking(null);
             setEditBooking(null);
             setAddDialogOpen(false);
         } catch (err: unknown) {
             const e = err as { status?: number; message?: string; responseData?: { error?: string; message?: string } };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "فشل تحديث الحجز";
-            toast({ title: "فشل تحديث الحجز", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("toast.updateFailedTitle");
+            toast({ title: t("toast.updateFailedTitle"), description: msg, variant: "destructive" });
         }
     };
 
@@ -1454,10 +1506,10 @@ export default function CourtBookingsPage() {
         // TODO: Replace with dedicated admin block endpoint when available
         const courtObj = courts.find((c) => c.id === form.courtId);
         if (!courtObj?.sport_id) {
-            toast({ title: "بيانات غير مكتملة", description: "لا يمكن تحديد النشاط لهذا الملعب.", variant: "destructive" });
+            toast({ title: t("validation.incompleteDataTitle"), description: t("validation.missingCourtSport"), variant: "destructive" });
             return;
         }
-        const courtName = courtObj?.name_ar ?? courtObj?.name_en ?? courtObj?.name ?? "";
+        const courtName = getFieldName(courtObj, language);
         // Optimistic local add as fallback
         const tempId = generateId();
         const newBlock: Booking = {
@@ -1481,13 +1533,13 @@ export default function CourtBookingsPage() {
                 field_id: form.courtId,
                 start_time: `${form.date}T${form.from}:00`,
                 end_time: `${form.date}T${form.to}:00`,
-                notes: form.reason || "حجب إداري",
+                notes: form.reason || t("apiReasons.adminBlock"),
             });
-            toast({ title: "تم الحجب", description: "تم حجب الوقت بنجاح." });
+            toast({ title: t("toast.blockSuccessTitle"), description: t("toast.blockSuccessDescription") });
             void fetchCalendar();
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "فشل حجب الوقت";
-            toast({ title: "فشل حجب الوقت", description: msg, variant: "destructive" });
+            const msg = err instanceof Error ? err.message : t("toast.blockFailedTitle");
+            toast({ title: t("toast.blockFailedTitle"), description: msg, variant: "destructive" });
             // Keep optimistic block in local state as fallback
         }
     };
@@ -1507,17 +1559,17 @@ export default function CourtBookingsPage() {
     // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
-        <div className="h-full overflow-y-auto p-4 pb-8 space-y-4" dir="rtl">
+        <div className="h-full overflow-y-auto p-4 pb-8 space-y-4" dir={isRTL ? "rtl" : "ltr"}>
 
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-bold leading-tight">إدارة حجوزات الملاعب</h1>
+                    <h1 className="text-xl font-bold leading-tight">{t("header.title")}</h1>
                     <p className="text-xs text-muted-foreground mt-1 font-normal flex items-center gap-1.5">
                         {courtsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : selectedCourtName}
                         {!courtsLoading && <span className="mx-1.5 text-border">|</span>}
                         {weekLabel}
-                        {calendarLoading && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
+                        {calendarLoading && <Loader2 className="h-3 w-3 animate-spin ms-2" />}
                     </p>
                 </div>
                 <RoleGuard privilege="SCHEDULE_MATCH">
@@ -1525,10 +1577,10 @@ export default function CourtBookingsPage() {
                         type="button"
                         className="gap-2 shrink-0 shadow-sm px-4"
                         onClick={() => { setEditBooking(null); setAddDialogOpen(true); }}
-                        aria-label="إضافة حجز يدوي جديد"
+                        aria-label={t("header.addManualAria")}
                     >
                         <Plus className="h-4 w-4" />
-                        إضافة حجز يدوي
+                        {t("header.addManual")}
                     </Button>
                 </RoleGuard>
             </div>
@@ -1536,19 +1588,19 @@ export default function CourtBookingsPage() {
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
                 <Select value={selectedCourtId} onValueChange={setSelectedCourtId} disabled={courtsLoading}>
-                    <SelectTrigger className="w-52" aria-label="اختيار الملعب">
-                        <SelectValue placeholder={courtsLoading ? "جاري التحميل..." : "اختر الملعب"} />
+                    <SelectTrigger className="w-52" aria-label={t("filters.courtAria")}>
+                        <SelectValue placeholder={courtsLoading ? t("common.loading") : t("filters.selectCourt")} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir={isRTL ? "rtl" : "ltr"}>
                         {Object.entries(courtsBySport).map(([sport, sportCourts]) => (
                             <div key={sport}>
                                 <p className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
                                     {sport}
                                 </p>
                                 {sportCourts.map((c) => (
-                                    <SelectItem key={c.id} value={c.id} className="pr-4">
-                                        {c.name_ar ?? c.name_en ?? c.name ?? c.id}
-                                        {c.status === "inactive" && <span className="text-muted-foreground text-[10px] mr-1">(معطّل)</span>}
+                                    <SelectItem key={c.id} value={c.id} className={isRTL ? "pr-4" : "pl-4"}>
+                                        {getFieldName(c, language)}
+                                        {c.status === "inactive" && <span className="text-muted-foreground text-[10px] ms-1">({t("status.inactive")})</span>}
                                     </SelectItem>
                                 ))}
                             </div>
@@ -1558,7 +1610,7 @@ export default function CourtBookingsPage() {
 
                 <Button variant="outline" size="sm" onClick={() => void fetchCalendar()} disabled={calendarLoading || !selectedCourtId} className="gap-1">
                     <RefreshCw className={`h-3.5 w-3.5 ${calendarLoading ? "animate-spin" : ""}`} />
-                    تحديث
+                    {t("filters.refresh")}
                 </Button>
 
                 <div className="flex items-center gap-0 border border-border rounded-lg overflow-hidden">
@@ -1566,39 +1618,39 @@ export default function CourtBookingsPage() {
                         type="button"
                         onClick={goWeekBack}
                         className="p-2.5 hover:bg-muted transition-colors"
-                        aria-label="الانتقال إلى الأسبوع السابق"
+                        aria-label={t("filters.previousWeek")}
                     >
-                        <ChevronRight className="h-4 w-4" />
+                        {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                     </button>
                     <span className="px-3 text-sm font-medium whitespace-nowrap border-x border-border">{weekLabel}</span>
                     <button
                         type="button"
                         onClick={goWeekForward}
                         className="p-2.5 hover:bg-muted transition-colors"
-                        aria-label="الانتقال إلى الأسبوع التالي"
+                        aria-label={t("filters.nextWeek")}
                     >
-                        <ChevronLeft className="h-4 w-4" />
+                        {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                 </div>
 
                 {!isCurrentWeek && (
-                    <Button type="button" variant="outline" size="sm" onClick={goToday} aria-label="الانتقال إلى الأسبوع الحالي">اليوم</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={goToday} aria-label={t("filters.currentWeek")}>{t("filters.today")}</Button>
                 )}
             </div>
 
             {/* Legend */}
             <div className="inline-flex items-center gap-5 rounded-md border border-border bg-muted/30 px-3 py-1.5">
                 <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-emerald-400 border border-emerald-500" />مؤكد
+                    <span className="inline-block w-3 h-3 rounded-sm bg-emerald-400 border border-emerald-500" />{t("status.confirmed")}
                 </span>
                 <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-rose-400 border border-rose-500" />محجوب
+                    <span className="inline-block w-3 h-3 rounded-sm bg-rose-400 border border-rose-500" />{t("status.blocked")}
                 </span>
                 <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-muted border border-border" />متاح
+                    <span className="inline-block w-3 h-3 rounded-sm bg-muted border border-border" />{t("status.available")}
                 </span>
                 <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-muted/40 border border-dashed border-border opacity-50" />ملغي
+                    <span className="inline-block w-3 h-3 rounded-sm bg-muted/40 border border-dashed border-border opacity-50" />{t("status.cancelled")}
                 </span>
             </div>
 
@@ -1610,7 +1662,7 @@ export default function CourtBookingsPage() {
                     style={{ gridTemplateColumns: "56px repeat(7, 1fr)", minWidth: 700 }}
                 >
                     {/* Corner */}
-                    <div className="sticky right-0 z-30 bg-muted/60 border-l border-border" />
+                    <div className={`sticky ${isRTL ? "right-0 border-l" : "left-0 border-r"} z-30 bg-muted/60 border-border`} />
                     {weekDays.map((day) => {
                         const isToday = toISODate(day) === todayIso;
                         const isPast = day < today;
@@ -1624,10 +1676,10 @@ export default function CourtBookingsPage() {
                                             : "text-foreground"
                                     }`}
                             >
-                                <div>{dayOfWeekLabel(day)}</div>
+                                <div>{dayOfWeekLabel(day, language)}</div>
                                 <div className={`text-[10px] font-normal mt-0.5 ${isToday ? "text-primary font-medium" : "text-muted-foreground"
                                     }`}>
-                                    {toArabicNumerals(day.getDate())} {AR_MONTHS[day.getMonth()]}
+                                    {formatDisplayDate(day, language)}
                                 </div>
                             </div>
                         );
@@ -1640,14 +1692,14 @@ export default function CourtBookingsPage() {
                     style={{ gridTemplateColumns: "56px repeat(7, 1fr)", minWidth: 700 }}
                 >
                     {/* Time label column */}
-                    <div className="sticky right-0 z-10 bg-muted/20 border-l border-border">
+                    <div className={`sticky ${isRTL ? "right-0 border-l" : "left-0 border-r"} z-10 bg-muted/20 border-border`}>
                         {HOUR_SLOTS.map((slot) => (
                             <div
                                 key={slot}
                                 className="flex items-start justify-center pt-1 border-b border-border text-[10px] text-muted-foreground font-medium"
                                 style={{ height: 64 }}
                             >
-                                {formatHour(slot)}
+                                {formatClockTime(slot, language)}
                             </div>
                         ))}
                     </div>
@@ -1707,20 +1759,20 @@ export default function CourtBookingsPage() {
                                                     style={{ top: (startMins / 60) * 64, height: 64, zIndex: 0 }}
                                                     role="button"
                                                     tabIndex={0}
-                                                    aria-label={`خانة متاحة — ${dayOfWeekLabel(day)} ${slot}`}
+                                                    aria-label={t("grid.availableCellAria", { day: dayOfWeekLabel(day, language), time: formatClockTime(slot, language) })}
                                                 >
                                                     <span className="text-[9px] text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity select-none">
-                                                        متاح
+                                                        {t("status.available")}
                                                     </span>
                                                 </div>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-44 p-2" dir="rtl" side="bottom" align="end">
+                                            <PopoverContent className="w-44 p-2" dir={isRTL ? "rtl" : "ltr"} side="bottom" align="end">
                                                 <div className="flex flex-col gap-1">
                                                     <RoleGuard privilege="SCHEDULE_MATCH">
                                                         <div className="flex flex-col gap-1">
                                                             <button
                                                                 type="button"
-                                                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted text-right transition-colors w-full"
+                                                                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted ${isRTL ? "text-right" : "text-left"} transition-colors w-full`}
                                                                 onClick={() => {
                                                                     setCellPopover(null);
                                                                     setEditBooking(null);
@@ -1729,11 +1781,11 @@ export default function CourtBookingsPage() {
                                                                 }}
                                                             >
                                                                 <Plus className="h-3.5 w-3.5" />
-                                                                إضافة حجز
+                                                                {t("grid.addBooking")}
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-rose-50 text-rose-700 text-right transition-colors w-full"
+                                                                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-rose-50 text-rose-700 ${isRTL ? "text-right" : "text-left"} transition-colors w-full`}
                                                                 onClick={() => {
                                                                     setCellPopover(null);
                                                                     setBlockDefaults({ courtId: selectedCourtId, date: dateStr, from: slot });
@@ -1741,7 +1793,7 @@ export default function CourtBookingsPage() {
                                                                 }}
                                                             >
                                                                 <Lock className="h-3.5 w-3.5" />
-                                                                حجب الوقت
+                                                                {t("grid.blockTime")}
                                                             </button>
                                                         </div>
                                                     </RoleGuard>
@@ -1766,16 +1818,16 @@ export default function CourtBookingsPage() {
                                                 key={booking.id}
                                                 type="button"
                                                 onClick={() => setActiveBooking(booking)}
-                                                aria-label={`حجز مؤكد — ${booking.member?.nameAr ?? "حجز مؤكد"}`}
-                                                className="absolute rounded-lg bg-emerald-100 border border-emerald-300 transition-colors p-2 overflow-hidden text-right w-[calc(100%-8px)] hover:bg-emerald-200 cursor-pointer"
+                                                aria-label={t("grid.confirmedBookingAria", { name: booking.member?.nameAr ?? t("status.confirmed") })}
+                                                className={`absolute rounded-lg bg-emerald-100 border border-emerald-300 transition-colors p-2 overflow-hidden ${isRTL ? "text-right" : "text-left"} w-[calc(100%-8px)] hover:bg-emerald-200 cursor-pointer`}
                                                 style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                             >
                                                 <p className="text-[11px] font-semibold text-emerald-800 truncate leading-tight">
-                                                    {booking.member?.nameAr ?? "حجز مؤكد"}
+                                                    {booking.member?.nameAr ?? t("status.confirmed")}
                                                 </p>
                                                 <p className="text-[10px] text-emerald-600 leading-tight">{booking.from} - {booking.to}</p>
                                                 {booking.isManual && (
-                                                    <span className="text-[8px] bg-emerald-200 text-emerald-700 rounded px-1">يدوي</span>
+                                                    <span className="text-[8px] bg-emerald-200 text-emerald-700 rounded px-1">{t("bookingType.manualShort")}</span>
                                                 )}
                                             </button>
                                         );
@@ -1786,12 +1838,12 @@ export default function CourtBookingsPage() {
                                                 key={booking.id}
                                                 type="button"
                                                 onClick={() => setActiveBooking(booking)}
-                                                aria-label="وقت محجوب"
+                                                aria-label={t("grid.blockedTimeAria")}
                                                 className="absolute rounded-lg bg-rose-100 border border-rose-300 transition-colors flex flex-col items-center justify-center gap-1 w-[calc(100%-8px)] hover:bg-rose-200 cursor-pointer"
                                                 style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                             >
                                                 <Lock className="h-3 w-3 text-rose-600" />
-                                                <span className="text-[10px] font-semibold text-rose-700">محجوب</span>
+                                                <span className="text-[10px] font-semibold text-rose-700">{t("status.blocked")}</span>
                                             </button>
                                         );
                                     }
@@ -1801,11 +1853,11 @@ export default function CourtBookingsPage() {
                                             key={booking.id}
                                             type="button"
                                             onClick={() => setActiveBooking(booking)}
-                                            aria-label="حجز ملغي"
+                                            aria-label={t("grid.cancelledBookingAria")}
                                             className="absolute rounded-lg bg-muted/40 border border-dashed border-border flex items-center justify-center opacity-50 w-[calc(100%-8px)] hover:opacity-70 cursor-pointer"
                                             style={{ top: top + 2, height: height - 4, left: 4, right: 4, zIndex: 10 }}
                                         >
-                                            <span className="text-[10px] text-muted-foreground line-through">ملغي</span>
+                                            <span className="text-[10px] text-muted-foreground line-through">{t("status.cancelled")}</span>
                                         </button>
                                     );
                                 })}

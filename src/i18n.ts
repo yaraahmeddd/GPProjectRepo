@@ -23,6 +23,10 @@ import arMember from './i18n/locales/ar/member.json';
 import arMemberManagementPage from './i18n/locales/ar/MemberManagementPage.json';
 import arManageInvitationsPage from './i18n/locales/ar/ManageInvitationsPage.json';
 import arSportsPage from './i18n/locales/ar/SportsPage.json';
+import arCourtsManagementPage from './i18n/locales/ar/CourtsManagementPage.json';
+import arCourtBookingsPage from './i18n/locales/ar/CourtBookingsPage.json';
+import arTeamsManagementPage from './i18n/locales/ar/TeamsManagementPage.json';
+import arSportsMembersPage from './i18n/locales/ar/SportsMembersPage.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './i18n/locales/en/common.json';
@@ -45,6 +49,10 @@ import enMember from './i18n/locales/en/member.json';
 import enMemberManagementPage from './i18n/locales/en/MemberManagementPage.json';
 import enManageInvitationsPage from './i18n/locales/en/ManageInvitationsPage.json';
 import enSportsPage from './i18n/locales/en/SportsPage.json';
+import enCourtsManagementPage from './i18n/locales/en/CourtsManagementPage.json';
+import enCourtBookingsPage from './i18n/locales/en/CourtBookingsPage.json';
+import enTeamsManagementPage from './i18n/locales/en/TeamsManagementPage.json';
+import enSportsMembersPage from './i18n/locales/en/SportsMembersPage.json';
 
 const RTL_LANGUAGES = new Set(['ar']);
 
@@ -85,6 +93,10 @@ void i18n
         MemberManagementPage: arMemberManagementPage,
         ManageInvitationsPage: arManageInvitationsPage,
         SportsPage: arSportsPage,
+        CourtsManagementPage: arCourtsManagementPage,
+        CourtBookingsPage: arCourtBookingsPage,
+        TeamsManagementPage: arTeamsManagementPage,
+        SportsMembersPage: arSportsMembersPage,
       },
       en: {
         common: enCommon,
@@ -107,6 +119,10 @@ void i18n
         MemberManagementPage: enMemberManagementPage,
         ManageInvitationsPage: enManageInvitationsPage,
         SportsPage: enSportsPage,
+        CourtsManagementPage: enCourtsManagementPage,
+        CourtBookingsPage: enCourtBookingsPage,
+        TeamsManagementPage: enTeamsManagementPage,
+        SportsMembersPage: enSportsMembersPage,
       },
     },
 
@@ -120,7 +136,8 @@ void i18n
       'members', 'sports', 'finance', 'registrations',
       'RegistrationManagementPage', 'faculties', 'branches',
       'professions', 'media', 'admin', 'landing', 'team', 'member',
-      'MemberManagementPage', 'ManageInvitationsPage', 'SportsPage'
+      'MemberManagementPage', 'ManageInvitationsPage', 'SportsPage',
+      'CourtsManagementPage', 'CourtBookingsPage', 'TeamsManagementPage', 'SportsMembersPage'
     ],
 
     interpolation: { escapeValue: false },
