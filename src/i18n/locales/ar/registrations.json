@@ -1,1 +1,132 @@
-{}
+﻿{
+  "header": {
+    "back_home": "العودة للرئيسية",
+    "logo_alt": "نادي جامعة حلوان"
+  },
+  "steps": {
+    "category": "الفئة",
+    "membership_type": "نوع العضوية",
+    "basic_info": "البيانات الأساسية",
+    "details": "التفاصيل",
+    "documents": "المستندات"
+  },
+  "actions": {
+    "previous": "السابق",
+    "next": "التالي",
+    "confirm_registration": "تأكيد التسجيل",
+    "processing": "جاري المعالجة..."
+  },
+  "messages": {
+    "submit_success": "تم إرسال طلب العضوية بنجاح! سيتم مراجعة البيانات.",
+    "submit_error": "حدث خطأ أثناء التسجيل",
+    "complete_required_docs": "يرجى التأكد من ملء جميع البيانات المطلوبة ورفع كافة المستندات",
+    "complete_required_fields": "يرجى التأكد من ملء جميع البيانات المطلوبة بشكل صحيح"
+  },
+  "role": {
+    "title": "اختر نوع العضوية",
+    "subtitle": "حدد نوع العضوية المناسب لك",
+    "social": {
+      "title": "عضو بالنادي",
+      "subtitle": "عضوية اجتماعية",
+      "description": "استمتع بجميع مرافق النادي الاجتماعية والترفيهية",
+      "features": ["المرافق الاجتماعية", "حمام السباحة", "الكافيتريا", "الحدائق"]
+    },
+    "player": {
+      "title": "لاعب",
+      "subtitle": "لاعب رياضي",
+      "description": "انضم لفرق النادي الرياضية واحتراف رياضتك المفضلة",
+      "features": ["التدريبات", "المسابقات", "المدربين", "البطولات"]
+    },
+    "player_note": "يمكنك الانضمام للفرق الرياضية من خلال لوحة التحكم بعد إتمام التسجيل"
+  },
+  "category_cards": {
+    "staff": { "title": "عامل بالجامعة", "desc": "أعضاء هيئة التدريس والموظفين" },
+    "student": { "title": "طالب / خريج", "desc": "الطلاب والخريجين" },
+    "retired": { "title": "متقاعد", "desc": "أساتذة وموظفين متقاعدين" },
+    "dependent": { "title": "عضو تابع", "desc": "أسرة الأعضاء (زوجة/أبناء)" },
+    "foreigner": { "title": "أجنبي / موسمي", "desc": "لغير المصريين (مدد محددة)" },
+    "visitor": { "title": "عضو زائر", "desc": "عضويات عامة" }
+  },
+  "details": {
+    "title": "تفاصيل العضوية",
+    "address": "العنوان الحالي بالتفصيل",
+    "faculty": "الكلية",
+    "select_faculty": "اختر الكلية",
+    "graduation_year": "سنة التخرج",
+    "job_grade": "الدرجة الوظيفية",
+    "select_profession": "اختر المهنة",
+    "department": "القسم / الإدارة",
+    "salary": "الراتب الشهري",
+    "salary_note": "يتم تحديد رسوم الاشتراك السنوي بناءً على شريحة الراتب.",
+    "retired_department": "الإدارة/القسم قبل التقاعد",
+    "retirement_date": "تاريخ التقاعد",
+    "retired_last_salary": "آخر راتب قبل التقاعد (اختياري)",
+    "retired_profession": "المهنة قبل التقاعد (اختياري)",
+    "duration": "مدة العضوية",
+    "one_month": "شهر واحد",
+    "six_months": "6 أشهر",
+    "one_year": "سنة كاملة",
+    "visa_status": "حالة التأشيرة",
+    "visa_valid": "سارية",
+    "visa_pending": "قيد الإجراءات",
+    "installment_note": "متاح الدفع بالتقسيط (دفعتين) لهذا الاشتراك.",
+    "primary_member_id": "رقم العضوية للعضو الأساسي",
+    "primary_member_id_placeholder": "رقم العضوية أو الرقم القومي",
+    "relationship": "صلة القرابة",
+    "spouse": "زوج / زوجة",
+    "child": "ابن / ابنة",
+    "parent": "والد / والدة",
+    "dependent_discount": "سيتم تطبيق خصم التابع (40%) على قيمة الاشتراك.",
+    "visitor_note": "عضوية عامة - سيتم تحديد الرسوم بناءً على التقييم."
+  },
+  "basic": {
+    "title": "البيانات الأساسية",
+    "subtitle": "يرجى ملء جميع الحقول المطلوبة بدقة",
+    "first_name_ar": "الاسم الأول (عربي)",
+    "last_name_ar": "اسم العائلة (عربي)",
+    "first_name_en": "الاسم الأول (إنجليزي)",
+    "last_name_en": "اسم العائلة (إنجليزي)",
+    "first_name_ar_placeholder": "مثال: أحمد",
+    "last_name_ar_placeholder": "مثال: محمد",
+    "first_name_en_placeholder": "e.g. Ahmed",
+    "last_name_en_placeholder": "e.g. Mohamed",
+    "national_id": "الرقم القومي",
+    "national_id_placeholder": "رقم 14",
+    "passport_number": "رقم جواز السفر",
+    "passport_number_placeholder": "Passport Number",
+    "dob": "تاريخ الميلاد",
+    "gender": "الجنس",
+    "male": "ذكر",
+    "female": "أنثى",
+    "phone": "رقم الهاتف",
+    "phone_placeholder": "01x xxx xxxx",
+    "email": "البريد الإلكتروني",
+    "email_placeholder": "example@email.com",
+    "password": "كلمة المرور",
+    "confirm_password": "تأكيد كلمة المرور",
+    "password_strength": "قوة كلمة المرور",
+    "password_strength_weak": "ضعيفة",
+    "password_strength_medium": "متوسطة",
+    "password_strength_good": "جيدة",
+    "password_strength_strong": "قوية",
+    "back_aria": "العودة للخطوة السابقة",
+    "next_aria": "الانتقال للخطوة التالية"
+  },
+  "files": {
+    "title": "المرفقات والمستندات",
+    "upload_hint": "اضغط لرفع الملف (PDF, JPG)",
+    "photo": "صورة شخصية حديثة",
+    "passport": "صورة جواز السفر",
+    "id_front": "صورة البطاقة (أمام)",
+    "id_back": "صورة البطاقة (خلف)",
+    "proof": "مستند إثبات",
+    "medical": "تقرير طبي",
+    "salary_slip": "مفردات مرتب / بيان معاش",
+    "student_proof": "إثبات قيد / شهادة تخرج",
+    "relation_proof": "مستند إثبات القرابة"
+  },
+  "validation": {
+    "missing_essential_docs": "المستندات الأساسية المطلوبة غير مرفوعة: {{docs}}",
+    "missing_player_docs": "المستندات الإضافية المطلوبة للاعبي الرياضة غير مرفوعة: {{docs}}"
+  }
+}

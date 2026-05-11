@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import type { ReactNode } from 'react';
 import type { FieldError } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, AlertCircle, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { RegisterFormValues } from '../schemas/validation';
 import { AuthService } from '../../../services/authService';
 
@@ -15,16 +16,16 @@ interface Step3DetailsProps {
 interface Faculty {
     id: number;
     code: string;
-    name_en: string;
-    name_ar: string;
-    created_at?: string;
-    updated_at?: string;
+    name_en?: string;
+    name_ar?: string;
 }
 
 interface Profession {
     id: number;
     code: string;
-    name: string;
+    name?: string;
+    name_en?: string;
+    name_ar?: string;
 }
 
 interface InputGroupProps {
@@ -34,9 +35,6 @@ interface InputGroupProps {
     className?: string;
 }
 
-/**
- * Input Group Component
- */
 const InputGroup = ({ label, error, children, className = '' }: InputGroupProps) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
         <label className="text-sm font-semibold text-gray-700">{label}</label>
@@ -56,60 +54,42 @@ const InputGroup = ({ label, error, children, className = '' }: InputGroupProps)
     </div>
 );
 
-/**
- * Navigation Buttons Component
- */
-const NavigationButtons = ({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) => (
-    <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
-        <button
-            onClick={onPrev}
-            type="button"
-            className="px-8 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors flex items-center gap-2"
-        >
-            <ChevronRight size={20} /> السابق
-        </button>
-        <button
-            onClick={onNext}
-            type="button"
-            className="px-8 py-3 rounded-xl bg-[#2596be] hover:bg-[#1a7a9a] text-white font-bold shadow-lg shadow-[#2596be]/20 transition-all flex items-center gap-2"
-        >
-            التالي <ChevronLeft size={20} />
-        </button>
-    </div>
-);
+const NavigationButtons = ({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) => {
+    const { t, i18n } = useTranslation('registrations');
+    const isRTL = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar');
+    return (
+        <div className="flex justify-between mt-12 pt-6 border-t border-gray-100">
+            <button onClick={onPrev} type="button" className="px-8 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold transition-colors flex items-center gap-2">
+                {isRTL ? <ChevronRight size={20} /> : <ChevronLeft size={20} />} {t('actions.previous', 'Previous')}
+            </button>
+            <button onClick={onNext} type="button" className="px-8 py-3 rounded-xl bg-[#2596be] hover:bg-[#1a7a9a] text-white font-bold shadow-lg shadow-[#2596be]/20 transition-all flex items-center gap-2">
+                {t('actions.next', 'Next')} {isRTL ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+            </button>
+        </div>
+    );
+};
 
-/**
- * Helper: Get Category Display Name
- */
-const getCategoryName = (cat: RegisterFormValues['category'] | undefined): string => {
+const getCategoryName = (cat: RegisterFormValues['category'] | undefined, t: (k: string, d?: string) => string): string => {
     switch (cat) {
-        case 'student': return 'طالب / خريج';
-        case 'staff': return 'عامل بالجامعة';
-        case 'retired': return 'متقاعد';
-        case 'foreigner': return 'أجنبي / موسمي';
-        case 'dependent': return 'عضو تابع';
-        case 'visitor': return 'عضو زائر';
-        default: return 'عضو';
+        case 'student': return t('category_cards.student.title', 'Student / Graduate');
+        case 'staff': return t('category_cards.staff.title', 'University Staff');
+        case 'retired': return t('category_cards.retired.title', 'Retired');
+        case 'foreigner': return t('category_cards.foreigner.title', 'Foreigner / Seasonal');
+        case 'dependent': return t('category_cards.dependent.title', 'Dependent Member');
+        case 'visitor': return t('category_cards.visitor.title', 'Visitor Member');
+        default: return t('steps.membership_type', 'Membership Type');
     }
 };
 
-/**
- * Step 3: Detailed Information (Dynamic)
- * 
- * Renders category-specific fields based on the selected membership type.
- * Fetches dynamic data (faculties, universities, professions) from the backend.
- */
 export const Step3Details = ({ onNext, onPrev }: Step3DetailsProps) => {
-    const {
-        register,
-        watch,
-        formState: { errors },
-    } = useFormContext<RegisterFormValues>();
+    const { t, i18n } = useTranslation('registrations');
+    const isRTL = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar');
+
+    const { register, watch, formState: { errors } } = useFormContext<RegisterFormValues>();
 
     const category = watch('category');
     const selectedDuration = watch('seasonalDuration');
 
-    // Dynamic Data State
     const [faculties, setFaculties] = useState<Faculty[]>([]);
     const [professions, setProfessions] = useState<Profession[]>([]);
 
@@ -119,214 +99,170 @@ export const Step3Details = ({ onNext, onPrev }: Step3DetailsProps) => {
     transition-all duration-200 outline-none placeholder:text-gray-400 text-gray-800
   `;
 
-    // Fetch Dynamic Data on Mount
     useEffect(() => {
-        // Initialize Mock Professions
-        setProfessions([
-            { id: 1, code: 'PROF', name: 'عضو هيئة تدريس' },
-            { id: 2, code: 'TA', name: 'معيد / مدرس مساعد' },
-            { id: 3, code: 'STAFF', name: 'موظف إداري' },
-        ]);
+        const loadData = async () => {
+            try {
+                const [facRes, proRes] = await Promise.all([
+                    AuthService.getFaculties(),
+                    AuthService.getProfessions(),
+                ]);
 
-        // Fetch Faculties from Backend
-        fetchFaculties();
+                const facultiesData = Array.isArray(facRes?.data) ? facRes.data : Array.isArray(facRes) ? facRes : [];
+                const professionsData = Array.isArray(proRes?.data) ? proRes.data : Array.isArray(proRes) ? proRes : [];
+
+                setFaculties(facultiesData);
+                setProfessions(professionsData);
+            } catch (error) {
+                console.error('Failed to fetch registration lists:', error);
+                setFaculties([]);
+                setProfessions([]);
+            }
+        };
+
+        void loadData();
     }, []);
 
-    const fetchFaculties = async () => {
-        try {
-            const response = await AuthService.getFaculties();
-            if (response.success && response.data) {
-                setFaculties(response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch faculties:', error);
-        }
-    };
+    const facultyName = (f: Faculty) => (isRTL ? (f.name_ar || f.name_en || String(f.id)) : (f.name_en || f.name_ar || String(f.id)));
+    const professionName = (p: Profession) => (isRTL ? (p.name_ar || p.name || p.name_en || p.code) : (p.name_en || p.name || p.name_ar || p.code));
 
     return (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="bg-white rounded-3xl shadow-xl p-8 md:p-12"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-3xl shadow-xl p-8 md:p-12">
             <h3 className="text-2xl font-bold text-[#1a5f7a] mb-8 flex items-center gap-3">
                 <div className="p-2 bg-[#e8f4f8] rounded-lg">
                     <Building2 className="text-[#2596be]" />
                 </div>
-                تفاصيل العضوية{' '}
-                <span className="text-gray-400 text-lg font-normal">({getCategoryName(category)})</span>
+                {t('details.title', 'Membership Details')}{' '}
+                <span className="text-gray-400 text-lg font-normal">({getCategoryName(category, t)})</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Address (Common for All) */}
                 <div className="md:col-span-2">
-                    <InputGroup label="العنوان الحالي بالتفصيل" error={errors.address}>
+                    <InputGroup label={t('details.address', 'Current Address in Detail')} error={errors.address}>
                         <input {...register('address')} className={inputClasses} />
                     </InputGroup>
                 </div>
 
-                {/* ====================================================================== */}
-                {/* STUDENT Fields */}
-                {/* ====================================================================== */}
                 {category === 'student' && (
                     <>
-                        <InputGroup label="الكلية" error={errors.facultyId}>
+                        <InputGroup label={t('details.faculty', 'Faculty')} error={errors.facultyId}>
                             <select {...register('facultyId')} className={inputClasses}>
-                                <option value="">اختر الكلية</option>
+                                <option value="">{t('details.select_faculty', 'Select faculty')}</option>
                                 {faculties.map((f) => (
-                                    <option key={f.id} value={f.id}>
-                                        {f.name_ar}
-                                    </option>
+                                    <option key={f.id} value={f.id}>{facultyName(f)}</option>
                                 ))}
                             </select>
                         </InputGroup>
 
-                        <InputGroup label="سنة التخرج" error={errors.graduationYear}>
-                            <input
-                                type="number"
-                                {...register('graduationYear')}
-                                className={inputClasses}
-                                placeholder="YYYY"
-                            />
-                            <p className="text-xs text-gray-400 mt-1">يحدد النظام تلقائياً حالة (طالب/خريج)</p>
+                        <InputGroup label={t('details.graduation_year', 'Graduation Year')} error={errors.graduationYear}>
+                            <input type="number" {...register('graduationYear')} className={inputClasses} placeholder="YYYY" />
                         </InputGroup>
                     </>
                 )}
 
-                {/* ====================================================================== */}
-                {/* STAFF Fields */}
-                {/* ====================================================================== */}
                 {category === 'staff' && (
                     <>
-                        <InputGroup label="الدرجة الوظيفية" error={errors.professionId}>
+                        <InputGroup label={t('details.job_grade', 'Job Grade')} error={errors.professionId}>
                             <select {...register('professionId')} className={inputClasses}>
-                                <option value="">اختر المهنة</option>
+                                <option value="">{t('details.select_profession', 'Select profession')}</option>
                                 {professions.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.name}
-                                    </option>
+                                    <option key={p.id} value={p.id}>{professionName(p)}</option>
                                 ))}
                             </select>
                         </InputGroup>
 
-                        <InputGroup label="القسم / الإدارة" error={errors.department}>
+                        <InputGroup label={t('details.department', 'Department / Administration')} error={errors.department}>
                             <input {...register('department')} className={inputClasses} />
                         </InputGroup>
 
                         <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
-                            <InputGroup label="الراتب الشهري" error={errors.salary}>
+                            <InputGroup label={t('details.salary', 'Monthly Salary')} error={errors.salary}>
                                 <div className="relative">
-                                    <input
-                                        type="number"
-                                        {...register('salary')}
-                                        className={`${inputClasses} bg-white`}
-                                        placeholder="0.00"
-                                    />
+                                    <input type="number" {...register('salary')} className={`${inputClasses} bg-white`} placeholder="0.00" />
                                     <span className="absolute left-4 top-3 text-gray-400 text-sm font-bold">EGP</span>
                                 </div>
                             </InputGroup>
                             <p className="text-sm text-blue-600 mt-3 flex items-center gap-2">
-                                <AlertCircle size={16} /> يتم تحديد رسوم الاشتراك السنوي بناءً على شريحة الراتب.
+                                <AlertCircle size={16} /> {t('details.salary_note', 'Annual subscription fees are determined based on salary bracket.')}
                             </p>
                         </div>
                     </>
                 )}
 
-                {/* ====================================================================== */}
-                {/* RETIRED Fields */}
-                {/* ====================================================================== */}
                 {category === 'retired' && (
                     <>
-                        <InputGroup label="الإدارة/القسم قبل التقاعد" error={errors.department}>
-                            <input type="text" placeholder="مثال: الهندسة الكهربائية" {...register('department')} className={inputClasses} />
+                        <InputGroup label={t('details.retired_department', 'Department before retirement')} error={errors.department}>
+                            <input type="text" placeholder={isRTL ? 'مثال: الهندسة الكهربائية' : 'e.g. Electrical Engineering'} {...register('department')} className={inputClasses} />
                         </InputGroup>
 
-                        <InputGroup label="تاريخ التقاعد" error={errors.retirementDate}>
+                        <InputGroup label={t('details.retirement_date', 'Retirement Date')} error={errors.retirementDate}>
                             <input type="date" {...register('retirementDate')} className={inputClasses} />
                         </InputGroup>
 
-                        <InputGroup label="آخر راتب قبل التقاعد (اختياري)" error={errors.salary}>
+                        <InputGroup label={t('details.retired_last_salary', 'Last salary before retirement (optional)')} error={errors.salary}>
                             <input type="number" {...register('salary')} className={inputClasses} />
                         </InputGroup>
 
-                        <InputGroup label="المهنة قبل التقاعد (اختياري)" error={errors.professionCode}>
+                        <InputGroup label={t('details.retired_profession', 'Profession before retirement (optional)')} error={errors.professionCode}>
                             <select {...register('professionCode')} className={inputClasses}>
-                                <option value="">اختر المهنة</option>
-                                <option value="RETIRED_PROF">أستاذ جامعي متقاعد</option>
-                                <option value="RETIRED_STAFF">موظف متقاعد</option>
+                                <option value="">{t('details.select_profession', 'Select profession')}</option>
+                                {professions.map((p) => (
+                                    <option key={p.id} value={p.code || p.id}>{professionName(p)}</option>
+                                ))}
                             </select>
                         </InputGroup>
                     </>
                 )}
 
-                {/* ====================================================================== */}
-                {/* FOREIGNER Fields */}
-                {/* ====================================================================== */}
                 {category === 'foreigner' && (
                     <>
-                        <InputGroup label="مدة العضوية" error={errors.seasonalDuration}>
+                        <InputGroup label={t('details.duration', 'Membership Duration')} error={errors.seasonalDuration}>
                             <select {...register('seasonalDuration')} className={inputClasses}>
-                                <option value="1">شهر واحد</option>
-                                <option value="6">6 أشهر</option>
-                                <option value="12">سنة كاملة</option>
+                                <option value="1">{t('details.one_month', '1 month')}</option>
+                                <option value="6">{t('details.six_months', '6 months')}</option>
+                                <option value="12">{t('details.one_year', '1 year')}</option>
                             </select>
                         </InputGroup>
 
-                        <InputGroup label="حالة التأشيرة" error={errors.visaStatus}>
+                        <InputGroup label={t('details.visa_status', 'Visa Status')} error={errors.visaStatus}>
                             <select {...register('visaStatus')} className={inputClasses}>
-                                <option value="valid">سارية</option>
-                                <option value="pending">قيد الإجراءات</option>
+                                <option value="valid">{t('details.visa_valid', 'Valid')}</option>
+                                <option value="pending">{t('details.visa_pending', 'Pending')}</option>
                             </select>
                         </InputGroup>
 
                         {selectedDuration === '12' && (
                             <div className="md:col-span-2 text-sm text-green-700 bg-green-50 p-4 rounded-xl border border-green-100 flex items-center gap-2">
                                 <Check size={18} className="text-green-600" />
-                                متاح الدفع بالتقسيط (دفعتين) لهذا الاشتراك.
+                                {t('details.installment_note', 'Installment payment (2 installments) is available for this subscription.')}
                             </div>
                         )}
                     </>
                 )}
 
-                {/* ====================================================================== */}
-                {/* DEPENDENT Fields */}
-                {/* ====================================================================== */}
                 {category === 'dependent' && (
                     <>
-                        <InputGroup
-                            label="رقم العضوية للعضو الأساسي"
-                            className="md:col-span-2"
-                            error={errors.relatedMemberId}
-                        >
-                            <input
-                                {...register('relatedMemberId')}
-                                className={inputClasses}
-                                placeholder="رقم العضوية أو الرقم القومي"
-                            />
+                        <InputGroup label={t('details.primary_member_id', 'Primary Member ID')} className="md:col-span-2" error={errors.relatedMemberId}>
+                            <input {...register('relatedMemberId')} className={inputClasses} placeholder={t('details.primary_member_id_placeholder', 'Membership ID or National ID')} />
                         </InputGroup>
 
-                        <InputGroup label="صلة القرابة" error={errors.relationshipType}>
+                        <InputGroup label={t('details.relationship', 'Relationship')} error={errors.relationshipType}>
                             <select {...register('relationshipType')} className={inputClasses}>
-                                <option value="spouse">زوج / زوجة</option>
-                                <option value="child">ابن / ابنة</option>
-                                <option value="parent">والد / والدة</option>
+                                <option value="spouse">{t('details.spouse', 'Spouse')}</option>
+                                <option value="child">{t('details.child', 'Child')}</option>
+                                <option value="parent">{t('details.parent', 'Parent')}</option>
                             </select>
                         </InputGroup>
 
                         <div className="md:col-span-2 text-sm text-[#2596be] bg-[#e8f4f8] p-4 rounded-xl border border-[#2596be]/20 flex items-center gap-2">
-                            <Check size={18} /> سيتم تطبيق خصم التابع (40%) على قيمة الاشتراك.
+                            <Check size={18} /> {t('details.dependent_discount', 'A dependent discount (40%) will be applied to the subscription value.')}
                         </div>
                     </>
                 )}
 
-                {/* ====================================================================== */}
-                {/* VISITOR Fields (Minimal - just address required) */}
-                {/* ====================================================================== */}
                 {category === 'visitor' && (
                     <div className="md:col-span-2 text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-200 flex items-center gap-2">
                         <Check size={18} className="text-gray-500" />
-                        عضوية عامة - سيتم تحديد الرسوم بناءً على التقييم.
+                        {t('details.visitor_note', 'General membership - fees are determined after evaluation.')}
                     </div>
                 )}
             </div>

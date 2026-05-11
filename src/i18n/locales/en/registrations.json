@@ -1,1 +1,132 @@
-{}
+﻿{
+  "header": {
+    "back_home": "Back to Home",
+    "logo_alt": "Helwan University Club"
+  },
+  "steps": {
+    "category": "Category",
+    "membership_type": "Membership Type",
+    "basic_info": "Basic Info",
+    "details": "Details",
+    "documents": "Documents"
+  },
+  "actions": {
+    "previous": "Previous",
+    "next": "Next",
+    "confirm_registration": "Confirm Registration",
+    "processing": "Processing..."
+  },
+  "messages": {
+    "submit_success": "Membership request submitted successfully. We will review your data.",
+    "submit_error": "An error occurred during registration",
+    "complete_required_docs": "Please complete all required fields and upload all required documents",
+    "complete_required_fields": "Please ensure all required fields are correctly filled"
+  },
+  "role": {
+    "title": "Choose Membership Type",
+    "subtitle": "Select the membership type that suits you",
+    "social": {
+      "title": "Club Member",
+      "subtitle": "Social Member",
+      "description": "Enjoy all social and recreational club facilities",
+      "features": ["Social Facilities", "Swimming Pool", "Cafeteria", "Gardens"]
+    },
+    "player": {
+      "title": "Player",
+      "subtitle": "Sports Player",
+      "description": "Join club teams and pursue your favorite sport",
+      "features": ["Training", "Competitions", "Coaches", "Tournaments"]
+    },
+    "player_note": "You can join sports teams from your dashboard after completing registration"
+  },
+  "category_cards": {
+    "staff": { "title": "University Staff", "desc": "Faculty members and employees" },
+    "student": { "title": "Student / Graduate", "desc": "Students and graduates" },
+    "retired": { "title": "Retired", "desc": "Retired faculty and employees" },
+    "dependent": { "title": "Dependent Member", "desc": "Family members (spouse/children)" },
+    "foreigner": { "title": "Foreigner / Seasonal", "desc": "Non-Egyptians (limited durations)" },
+    "visitor": { "title": "Visitor Member", "desc": "General memberships" }
+  },
+  "details": {
+    "title": "Membership Details",
+    "address": "Current Address in Detail",
+    "faculty": "Faculty",
+    "select_faculty": "Select faculty",
+    "graduation_year": "Graduation Year",
+    "job_grade": "Job Grade",
+    "select_profession": "Select profession",
+    "department": "Department / Administration",
+    "salary": "Monthly Salary",
+    "salary_note": "Annual subscription fees are determined based on salary bracket.",
+    "retired_department": "Department before retirement",
+    "retirement_date": "Retirement Date",
+    "retired_last_salary": "Last salary before retirement (optional)",
+    "retired_profession": "Profession before retirement (optional)",
+    "duration": "Membership Duration",
+    "one_month": "1 month",
+    "six_months": "6 months",
+    "one_year": "1 year",
+    "visa_status": "Visa Status",
+    "visa_valid": "Valid",
+    "visa_pending": "Pending",
+    "installment_note": "Installment payment (2 installments) is available for this subscription.",
+    "primary_member_id": "Primary Member ID",
+    "primary_member_id_placeholder": "Membership ID or National ID",
+    "relationship": "Relationship",
+    "spouse": "Spouse",
+    "child": "Child",
+    "parent": "Parent",
+    "dependent_discount": "A dependent discount (40%) will be applied to the subscription value.",
+    "visitor_note": "General membership - fees are determined after evaluation."
+  },
+  "basic": {
+    "title": "Basic Information",
+    "subtitle": "Please fill in all required fields carefully",
+    "first_name_ar": "First Name (Ar)",
+    "last_name_ar": "Last Name (Ar)",
+    "first_name_en": "First Name (En)",
+    "last_name_en": "Last Name (En)",
+    "first_name_ar_placeholder": "e.g. Ahmed",
+    "last_name_ar_placeholder": "e.g. Mohamed",
+    "first_name_en_placeholder": "e.g. Ahmed",
+    "last_name_en_placeholder": "e.g. Mohamed",
+    "national_id": "National ID",
+    "national_id_placeholder": "14 digits",
+    "passport_number": "Passport Number",
+    "passport_number_placeholder": "Passport Number",
+    "dob": "Date of Birth",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "phone": "Phone Number",
+    "phone_placeholder": "01x xxx xxxx",
+    "email": "Email",
+    "email_placeholder": "example@email.com",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "password_strength": "Password Strength",
+    "password_strength_weak": "Weak",
+    "password_strength_medium": "Medium",
+    "password_strength_good": "Good",
+    "password_strength_strong": "Strong",
+    "back_aria": "Go back to previous step",
+    "next_aria": "Go to next step"
+  },
+  "files": {
+    "title": "Attachments & Documents",
+    "upload_hint": "Click to upload file (PDF, JPG)",
+    "photo": "Recent Personal Photo",
+    "passport": "Passport Copy",
+    "id_front": "National ID (Front)",
+    "id_back": "National ID (Back)",
+    "proof": "Proof Document",
+    "medical": "Medical Report",
+    "salary_slip": "Salary Slip / Pension Statement",
+    "student_proof": "Enrollment Proof / Graduation Certificate",
+    "relation_proof": "Relationship Proof"
+  },
+  "validation": {
+    "missing_essential_docs": "Required essential documents are missing: {{docs}}",
+    "missing_player_docs": "Required additional sports-player documents are missing: {{docs}}"
+  }
+}
