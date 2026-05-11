@@ -9,6 +9,7 @@ import { Switch } from "../Component/StaffPagesComponents/ui/switch";
 import { Plus, Search, RefreshCw, ChevronRight, ChevronLeft, MapPin, Pencil, Trash2, Link, Loader2, Eye, XCircle } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,8 @@ const PAGE_SIZE = 10;
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BranchManagementPage() {
+    const { t, i18n } = useTranslation('BranchManagementPage');
+    const isRTL = i18n.language === 'ar';
     const { toast } = useToast();
     
     // State
@@ -103,7 +106,7 @@ export default function BranchManagementPage() {
     const handleSave = async () => {
         setFormErrors({});
         if (!form.name_ar.trim() || !form.location_ar.trim() || (!editBranch && !form.code.trim())) {
-            toast({ title: "بيانات ناقصة", description: "يرجى ملء الحقول الإجبارية (الكود والاسم والمكان بالعربية).", variant: "destructive" });
+            toast({ title: t('toasts.missingDataTitle'), description: t('toasts.missingDataDesc'), variant: "destructive" });
             return;
         }
 
@@ -120,10 +123,10 @@ export default function BranchManagementPage() {
             };
             if (editBranch) {
                 await api.put(`/branches/${editBranch.id}`, body);
-                toast({ title: "تم التحديث", description: "تم تحديث بيانات الفرع بنجاح" });
+                toast({ title: t('toasts.updateSuccessTitle'), description: t('toasts.updateSuccessDesc') });
             } else {
                 await api.post("/branches", body);
-                toast({ title: "تمت الإضافة", description: "تمت إضافة الفرع بنجاح" });
+                toast({ title: t('toasts.addSuccessTitle'), description: t('toasts.addSuccessDesc') });
             }
             setIsAddOpen(false);
             void fetchBranches();
@@ -132,10 +135,10 @@ export default function BranchManagementPage() {
             
             if (e?.responseData?.errors) {
                 setFormErrors(e.responseData.errors);
-                toast({ title: "أخطاء في الإدخال", description: "يرجى مراجعة الحقول المحددة.", variant: "destructive" });
+                toast({ title: t('toasts.inputErrorsTitle'), description: t('toasts.inputErrorsDesc'), variant: "destructive" });
             } else {
-                const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند الحفظ";
-                toast({ title: "فشل الحفظ", description: msg, variant: "destructive" });
+                const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t('toasts.saveFailedDesc');
+                toast({ title: t('toasts.saveFailedTitle'), description: msg, variant: "destructive" });
             }
         } finally {
             setSaveLoading(false);
@@ -147,13 +150,13 @@ export default function BranchManagementPage() {
         setDeleteLoading(true);
         try {
             await api.delete(`/branches/${deleteId}`);
-            toast({ title: "تم الحذف", description: "تم حذف الفرع بنجاح" });
+            toast({ title: t('toasts.deleteSuccessTitle'), description: t('toasts.deleteSuccessDesc') });
             setDeleteId(null);
             void fetchBranches();
         } catch (err) {
             const e = err as { status?: number, responseData?: { message?: string, error?: string }, message?: string };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند الحذف";
-            toast({ title: "فشل الحذف", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t('toasts.deleteFailedDesc');
+            toast({ title: t('toasts.deleteFailedTitle'), description: msg, variant: "destructive" });
         } finally {
             setDeleteLoading(false);
         }
@@ -187,20 +190,20 @@ export default function BranchManagementPage() {
 
     const handleAssign = async () => {
         if (!assignBranch || !memberIdForAssign.trim()) {
-            toast({ title: "بيانات ناقصة", description: "يرجى تحديد العضو المطلوب.", variant: "destructive" });
+            toast({ title: t('toasts.missingDataTitle'), description: t('toasts.assignMissingDataDesc'), variant: "destructive" });
             return;
         }
         setAssignLoading(true);
         try {
             await api.post(`/branches/${assignBranch.id}/assign-to-member/${memberIdForAssign.trim()}`);
-            toast({ title: "تم التعيين", description: "تم ربط العضو بالفرع بنجاح" });
+            toast({ title: t('toasts.assignSuccessTitle'), description: t('toasts.assignSuccessDesc') });
             setAssignBranch(null);
             setMemberIdForAssign("");
             setMemberName("");
         } catch (err) {
             const e = err as { status?: number, responseData?: { message?: string, error?: string }, message?: string };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند التعيين";
-            toast({ title: "فشل التعيين", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t('toasts.assignFailedDesc');
+            toast({ title: t('toasts.assignFailedTitle'), description: msg, variant: "destructive" });
         } finally {
             setAssignLoading(false);
         }
@@ -212,7 +215,7 @@ export default function BranchManagementPage() {
             const res = await api.get<{ data: BranchSport[] }>(`/branches/${branchId}/sports`);
             setBranchSports(p => ({ ...p, [branchId]: res?.data?.data || [] }));
         } catch (err) {
-            toast({ title: "فشل التحميل", description: "لم نتمكن من جلب الرياضات المرتبطة.", variant: "destructive" });
+            toast({ title: t('toasts.loadSportsFailedTitle'), description: t('toasts.loadSportsFailedDesc'), variant: "destructive" });
         } finally {
             setLoadingSports(p => ({ ...p, [branchId]: false }));
         }
@@ -252,14 +255,14 @@ export default function BranchManagementPage() {
         setAddingSport(true);
         try {
             await api.post("/branch-sports", { branch_id: addSportDialogOpen, sport_id: Number(selectedGlobalSport) });
-            toast({ title: "تم الإضافة", description: "تم ربط الرياضة بالفرع بنجاح." });
+            toast({ title: t('toasts.addSportSuccessTitle'), description: t('toasts.addSportSuccessDesc') });
             setAddSportDialogOpen(null);
             void loadBranchSports(addSportDialogOpen);
             void fetchBranches();
         } catch (err) {
             const e = err as any;
-            const msg = e?.responseData?.error || e?.responseData?.message || "حدث خطأ أثناء الربط.";
-            toast({ title: "فشل الإضافة", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || t('toasts.addSportFailedDesc');
+            toast({ title: t('toasts.addSportFailedTitle'), description: msg, variant: "destructive" });
         } finally {
             setAddingSport(false);
         }
@@ -276,7 +279,7 @@ export default function BranchManagementPage() {
                 });
             }
         } catch (err) {
-            toast({ title: "فشل التحديث", description: "لم نتمكن من تغيير حالة الرياضة.", variant: "destructive" });
+            toast({ title: t('toasts.updateSportFailedTitle'), description: t('toasts.updateSportFailedDesc'), variant: "destructive" });
             if (expandedBranchId) void loadBranchSports(expandedBranchId);
         }
     };
@@ -286,12 +289,12 @@ export default function BranchManagementPage() {
         setRemovingSport(true);
         try {
             await api.delete(`/branch-sports/${deleteBranchSportId}`);
-            toast({ title: "تم الإزالة", description: "تمت إزالة الرياضة بنجاح." });
+            toast({ title: t('toasts.removeSportSuccessTitle'), description: t('toasts.removeSportSuccessDesc') });
             setDeleteBranchSportId(null);
             void loadBranchSports(expandedBranchId);
             void fetchBranches();
         } catch (err) {
-            toast({ title: "فشل الإزالة", description: "تعذرت الإزالة.", variant: "destructive" });
+            toast({ title: t('toasts.removeSportFailedTitle'), description: t('toasts.removeSportFailedDesc'), variant: "destructive" });
         } finally {
             setRemovingSport(false);
         }
@@ -309,8 +312,8 @@ export default function BranchManagementPage() {
                 setBranches([]);
             }
         } catch (err) {
-            const message = err instanceof Error ? err.message : "تعذر تحميل الفروع";
-            toast({ title: "فشل التحميل", description: message, variant: "destructive" });
+            const message = err instanceof Error ? err.message : t('toasts.loadBranchesFailedDesc');
+            toast({ title: t('toasts.loadBranchesFailedTitle'), description: message, variant: "destructive" });
             setBranches([]);
         } finally {
             setLoading(false);
@@ -338,7 +341,7 @@ export default function BranchManagementPage() {
     const pagedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col gap-0 bg-zinc-50/50" dir="rtl">
+        <div className="h-[calc(100vh-4rem)] flex flex-col gap-0 bg-zinc-50/50" dir={isRTL ? "rtl" : "ltr"}>
 
             {/* ── Page Header ── */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-zinc-200/60 bg-white shrink-0 z-10 shadow-[0_1px_3px_0_rgb(0,0,0,0.01)]">
@@ -347,10 +350,10 @@ export default function BranchManagementPage() {
                         <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                             <MapPin className="w-5 h-5 text-primary" />
                         </div>
-                        إدارة الفروع
+                        {t('header.title')}
                     </h1>
-                    <p className="text-[13px] font-medium text-zinc-500 mt-1.5 pr-12">
-                        إجمالي الفروع المسجلة: <strong className="text-zinc-800">{branches.length}</strong>
+                    <p className="text-[13px] font-medium text-zinc-500 mt-1.5 pe-12">
+                        {t('header.totalBranches')}: <strong className="text-zinc-800">{branches.length}</strong>
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -361,7 +364,7 @@ export default function BranchManagementPage() {
                             onClick={openAdd}
                         >
                             <Plus className="w-4 h-4" />
-                            إضافة فرع
+                            {t('header.addBranch')}
                         </Button>
                     </RoleGuard>
                 </div>
@@ -423,12 +426,12 @@ export default function BranchManagementPage() {
 
                         {/* Search Input */}
                         <div className="relative w-full sm:w-80">
-                            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                            <Search className="absolute end-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                             <Input
-                                placeholder="بحث بالاسم، أو الموقع..."
+                                placeholder={t('toolbar.searchPlaceholder')}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pr-10 h-10 text-[13px] bg-zinc-50/50 border-zinc-200/80 rounded-xl focus-visible:ring-primary/20 focus-visible:bg-white transition-all shadow-inner"
+                                className="pe-10 h-10 text-[13px] bg-zinc-50/50 border-zinc-200/80 rounded-xl focus-visible:ring-primary/20 focus-visible:bg-white transition-all shadow-inner"
                             />
                         </div>
 
@@ -437,7 +440,7 @@ export default function BranchManagementPage() {
                             onClick={() => { void fetchBranches(); }}
                             disabled={loading}
                             className="p-2.5 rounded-xl hover:bg-zinc-100 transition-colors text-zinc-500 disabled:opacity-40 border border-transparent hover:border-zinc-200"
-                            title="تحديث البيانات"
+                            title={t('toolbar.refresh')}
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                         </button>
@@ -448,29 +451,29 @@ export default function BranchManagementPage() {
                         {loading ? (
                             <div className="py-24 text-center text-zinc-400">
                                 <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-4" />
-                                <p className="text-sm font-medium tracking-wide">جارٍ جلب السجلات...</p>
+                                <p className="text-sm font-medium tracking-wide">{t('table.loading')}</p>
                             </div>
                         ) : filteredRows.length === 0 ? (
                             <div className="py-24 text-center text-zinc-400 flex flex-col items-center">
                                 <div className="rounded-full bg-zinc-50 border border-zinc-100 p-6 mb-5">
                                     <MapPin className="h-10 w-10 text-zinc-300" />
                                 </div>
-                                <h3 className="text-[15px] font-bold text-zinc-800 mb-1.5">لا يوجد فروع مسجلة</h3>
+                                <h3 className="text-[15px] font-bold text-zinc-800 mb-1.5">{t('table.empty')}</h3>
                                 <p className="text-[13px] max-w-sm">
-                                    {search ? `لا توجد نتائج مطابقة لـ "${search}"` : "لم يتم إدراج أي فروع بعد. أضف فروعك الآن."}
+                                    {search ? t('table.emptySearch', { search }) : t('table.emptyInstruction')}
                                 </p>
                             </div>
                         ) : (
                             <table className="w-full text-sm text-right">
                                 <thead className="sticky top-0 bg-white z-10 before:absolute before:inset-0 before:border-b before:border-zinc-100 before:pointer-events-none">
                                     <tr>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle w-12">#</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">اسم الفرع</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الكود</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الموقع</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الحالة</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">الرياضات المرتبطة</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">الإجراءات</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle w-12">{t('table.columns.serial')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">{t('table.columns.name')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">{t('table.columns.code')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">{t('table.columns.location')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">{t('table.columns.status')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">{t('table.columns.sportsCount')}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">{t('table.columns.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100">
@@ -483,8 +486,8 @@ export default function BranchManagementPage() {
                                                 </td>
 
                                                 {/* Name */}
-                                                <td className="px-6 py-3.5 align-middle font-bold text-zinc-900 border-r-2 border-transparent group-hover:border-primary/40 transition-all">
-                                                    {branch.name_ar || branch.name_en || "—"}
+                                                <td className="px-6 py-3.5 align-middle font-bold text-zinc-900 border-e-2 border-transparent group-hover:border-primary/40 transition-all">
+                                                    {isRTL ? (branch.name_ar || branch.name_en || "—") : (branch.name_en || branch.name_ar || "—")}
                                                 </td>
 
                                                 {/* Code */}
@@ -496,7 +499,7 @@ export default function BranchManagementPage() {
 
                                                 {/* Location */}
                                                 <td className="px-6 py-3.5 align-middle text-zinc-500 font-medium tracking-wide">
-                                                    {branch.location_ar || branch.location_en || "—"}
+                                                    {isRTL ? (branch.location_ar || branch.location_en || "—") : (branch.location_en || branch.location_ar || "—")}
                                                 </td>
 
                                                 {/* Status */}
@@ -509,7 +512,7 @@ export default function BranchManagementPage() {
                                                                 ? 'bg-zinc-100 text-zinc-700 border-zinc-200'
                                                                 : 'bg-amber-100 text-amber-700 border-amber-200'
                                                         }`}>
-                                                            {branch.status === 'active' ? 'نشط' : branch.status === 'inactive' ? 'معطل' : 'مؤرشف'}
+                                                            {branch.status === 'active' ? t('table.status.active') : branch.status === 'inactive' ? t('table.status.inactive') : t('table.status.archived')}
                                                         </span>
                                                     ) : "—"}
                                                 </td>
@@ -527,7 +530,7 @@ export default function BranchManagementPage() {
                                                         
                                                         <RoleGuard privilege="UPDATE_BRANCH">
                                                             <button
-                                                                title="تعديل فرع"
+                                                                title={t('table.actions.edit')}
                                                                 onClick={() => openEdit(branch)}
                                                                 className="p-1.5 rounded-lg hover:bg-zinc-900 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-zinc-800"
                                                             >
@@ -537,7 +540,7 @@ export default function BranchManagementPage() {
 
                                                         <RoleGuard privilege="ASSIGN_BRANCH_TO_MEMBER">
                                                             <button
-                                                                title="تعيين عضو"
+                                                                title={t('table.actions.assign')}
                                                                 onClick={() => setAssignBranch(branch)}
                                                                 className="p-1.5 rounded-lg hover:bg-zinc-900 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-zinc-800"
                                                             >
@@ -547,7 +550,7 @@ export default function BranchManagementPage() {
 
                                                         <RoleGuard privilege="CREATE_BRANCH">
                                                             <button
-                                                                title="إدارة الرياضات"
+                                                                title={t('table.actions.sports')}
                                                                 onClick={() => toggleExpand(branch.id)}
                                                                 className={`p-1.5 rounded-lg transition-all shadow-sm border border-transparent ${expandedBranchId === branch.id ? 'bg-emerald-600 text-white' : 'hover:bg-emerald-600 hover:text-white text-zinc-500 hover:border-emerald-700'}`}
                                                             >
@@ -557,7 +560,7 @@ export default function BranchManagementPage() {
 
                                                         <RoleGuard privilege="DELETE_BRANCH">
                                                             <button
-                                                                title="حذف الفرع"
+                                                                title={t('table.actions.delete')}
                                                                 onClick={() => setDeleteId(branch.id)}
                                                                 className="p-1.5 rounded-lg hover:bg-rose-500 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-rose-600"
                                                             >
@@ -571,17 +574,17 @@ export default function BranchManagementPage() {
                                             {/* EXPANDED PANEL HERE */}
                                             {expandedBranchId === branch.id && (
                                                 <tr className="bg-zinc-50/80 border-b border-zinc-200/80">
-                                                    <td colSpan={7} className="p-0 border-r-4 border-r-emerald-500 shadow-inner">
+                                                    <td colSpan={7} className="p-0 border-s-4 border-s-emerald-500 shadow-inner">
                                                         <div className="p-6">
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <h4 className="text-[13px] font-bold text-zinc-800 flex items-center gap-2">
                                                                     <Link className="w-4 h-4 text-emerald-600" />
-                                                                    الرياضات المرتبطة: {branch.name_ar || branch.name_en}
+                                                                    {t('sportsPanel.title')} {branch.name_ar || branch.name_en}
                                                                 </h4>
                                                                 <RoleGuard privilege="CREATE_BRANCH">
                                                                     <Button size="sm" onClick={() => openAddSport(branch.id)} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-bold rounded-lg px-4">
                                                                         <Plus className="w-3.5 h-3.5" />
-                                                                        إضافة رياضة
+                                                                        {t('sportsPanel.addSport')}
                                                                     </Button>
                                                                 </RoleGuard>
                                                             </div>
@@ -592,16 +595,16 @@ export default function BranchManagementPage() {
                                                                 </div>
                                                             ) : !branchSports[branch.id]?.length ? (
                                                                 <div className="text-center py-6 bg-white rounded-xl border border-zinc-200/60 shadow-sm">
-                                                                    <p className="text-xs text-zinc-500 font-medium">لا توجد رياضات مرتبطة بهذا الفرع بعد.</p>
+                                                                    <p className="text-xs text-zinc-500 font-medium">{t('sportsPanel.empty')}</p>
                                                                 </div>
                                                             ) : (
                                                                 <div className="bg-white rounded-xl border border-zinc-200/60 shadow-sm overflow-hidden border-t-0">
-                                                                    <table className="w-full text-xs text-right">
+                                                                    <table className="w-full text-xs text-start">
                                                                         <thead className="bg-zinc-50/50 border-b border-zinc-100">
                                                                             <tr>
-                                                                                <th className="px-5 py-3 font-bold text-zinc-500">اسم الرياضة</th>
-                                                                                <th className="px-5 py-3 font-bold text-zinc-500 text-center w-28">الحالة</th>
-                                                                                <th className="px-5 py-3 font-bold text-zinc-500 text-center w-24">إجراءات</th>
+                                                                                <th className="px-5 py-3 font-bold text-zinc-500">{t('sportsPanel.columns.sportName')}</th>
+                                                                                <th className="px-5 py-3 font-bold text-zinc-500 text-center w-28">{t('sportsPanel.columns.status')}</th>
+                                                                                <th className="px-5 py-3 font-bold text-zinc-500 text-center w-24">{t('sportsPanel.columns.actions')}</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody className="divide-y divide-zinc-100">
@@ -611,10 +614,10 @@ export default function BranchManagementPage() {
                                                                                     <td className="px-5 py-3 text-center">
                                                                                         <RoleGuard privilege="UPDATE_BRANCH" fallback={
                                                                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${bs.status === 'active' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'}`}>
-                                                                                                {bs.status === 'active' ? "نشط" : "معطل"}
+                                                                                                {bs.status === 'active' ? t('table.status.active') : t('table.status.inactive')}
                                                                                             </span>
                                                                                         }>
-                                                                                            <div title="تفعيل / تعطيل الارتباط">
+                                                                                            <div title={t('sportsPanel.actions.toggleStatus')}>
                                                                                                 <Switch 
                                                                                                     checked={bs.status === 'active'}
                                                                                                     onCheckedChange={(val) => void toggleBranchSportStatus(bs.id, val)}
@@ -625,7 +628,7 @@ export default function BranchManagementPage() {
                                                                                     <td className="px-5 py-3 text-center">
                                                                                         <RoleGuard privilege="DELETE_BRANCH">
                                                                                             <div className="flex justify-center">
-                                                                                                <button onClick={() => setDeleteBranchSportId(bs.id)} className="p-1.5 rounded-md text-zinc-400 hover:bg-rose-100 hover:text-rose-600 transition-colors" title="إزالة من الفرع">
+                                                                                                <button onClick={() => setDeleteBranchSportId(bs.id)} className="p-1.5 rounded-md text-zinc-400 hover:bg-rose-100 hover:text-rose-600 transition-colors" title={t('sportsPanel.actions.remove')}>
                                                                                                     <Trash2 className="w-4 h-4" />
                                                                                                 </button>
                                                                                             </div>
@@ -653,97 +656,97 @@ export default function BranchManagementPage() {
             
             {/* ── Dialogs ── */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogContent className="sm:max-w-[425px]" dir="rtl">
+                <DialogContent className="sm:max-w-[425px]" dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle>{editBranch ? "تعديل فرع" : "إضافة فرع جديد"}</DialogTitle>
+                        <DialogTitle>{editBranch ? t('modals.addEdit.titleEdit') : t('modals.addEdit.titleAdd')}</DialogTitle>
                         <DialogDescription>
-                            {editBranch ? "قم بتعديل بيانات الفرع المحدد." : "أدخل بيانات الفرع الجديد."}
+                            {editBranch ? t('modals.addEdit.descEdit') : t('modals.addEdit.descAdd')}
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="grid gap-4 py-4">
                         {!editBranch && (
                             <div className="grid gap-2">
-                                <Label htmlFor="code">كود الفرع <span className="text-destructive">*</span></Label>
+                                <Label htmlFor="code">{t('modals.addEdit.fields.code')} <span className="text-destructive">*</span></Label>
                                 <Input 
                                     id="code"
                                     dir="ltr"
                                     className={`text-left font-mono uppercase ${formErrors.code?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
                                     value={form.code}
                                     onChange={(e) => { setForm({ ...form, code: e.target.value.toUpperCase() }); setFormErrors({...formErrors, code: []}); }}
-                                    placeholder="مثال: CAIRO-01"
+                                    placeholder={t('modals.addEdit.fields.codePlaceholder')}
                                     maxLength={50}
                                 />
-                                <p className="text-[11px] text-zinc-400">كود فريد للفرع (لا يمكن تغييره لاحقاً)</p>
+                                <p className="text-[11px] text-zinc-400">{t('modals.addEdit.fields.codeHint')}</p>
                                 {formErrors.code?.length > 0 && <span className="text-xs text-destructive">{formErrors.code[0]}</span>}
                             </div>
                         )}
                         <div className="grid gap-2">
-                            <Label htmlFor="name_ar">الاسم (عربي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="name_ar">{t('modals.addEdit.fields.nameAr')} <span className="text-destructive">*</span></Label>
                             <Input 
                                 id="name_ar" 
                                 value={form.name_ar} 
                                 onChange={(e) => { setForm({ ...form, name_ar: e.target.value }); setFormErrors({...formErrors, name_ar: []}); }} 
-                                placeholder="مثال: فرع المهندسين" 
+                                placeholder={t('modals.addEdit.fields.nameArPlaceholder')} 
                                 className={formErrors.name_ar?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}
                             />
                             {formErrors.name_ar?.length > 0 && <span className="text-xs text-destructive">{formErrors.name_ar[0]}</span>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="name_en">الاسم (إنجليزي)</Label>
+                            <Label htmlFor="name_en">{t('modals.addEdit.fields.nameEn')}</Label>
                             <Input 
                                 id="name_en" 
                                 dir="ltr" 
                                 value={form.name_en} 
                                 onChange={(e) => { setForm({ ...form, name_en: e.target.value }); setFormErrors({...formErrors, name_en: []}); }} 
-                                placeholder="Mohandiseen Branch" 
-                                className={`text-left ${formErrors.name_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
+                                placeholder={t('modals.addEdit.fields.nameEnPlaceholder')} 
+                                className={`text-start ${formErrors.name_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
                             />
                             {formErrors.name_en?.length > 0 && <span className="text-xs text-destructive">{formErrors.name_en[0]}</span>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="location_ar">الموقع (عربي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="location_ar">{t('modals.addEdit.fields.locationAr')} <span className="text-destructive">*</span></Label>
                             <Input 
                                 id="location_ar" 
                                 value={form.location_ar} 
                                 onChange={(e) => { setForm({ ...form, location_ar: e.target.value }); setFormErrors({...formErrors, location_ar: []}); }} 
-                                placeholder="مثال: شارع جامعة الدول العربية" 
+                                placeholder={t('modals.addEdit.fields.locationArPlaceholder')} 
                                 className={formErrors.location_ar?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}
                             />
                             {formErrors.location_ar?.length > 0 && <span className="text-xs text-destructive">{formErrors.location_ar[0]}</span>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="location_en">الموقع (إنجليزي)</Label>
+                            <Label htmlFor="location_en">{t('modals.addEdit.fields.locationEn')}</Label>
                             <Input 
                                 id="location_en" 
                                 dir="ltr" 
                                 value={form.location_en} 
                                 onChange={(e) => { setForm({ ...form, location_en: e.target.value }); setFormErrors({...formErrors, location_en: []}); }} 
-                                placeholder="Arab League St." 
-                                className={`text-left ${formErrors.location_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
+                                placeholder={t('modals.addEdit.fields.locationEnPlaceholder')} 
+                                className={`text-start ${formErrors.location_en?.length ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
                             />
                             {formErrors.location_en?.length > 0 && <span className="text-xs text-destructive">{formErrors.location_en[0]}</span>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="status">الحالة</Label>
+                            <Label htmlFor="status">{t('modals.addEdit.fields.status')}</Label>
                             <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as 'active' | 'inactive' | 'archived' })}>
                                 <SelectTrigger id="status">
-                                    <SelectValue placeholder="اختر الحالة" />
+                                    <SelectValue placeholder={t('modals.addEdit.fields.statusPlaceholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="active">نشط</SelectItem>
-                                    <SelectItem value="inactive">معطل</SelectItem>
-                                    <SelectItem value="archived">مؤرشف</SelectItem>
+                                    <SelectItem value="active">{t('table.status.active')}</SelectItem>
+                                    <SelectItem value="inactive">{t('table.status.inactive')}</SelectItem>
+                                    <SelectItem value="archived">{t('table.status.archived')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
                     <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saveLoading}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saveLoading}>{t('modals.addEdit.buttons.cancel')}</Button>
                         <Button onClick={() => void handleSave()} disabled={saveLoading} className="w-full sm:w-auto">
-                            {saveLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {saveLoading ? "جارٍ الحفظ..." : "حفظ الفرع"}
+                            {saveLoading && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                            {saveLoading ? t('modals.addEdit.buttons.saving') : t('modals.addEdit.buttons.save')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -751,19 +754,19 @@ export default function BranchManagementPage() {
 
             {/* ── Delete Modal ── */}
             <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-                <DialogContent dir="rtl">
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle className="text-destructive">تأكيد الحذف</DialogTitle>
+                        <DialogTitle className="text-destructive">{t('modals.delete.title')}</DialogTitle>
                         <DialogDescription>
-                            هل أنت متأكد من حذف هذا الفرع؟ لا يمكن التراجع عن هذا الإجراء وسيؤثر على السجلات المرتبطة به.
+                            {t('modals.delete.desc')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:justify-start">
                         <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
-                            {deleteLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {deleteLoading ? "جارٍ الحذف..." : "تأكيد الحذف"}
+                            {deleteLoading && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                            {deleteLoading ? t('modals.delete.buttons.deleting') : t('modals.delete.buttons.confirm')}
                         </Button>
-                        <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>{t('modals.delete.buttons.cancel')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -772,113 +775,103 @@ export default function BranchManagementPage() {
             <Dialog open={assignBranch !== null} onOpenChange={(open) => { 
                 if (!open) { setAssignBranch(null); setMemberIdForAssign(""); setMemberName(""); } 
             }}>
-                <DialogContent dir="rtl">
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle>تعيين عضو في الفرع</DialogTitle>
+                        <DialogTitle>{t('modals.assign.title')}</DialogTitle>
                         <DialogDescription>
-                            تحديد العضو المراد ربطه بالفرع: <span className="font-bold underline text-primary">{assignBranch?.name_ar || assignBranch?.name_en}</span>
+                            {t('modals.assign.desc')} <span className="font-bold underline text-primary">{assignBranch?.name_ar || assignBranch?.name_en}</span>
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="py-4">
-                        <Label htmlFor="memberIdAssign">رقم العضو <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="memberIdAssign">{t('modals.assign.fields.memberId')} <span className="text-destructive">*</span></Label>
                         <div className="relative mt-2">
                             <Input
                                 id="memberIdAssign"
                                 dir="ltr"
-                                className="text-left font-mono pr-8"
-                                placeholder="رقم العضو (مثل: 5049)"
+                                className="text-start font-mono pe-8"
+                                placeholder={t('modals.assign.fields.memberIdPlaceholder')}
                                 value={memberIdForAssign}
                                 onChange={(e) => setMemberIdForAssign(e.target.value)}
                             />
                             {memberLookupState === "loading" && (
-                                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                <Loader2 className="absolute end-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                             )}
                             {memberLookupState === "found" && (
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 bg-emerald-100 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold">✓</span>
+                                <span className="absolute end-2 top-1/2 -translate-y-1/2 text-emerald-600 bg-emerald-100 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold">✓</span>
                             )}
                         </div>
-                        {memberLookupState === "notfound" && (
-                            <p className="text-[12px] text-destructive flex items-center gap-1 mt-2">
-                                <XCircle className="w-3 h-3" />
-                                لم يُعثر على عضو يطابق هذا الرقم
-                            </p>
-                        )}
-                        {memberLookupState === "idle" && !memberIdForAssign.trim() && (
-                            <p className="text-[12px] text-muted-foreground mt-2">
-                                أدخل أرقاماً صحيحة وسيبدأ البحث التلقائي
-                            </p>
+                        {memberLookupState === "notfound" && memberIdForAssign && (
+                            <p className="text-xs text-destructive mt-1.5">{t('modals.assign.fields.memberNotFound')}</p>
                         )}
                         {memberLookupState === "found" && (
-                            <p className="text-sm font-medium text-emerald-700 mt-3 p-2 bg-emerald-50 rounded-md border border-emerald-100">
-                                الاسم: {memberName}
-                            </p>
+                            <div className="mt-2 text-sm bg-zinc-50 border border-zinc-100 p-2.5 rounded-lg flex items-center gap-2">
+                                <div className="h-6 w-6 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                    <MapPin className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="font-medium text-zinc-800">{memberName}</span>
+                            </div>
                         )}
                     </div>
-
+                    
                     <DialogFooter className="gap-2 sm:gap-0">
-                        <Button 
-                            onClick={() => void handleAssign()} 
-                            disabled={assignLoading || memberLookupState !== "found"}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
-                        >
-                            {assignLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {assignLoading ? "جارٍ الربط..." : "تأكيد التعيين"}
+                        <Button variant="outline" onClick={() => setAssignBranch(null)} disabled={assignLoading}>{t('modals.assign.buttons.cancel')}</Button>
+                        <Button onClick={() => void handleAssign()} disabled={assignLoading || memberLookupState !== "found"}>
+                            {assignLoading && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                            {assignLoading ? t('modals.assign.buttons.assigning') : t('modals.assign.buttons.assign')}
                         </Button>
-                        <Button variant="outline" onClick={() => setAssignBranch(null)} disabled={assignLoading}>إلغاء</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* ── Add Sport Modal ── */}
-            <Dialog open={addSportDialogOpen !== null} onOpenChange={(open) => { if (!open) setAddSportDialogOpen(null); }}>
-                <DialogContent dir="rtl">
+            <Dialog open={addSportDialogOpen !== null} onOpenChange={(open) => !open && setAddSportDialogOpen(null)}>
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle>إضافة رياضة للفرع</DialogTitle>
-                        <DialogDescription>
-                            يرجى اختيار الرياضة المراد توفيرها في هذا الفرع.
-                        </DialogDescription>
+                        <DialogTitle>{t('modals.addSport.title')}</DialogTitle>
                     </DialogHeader>
                     <div className="py-4">
-                        <Label>الرياضة <span className="text-destructive">*</span></Label>
+                        <Label>{t('modals.addSport.fields.sport')} <span className="text-destructive">*</span></Label>
                         <Select value={selectedGlobalSport} onValueChange={setSelectedGlobalSport}>
-                            <SelectTrigger className="w-full mt-2" dir="rtl">
-                                <SelectValue placeholder="-- اختر رياضة --" />
+                            <SelectTrigger className="mt-2">
+                                <SelectValue placeholder={t('modals.addSport.fields.sportPlaceholder')} />
                             </SelectTrigger>
-                            <SelectContent dir="rtl">
-                                {globalSports.map(s => (
-                                    <SelectItem key={s.id} value={String(s.id)}>
-                                        {s.nameAr}
-                                    </SelectItem>
-                                ))}
+                            <SelectContent>
+                                {globalSports.length === 0 ? (
+                                    <SelectItem value="none" disabled>{t('modals.addSport.fields.noSports')}</SelectItem>
+                                ) : (
+                                    globalSports.map(s => (
+                                        <SelectItem key={s.id} value={s.id.toString()}>{s.nameAr}</SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
                     <DialogFooter className="gap-2 sm:justify-start">
                         <Button onClick={() => void handleAddSport()} disabled={addingSport || !selectedGlobalSport} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                            {addingSport && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {addingSport ? "جارٍ الربط..." : "تأكيد"}
+                            {addingSport && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                            {addingSport ? t('modals.addSport.buttons.adding') : t('modals.addSport.buttons.add')}
                         </Button>
-                        <Button variant="outline" onClick={() => setAddSportDialogOpen(null)} disabled={addingSport}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setAddSportDialogOpen(null)} disabled={addingSport}>{t('modals.addSport.buttons.cancel')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* ── Delete Branch Sport Modal ── */}
             <Dialog open={deleteBranchSportId !== null} onOpenChange={() => setDeleteBranchSportId(null)}>
-                <DialogContent dir="rtl">
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
                     <DialogHeader>
-                        <DialogTitle className="text-destructive">إزالة الرياضة</DialogTitle>
+                        <DialogTitle className="text-destructive">{t('modals.removeSport.title')}</DialogTitle>
                         <DialogDescription>
-                            هل أنت متأكد من إزالة هذه الرياضة من ارتباطات الفرع؟ لن يلغي هذا الرياضة كلياً بل سيفصلها عن الفرع فقط.
+                            {t('modals.removeSport.desc')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:justify-start">
                         <Button variant="destructive" onClick={() => void handleRemoveBranchSport()} disabled={removingSport}>
-                            {removingSport && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {removingSport ? "جارٍ الإزالة..." : "تأكيد الإزالة"}
+                            {removingSport && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                            {removingSport ? t('modals.removeSport.buttons.removing') : t('modals.removeSport.buttons.confirm')}
                         </Button>
-                        <Button variant="outline" onClick={() => setDeleteBranchSportId(null)} disabled={removingSport}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setDeleteBranchSportId(null)} disabled={removingSport}>{t('modals.removeSport.buttons.cancel')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

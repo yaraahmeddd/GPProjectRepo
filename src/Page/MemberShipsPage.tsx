@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { RoleGuard } from "../Component/StaffPagesComponents/RoleGuard";
 import { Pencil, Search, Trash2, Eye, Power, Plus } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
-
 
 type MembershipApiItem = {
   id: number;
@@ -55,6 +55,9 @@ type MemberTypesResponse = {
 const PAGE_SIZE = 10;
 
 export default function MembershipsPage() {
+  const { t, i18n } = useTranslation("MemberShipsPage");
+  const isRTL = i18n.language === "ar";
+  
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [memberships, setMemberships] = useState<MembershipApiItem[]>([]);
@@ -114,8 +117,8 @@ export default function MembershipsPage() {
         }
 
       } catch (err) {
-        const message = err instanceof Error ? err.message : "تعذر تحميل البيانات";
-        toast({ title: "خطأ في التحميل", description: message, variant: "destructive" });
+        const message = err instanceof Error ? err.message : t("toast.loadErrorDesc");
+        toast({ title: t("toast.loadErrorTitle"), description: message, variant: "destructive" });
         setMemberships([]);
       } finally {
         setIsLoading(false);
@@ -123,7 +126,7 @@ export default function MembershipsPage() {
     };
 
     void load();
-  }, [toast]);
+  }, [toast, t]);
 
   const refreshPlans = async () => {
     setIsLoading(true);
@@ -138,8 +141,8 @@ export default function MembershipsPage() {
         setMemberships([]);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "تعذر تحميل خطط العضوية";
-      toast({ title: "تعذر تحميل خطط العضوية", description: message, variant: "destructive" });
+      const message = err instanceof Error ? err.message : t("toast.loadPlansErrorDesc");
+      toast({ title: t("toast.loadPlansErrorTitle"), description: message, variant: "destructive" });
       setMemberships([]);
     } finally {
       setIsLoading(false);
@@ -177,12 +180,12 @@ export default function MembershipsPage() {
       };
 
       const res = await api.post<{ message: string }>("/membership-plans", payload);
-      toast({ title: "تمت الإضافة", description: res?.data?.message || "تم إنشاء خطة العضوية" });
+      toast({ title: t("toast.createSuccessTitle"), description: res?.data?.message || t("toast.createSuccessDesc") });
       setCreateOpen(false);
       await refreshPlans();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "فشل إنشاء خطة العضوية";
-      toast({ title: "فشل الإضافة", description: message, variant: "destructive" });
+      const message = err instanceof Error ? err.message : t("toast.createErrorDesc");
+      toast({ title: t("toast.createErrorTitle"), description: message, variant: "destructive" });
     } finally {
       setCreating(false);
     }
@@ -218,12 +221,12 @@ export default function MembershipsPage() {
       };
 
       const res = await api.put<{ message: string }>(`/membership-plans/${editPlan.id}`, payload);
-      toast({ title: "تم الحفظ", description: res?.data?.message || "تم تحديث الخطة بنجاح" });
+      toast({ title: t("toast.editSuccessTitle"), description: res?.data?.message || t("toast.editSuccessDesc") });
       setEditPlan(null);
       await refreshPlans();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "فشل تحديث الخطة";
-      toast({ title: "فشل الحفظ", description: message, variant: "destructive" });
+      const message = err instanceof Error ? err.message : t("toast.editErrorDesc");
+      toast({ title: t("toast.editErrorTitle"), description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -234,27 +237,26 @@ export default function MembershipsPage() {
     setDeleting(true);
     try {
       const res = await api.delete<{ message: string }>(`/membership-plans/${deletePlan.id}`);
-      toast({ title: "تم الحذف", description: res?.data?.message || "تم حذف الخطة بنجاح" });
+      toast({ title: t("toast.deleteSuccessTitle"), description: res?.data?.message || t("toast.deleteSuccessDesc") });
       setDeletePlan(null);
       await refreshPlans();
     } catch (err: unknown) {
-      // Improved Error Handling for 409 Conflict
       const error = err as Record<string, unknown>;
       if (error && typeof error === "object" && "response" in error) {
         const response = error.response as Record<string, unknown>;
         if (response?.status === 409) {
           toast({
-            title: "لا يمكن الحذف",
-            description: "هذه الخطة مرتبطة باشتراكات أعضاء نشطة. يرجى تعطيل الخطة بدلاً من حذفها.",
+            title: t("toast.deleteConflictTitle"),
+            description: t("toast.deleteConflictDesc"),
             variant: "destructive",
           });
         } else {
-          const message = err instanceof Error ? err.message : "فشل حذف الخطة";
-          toast({ title: "فشل الحذف", description: message, variant: "destructive" });
+          const message = err instanceof Error ? err.message : t("toast.deleteErrorDesc");
+          toast({ title: t("toast.deleteErrorTitle"), description: message, variant: "destructive" });
         }
       } else {
-        const message = err instanceof Error ? err.message : "فشل حذف الخطة";
-        toast({ title: "فشل الحذف", description: message, variant: "destructive" });
+        const message = err instanceof Error ? err.message : t("toast.deleteErrorDesc");
+        toast({ title: t("toast.deleteErrorTitle"), description: message, variant: "destructive" });
       }
     } finally {
       setDeleting(false);
@@ -265,11 +267,11 @@ export default function MembershipsPage() {
     setToggling(plan.id);
     try {
       const res = await api.patch<{ message: string }>(`/membership-plans/${plan.id}/status`, { is_active: !plan.is_active });
-      toast({ title: "تم التحديث", description: res?.data?.message || "تم تغيير حالة الخطة" });
+      toast({ title: t("toast.statusSuccessTitle"), description: res?.data?.message || t("toast.statusSuccessDesc") });
       await refreshPlans();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "فشل تغيير الحالة";
-      toast({ title: "فشل التحديث", description: message, variant: "destructive" });
+      const message = err instanceof Error ? err.message : t("toast.statusErrorDesc");
+      toast({ title: t("toast.statusErrorTitle"), description: message, variant: "destructive" });
     } finally {
       setToggling(null);
     }
@@ -287,40 +289,38 @@ export default function MembershipsPage() {
     });
   }, [memberships, search]);
 
-  // Reset to page 1 when search changes
   useEffect(() => { setPage(1); }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Helper to find member type name
   const getMemberTypeName = (id: number) => {
     const type = memberTypes.find(t => t.id === id);
-    return type ? (type.name_ar || type.name_en) : id;
+    if (!type) return id;
+    return isRTL ? type.name_ar : (type.name_en || type.name_ar);
   };
 
   return (
     <RoleGuard privilege="VIEW_MEMBERSHIP_PLANS">
-      <div className="h-full flex flex-col overflow-y-auto p-6 space-y-6" dir="rtl">
+      <div className="h-full flex flex-col overflow-y-auto p-6 space-y-6" dir={isRTL ? "rtl" : "ltr"}>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">خطط العضوية</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <RoleGuard privilege="CREATE_MEMBERSHIP_PLAN">
             <Button className="gap-2" onClick={openCreate}>
               <Plus className="h-4 w-4" />
-              إضافة خطة عضوية
+              {t("create.title")}
             </Button>
           </RoleGuard>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="بحث بالكود أو الاسم..."
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 text-right"
-              dir="rtl"
+              className="ps-10"
             />
           </div>
         </div>
@@ -329,20 +329,20 @@ export default function MembershipsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الكود</TableHead>
-                <TableHead>نوع العضوية</TableHead>
-                <TableHead>الاسم</TableHead>
-                <TableHead>السعر</TableHead>
-                <TableHead>المدة (شهر)</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead className="w-[260px] text-center">الإجراءات</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.code")}</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.memberType")}</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.name")}</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.price")}</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.durationMonths")}</TableHead>
+                <TableHead className={isRTL ? "text-right" : "text-left"}>{t("table.status")}</TableHead>
+                <TableHead className="w-[260px] text-center">{t("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                    جاري التحميل...
+                    {t("table.loading")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -350,18 +350,18 @@ export default function MembershipsPage() {
                   <TableRow key={m.id} className="border-b border-border hover:bg-accent/10">
                     <TableCell className="font-poppins">{m.plan_code}</TableCell>
                     <TableCell>{getMemberTypeName(m.member_type_id)}</TableCell>
-                    <TableCell className="font-medium">{m.name_ar}</TableCell>
+                    <TableCell className="font-medium">{isRTL ? m.name_ar : (m.name_en || m.name_ar)}</TableCell>
                     <TableCell className="font-poppins">{m.price} {m.currency}</TableCell>
                     <TableCell className="font-poppins">{m.duration_months}</TableCell>
                     <TableCell>
                       <Badge className={m.is_active ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground"}>
-                        {m.is_active ? "نشط" : "غير نشط"}
+                        {m.is_active ? t("status.active") : t("status.inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Button size="sm" variant="outline" onClick={() => setSelectedPlan(m)} className="gap-1">
-                          <Eye className="h-3 w-3" /> عرض
+                          <Eye className="h-3 w-3" /> {t("action.view")}
                         </Button>
 
                         <RoleGuard privilege="UPDATE_MEMBERSHIP_PLAN">
@@ -371,7 +371,7 @@ export default function MembershipsPage() {
                             className="gap-1 text-accent border-accent hover:bg-accent hover:text-accent-foreground"
                             onClick={() => openEdit(m)}
                           >
-                            <Pencil className="h-3 w-3" /> تعديل
+                            <Pencil className="h-3 w-3" /> {t("action.edit")}
                           </Button>
                         </RoleGuard>
 
@@ -382,7 +382,7 @@ export default function MembershipsPage() {
                             className="gap-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
                             onClick={() => setDeletePlan(m)}
                           >
-                            <Trash2 className="h-3 w-3" /> حذف
+                            <Trash2 className="h-3 w-3" /> {t("action.delete")}
                           </Button>
                         </RoleGuard>
 
@@ -395,7 +395,7 @@ export default function MembershipsPage() {
                             disabled={toggling === m.id}
                           >
                             <Power className="h-3 w-3" />
-                            {toggling === m.id ? "..." : (m.is_active ? "تعطيل" : "تفعيل")}
+                            {toggling === m.id ? "..." : (m.is_active ? t("action.deactivate") : t("action.activate"))}
                           </Button>
                         </RoleGuard>
                       </div>
@@ -405,8 +405,8 @@ export default function MembershipsPage() {
               )}
               {!isLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                    لا يوجد خطط عضوية مطابقة للبحث
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    {t("table.noResults")}
                   </TableCell>
                 </TableRow>
               )}
@@ -414,158 +414,158 @@ export default function MembershipsPage() {
           </Table>
         </motion.div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-2" dir="rtl">
+          <div className="flex items-center justify-between pt-2">
             <p className="text-sm text-muted-foreground">
-              عرض {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} من {filtered.length}
+              {t("pagination.showing", { start: (page - 1) * PAGE_SIZE + 1, end: Math.min(page * PAGE_SIZE, filtered.length), total: filtered.length })}
             </p>
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>السابق</Button>
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>{t("pagination.prev")}</Button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <Button key={p} size="sm" variant={p === page ? "default" : "outline"} onClick={() => setPage(p)}>{p}</Button>
               ))}
-              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>التالي</Button>
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>{t("pagination.next")}</Button>
             </div>
           </div>
         )}
 
         <Dialog open={selectedPlan !== null} onOpenChange={() => setSelectedPlan(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
             <DialogHeader>
-              <DialogTitle>تفاصيل خطة العضوية</DialogTitle>
-              <DialogDescription>عرض البيانات الكاملة للخطة</DialogDescription>
+              <DialogTitle className={isRTL ? "text-right" : "text-left"}>{t("detail.title")}</DialogTitle>
+              <DialogDescription className={isRTL ? "text-right" : "text-left"}>{t("detail.description")}</DialogDescription>
             </DialogHeader>
 
             {selectedPlan && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-muted-foreground">الكود</div>
+                  <div className="text-xs text-muted-foreground">{t("table.code")}</div>
                   <div className="font-poppins font-semibold">{selectedPlan.plan_code}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">نوع العضوية</div>
+                  <div className="text-xs text-muted-foreground">{t("table.memberType")}</div>
                   <div className="font-medium">{getMemberTypeName(selectedPlan.member_type_id)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">الحالة</div>
-                  <div className="font-medium">{selectedPlan.is_active ? "نشط" : "غير نشط"}</div>
+                  <div className="text-xs text-muted-foreground">{t("table.status")}</div>
+                  <div className="font-medium">{selectedPlan.is_active ? t("status.active") : t("status.inactive")}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">الاسم (AR)</div>
+                  <div className="text-xs text-muted-foreground">{t("detail.nameAr")}</div>
                   <div className="font-medium">{selectedPlan.name_ar}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">الاسم (EN)</div>
+                  <div className="text-xs text-muted-foreground">{t("detail.nameEn")}</div>
                   <div className="font-medium" dir="ltr">{selectedPlan.name_en}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">السعر</div>
+                  <div className="text-xs text-muted-foreground">{t("table.price")}</div>
                   <div className="font-poppins font-semibold">{selectedPlan.price} {selectedPlan.currency}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">المدة (شهر)</div>
+                  <div className="text-xs text-muted-foreground">{t("table.durationMonths")}</div>
                   <div className="font-poppins font-semibold">{selectedPlan.duration_months}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">سعر التجديد</div>
+                  <div className="text-xs text-muted-foreground">{t("detail.renewalPrice")}</div>
                   <div className="font-poppins font-semibold">{selectedPlan.renewal_price} {selectedPlan.currency}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">قابل للتقسيط</div>
-                  <div className="font-medium">{selectedPlan.is_installable ? "نعم" : "لا"}</div>
+                  <div className="text-xs text-muted-foreground">{t("detail.installable")}</div>
+                  <div className="font-medium">{selectedPlan.is_installable ? t("common.yes") : t("common.no")}</div>
                 </div>
               </div>
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedPlan(null)}>إغلاق</Button>
+              <Button variant="outline" onClick={() => setSelectedPlan(null)}>{t("common.close")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={editPlan !== null} onOpenChange={() => setEditPlan(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
             <DialogHeader>
-              <DialogTitle>تعديل خطة العضوية</DialogTitle>
-              <DialogDescription>قم بتحديث بيانات الخطة ثم احفظ</DialogDescription>
+              <DialogTitle className={isRTL ? "text-right" : "text-left"}>{t("edit.title")}</DialogTitle>
+              <DialogDescription className={isRTL ? "text-right" : "text-left"}>{t("edit.description")}</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="mb-2 text-sm font-medium">الكود</div>
+                <div className="mb-2 text-sm font-medium">{t("table.code")}</div>
                 <Input value={editForm.plan_code} onChange={(e) => setEditForm((p) => ({ ...p, plan_code: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">العملة</div>
+                <div className="mb-2 text-sm font-medium">{t("edit.currency")}</div>
                 <Input value={editForm.currency} onChange={(e) => setEditForm((p) => ({ ...p, currency: e.target.value }))} dir="ltr" className="text-left" />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">الاسم (AR)</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.nameAr")}</div>
                 <Input value={editForm.name_ar} onChange={(e) => setEditForm((p) => ({ ...p, name_ar: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">الاسم (EN)</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.nameEn")}</div>
                 <Input value={editForm.name_en} onChange={(e) => setEditForm((p) => ({ ...p, name_en: e.target.value }))} dir="ltr" className="text-left" />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">السعر</div>
+                <div className="mb-2 text-sm font-medium">{t("table.price")}</div>
                 <Input type="number" value={editForm.price} onChange={(e) => setEditForm((p) => ({ ...p, price: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">سعر التجديد</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.renewalPrice")}</div>
                 <Input type="number" value={editForm.renewal_price} onChange={(e) => setEditForm((p) => ({ ...p, renewal_price: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">المدة (شهر)</div>
+                <div className="mb-2 text-sm font-medium">{t("table.durationMonths")}</div>
                 <Input type="number" value={editForm.duration_months} onChange={(e) => setEditForm((p) => ({ ...p, duration_months: e.target.value }))} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-7">
                 <input
                   type="checkbox"
                   checked={editForm.is_active}
                   onChange={(e) => setEditForm((p) => ({ ...p, is_active: e.target.checked }))}
                   className="h-4 w-4 accent-[hsl(var(--huc-accentBlue))]"
                 />
-                <span className="text-sm font-medium">نشط</span>
+                <span className="text-sm font-medium">{t("status.active")}</span>
               </div>
             </div>
 
             <DialogFooter>
-              <Button onClick={() => void saveEdit()} disabled={saving}>{saving ? "جارٍ الحفظ..." : "حفظ"}</Button>
-              <Button variant="outline" onClick={() => setEditPlan(null)} disabled={saving}>إلغاء</Button>
+              <Button onClick={() => void saveEdit()} disabled={saving}>{saving ? t("common.saving") : t("common.save")}</Button>
+              <Button variant="outline" onClick={() => setEditPlan(null)} disabled={saving}>{t("common.cancel")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
             <DialogHeader>
-              <DialogTitle>إضافة خطة عضوية</DialogTitle>
-              <DialogDescription>أدخل بيانات الخطة الجديدة ثم اضغط حفظ</DialogDescription>
+              <DialogTitle className={isRTL ? "text-right" : "text-left"}>{t("create.title")}</DialogTitle>
+              <DialogDescription className={isRTL ? "text-right" : "text-left"}>{t("create.description")}</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="mb-2 text-sm font-medium">نوع العضوية</div>
+                <div className="mb-2 text-sm font-medium">{t("table.memberType")}</div>
                 <Select
                   value={String(createForm.member_type_id)}
                   onValueChange={(val) => setCreateForm((p) => ({ ...p, member_type_id: val }))}
+                  dir={isRTL ? "rtl" : "ltr"}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر نوع العضوية" />
+                    <SelectValue placeholder={t("create.selectMemberType")} />
                   </SelectTrigger>
                   <SelectContent>
                     {memberTypes.map((type) => (
                       <SelectItem key={type.id} value={String(type.id)}>
-                        {type.name_ar} ({type.code})
+                        {isRTL ? type.name_ar : (type.name_en || type.name_ar)} ({type.code})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">العملة</div>
+                <div className="mb-2 text-sm font-medium">{t("edit.currency")}</div>
                 <Input
                   value={createForm.currency}
                   onChange={(e) => setCreateForm((p) => ({ ...p, currency: e.target.value }))}
@@ -574,24 +574,24 @@ export default function MembershipsPage() {
                 />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">الكود</div>
+                <div className="mb-2 text-sm font-medium">{t("table.code")}</div>
                 <Input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-7">
                 <input
                   type="checkbox"
                   checked={createForm.is_active}
                   onChange={(e) => setCreateForm((p) => ({ ...p, is_active: e.target.checked }))}
                   className="h-4 w-4 accent-[hsl(var(--huc-accentBlue))]"
                 />
-                <span className="text-sm font-medium">نشط</span>
+                <span className="text-sm font-medium">{t("status.active")}</span>
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">الاسم (AR)</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.nameAr")}</div>
                 <Input value={createForm.name_ar} onChange={(e) => setCreateForm((p) => ({ ...p, name_ar: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">الاسم (EN)</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.nameEn")}</div>
                 <Input
                   value={createForm.name_en}
                   onChange={(e) => setCreateForm((p) => ({ ...p, name_en: e.target.value }))}
@@ -600,11 +600,11 @@ export default function MembershipsPage() {
                 />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">السعر</div>
+                <div className="mb-2 text-sm font-medium">{t("table.price")}</div>
                 <Input type="number" value={createForm.price} onChange={(e) => setCreateForm((p) => ({ ...p, price: e.target.value }))} />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">سعر التجديد</div>
+                <div className="mb-2 text-sm font-medium">{t("detail.renewalPrice")}</div>
                 <Input
                   type="number"
                   value={createForm.renewal_price}
@@ -612,7 +612,7 @@ export default function MembershipsPage() {
                 />
               </div>
               <div>
-                <div className="mb-2 text-sm font-medium">المدة (شهر)</div>
+                <div className="mb-2 text-sm font-medium">{t("table.durationMonths")}</div>
                 <Input
                   type="number"
                   value={createForm.duration_months}
@@ -623,26 +623,26 @@ export default function MembershipsPage() {
 
             <DialogFooter>
               <Button onClick={() => void saveCreate()} disabled={creating}>
-                {creating ? "جارٍ الحفظ..." : "حفظ"}
+                {creating ? t("common.saving") : t("common.save")}
               </Button>
-              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>إلغاء</Button>
+              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>{t("common.cancel")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={deletePlan !== null} onOpenChange={() => setDeletePlan(null)}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg" dir={isRTL ? "rtl" : "ltr"}>
             <DialogHeader>
-              <DialogTitle>تأكيد الحذف</DialogTitle>
-              <DialogDescription>
-                هل أنت متأكد من حذف خطة العضوية {deletePlan?.name_ar}؟ لا يمكن التراجع عن هذا الإجراء.
+              <DialogTitle className={isRTL ? "text-right" : "text-left"}>{t("delete.title")}</DialogTitle>
+              <DialogDescription className={isRTL ? "text-right" : "text-left"}>
+                {t("delete.description", { name: isRTL ? deletePlan?.name_ar : (deletePlan?.name_en || deletePlan?.name_ar) })}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="destructive" onClick={() => void confirmDelete()} disabled={deleting}>
-                {deleting ? "جارٍ الحذف..." : "حذف"}
+                {deleting ? t("common.deleting") : t("action.delete")}
               </Button>
-              <Button variant="outline" onClick={() => setDeletePlan(null)} disabled={deleting}>إلغاء</Button>
+              <Button variant="outline" onClick={() => setDeletePlan(null)} disabled={deleting}>{t("common.cancel")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

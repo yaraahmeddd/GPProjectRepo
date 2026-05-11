@@ -1,16 +1,17 @@
 /**
- * SportManagementPage.tsx  (الأعضاء بالرياضة)
+ * SportManagementPage.tsx
  *
- * Dynamic page — shows team members filtered by sport.
+ * Dynamic page: shows team members filtered by sport.
  *
  * Layout matches SportsMembersPage:
- *   Left panel (280px) : sport cards  → GET /sports
- *   Right panel (flex) : members table → GET /sports/team-members[/sport/:name]
+ *   Left panel (280px): sport cards -> GET /sports
+ *   Right panel (flex): members table -> GET /sports/team-members[/sport/:name]
  *
  * Default sort: created_at DESC (newest first)
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
     Trophy, Users, Search, RefreshCw, Filter,
     ChevronUp, ChevronDown, ChevronsUpDown,
@@ -24,7 +25,7 @@ import {
 } from "../Component/StaffPagesComponents/ui/select";
 import { motion } from "framer-motion";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 type Sport = {
     id: number;
@@ -71,47 +72,72 @@ type ApiMember = {
 
 const PAGE_SIZE = 15;
 
-type SortField = "name" | "status" | "created_at";
+type SortField = "name" | "national_id" | "status" | "created_at";
 type SortDir = "asc" | "desc";
-
-// ─── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-    active: { label: "نشط", cls: "bg-emerald-100 text-emerald-700" },
-    approved: { label: "مقبول", cls: "bg-emerald-100 text-emerald-700" },
-    inactive: { label: "غير نشط", cls: "bg-rose-100 text-rose-700" },
-    rejected: { label: "مرفوض", cls: "bg-rose-100 text-rose-700" },
-    suspended: { label: "موقوف", cls: "bg-orange-100 text-orange-700" },
-    pending: { label: "قيد الانتظار", cls: "bg-amber-100 text-amber-800" },
+// Status config
+const STATUS_CLASSES: Record<string, string> = {
+    active: "bg-emerald-100 text-emerald-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    inactive: "bg-rose-100 text-rose-700",
+    rejected: "bg-rose-100 text-rose-700",
+    suspended: "bg-orange-100 text-orange-700",
+    pending: "bg-amber-100 text-amber-800",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// Helpers
 const fullNameAr = (m: ApiMember) =>
     [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ");
+
+const fullNameEn = (m: ApiMember) =>
+    [m.first_name_en, m.last_name_en].filter(Boolean).join(" ");
+
+const getLanguage = (language?: string): Language =>
+    (language ?? "ar").split("-")[0] === "en" ? "en" : "ar";
+
+const fullName = (m: ApiMember, language: Language) =>
+    language === "en" ? fullNameEn(m) || fullNameAr(m) : fullNameAr(m) || fullNameEn(m);
+
+const secondaryName = (m: ApiMember, language: Language) =>
+    language === "en" ? fullNameAr(m) : fullNameEn(m);
+
+const getSportName = (sport: Sport, language: Language) =>
+    language === "en" ? sport.nameEn || sport.nameAr : sport.nameAr || sport.nameEn;
+
+const getSportSecondaryName = (sport: Sport, language: Language) =>
+    language === "en" ? sport.nameAr : sport.nameEn;
+
+const getTeamName = (team: Team | { name_ar?: string; name_en?: string }, language: Language) =>
+    language === "en" ? team.name_en || team.name_ar || "" : team.name_ar || team.name_en || "";
 
 const sportTags = (m: ApiMember) =>
     m.team_member_teams ?? [];
 
-// ─── Sport Card (left panel) ──────────────────────────────────────────────────
+// Sport card
 
 function SportCard({
     sport,
     count,
     selected,
     onClick,
+    language,
+    isRTL,
+    allLabel,
 }: {
     sport: Sport | null;   // null = "All"
     count: number;
     selected: boolean;
     onClick: () => void;
+    language: Language;
+    isRTL: boolean;
+    allLabel: string;
 }) {
     const isAll = sport === null;
+    const secondary = sport ? getSportSecondaryName(sport, language) : "";
     return (
         <button
             onClick={onClick}
             className={`
-        w-full text-right rounded-xl border p-4 transition-all duration-150
+        w-full ${isRTL ? "text-right" : "text-left"} rounded-xl border p-4 transition-all duration-150
         flex items-start gap-3
         ${selected
                     ? "border-[#214474] bg-[#214474] text-white shadow-md"
@@ -129,16 +155,16 @@ function SportCard({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                     <p className={`text-sm font-bold leading-tight truncate ${selected ? "text-white" : "text-foreground"}`}>
-                        {isAll ? "الكل" : sport.nameAr}
+                        {isAll || !sport ? allLabel : getSportName(sport, language)}
                     </p>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold
             ${selected ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"}`}>
                         {count}
                     </span>
                 </div>
-                {!isAll && sport && (
+                {!isAll && sport && secondary && (
                     <p className={`mt-0.5 text-[11px] ${selected ? "text-white/70" : "text-muted-foreground"}`} dir="ltr">
-                        {sport.nameEn}
+                        {secondary}
                     </p>
                 )}
             </div>
@@ -146,7 +172,7 @@ function SportCard({
     );
 }
 
-// ─── Sort header helper ───────────────────────────────────────────────────────
+// Sort header helper
 
 function Th({
     field,
@@ -155,6 +181,7 @@ function Th({
     sortField,
     sortDir,
     onSort,
+    isRTL,
 }: {
     field?: SortField;
     children: React.ReactNode;
@@ -162,12 +189,13 @@ function Th({
     sortField: SortField;
     sortDir: SortDir;
     onSort: (f: SortField) => void;
+    isRTL: boolean;
 }) {
     return (
         <th
             onClick={() => field && onSort(field)}
             className={`
-        ${center ? "text-center" : "text-right"}
+        ${center ? "text-center" : isRTL ? "text-right" : "text-left"}
         px-4 py-3 text-xs font-semibold text-muted-foreground
         whitespace-nowrap select-none align-middle
         ${field ? "cursor-pointer hover:text-foreground" : ""}
@@ -187,33 +215,36 @@ function Th({
     );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// Main page
 
 export default function SportManagementPage() {
     const { toast } = useToast();
+    const { t, i18n } = useTranslation("SportManagementPage");
+    const language = getLanguage(i18n.resolvedLanguage ?? i18n.language);
+    const isRTL = language === "ar";
 
-    // ── Sports ──────────────────────────────────────────────────────────────────
+    // Sports
     const [sports, setSports] = useState<Sport[]>([]);
     const [sportsLoading, setSportsLoading] = useState(true);
     const [selectedSport, setSelectedSport] = useState<Sport | null>(null); // null = All
 
-    // ── Members ─────────────────────────────────────────────────────────────────
+    // Members
     const [members, setMembers] = useState<ApiMember[]>([]);
     const [membersLoading, setMembersLoading] = useState(false);
 
-    // ── Table state ─────────────────────────────────────────────────────────────
+    // Table state
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [sortField, setSortField] = useState<SortField>("created_at");  // default: date
     const [sortDir, setSortDir] = useState<SortDir>("desc");           // newest first
     const [page, setPage] = useState(1);
 
-    // ── Team sub-nav state ───────────────────────────────────────────────────────────────
-    const [selectedTeam, setSelectedTeam] = useState<{ id: string; name_ar: string } | null>(null);
+    // Team sub-nav state
+    const [selectedTeam, setSelectedTeam] = useState<{ id: string; name_ar: string; name_en?: string } | null>(null);
     const [teamsForSport, setTeamsForSport] = useState<Team[]>([]);
     const [teamsLoading, setTeamsLoading] = useState(false);
 
-    // ── Map API sport ────────────────────────────────────────────────────────────
+    // Map API sport
     const mapSport = (item: SportApiItem): Sport => ({
         id: item.id,
         nameAr: item.name_ar || item.name || "",
@@ -221,22 +252,26 @@ export default function SportManagementPage() {
         membersCount: item.membersCount ?? item.members_count ?? 0,
     });
 
-    // ── Fetch sports ─────────────────────────────────────────────────────────────
+    // Fetch sports
     const fetchSports = useCallback(async () => {
         setSportsLoading(true);
         try {
             const res = await api.get<{ data?: SportApiItem[] }>("/sports");
             setSports(Array.isArray(res?.data?.data) ? res.data.data.map(mapSport) : []);
         } catch (err) {
-            toast({ title: "تعذر تحميل الرياضات", description: err instanceof Error ? err.message : "خطأ", variant: "destructive" });
+            toast({
+                title: t("toasts.loadSportsFailed.title"),
+                description: err instanceof Error ? err.message : t("common.error"),
+                variant: "destructive",
+            });
         } finally {
             setSportsLoading(false);
         }
-    }, [toast]);
+    }, [t, toast]);
 
     useEffect(() => { void fetchSports(); }, [fetchSports]);
 
-    // ── Fetch members ────────────────────────────────────────────────────────────
+    // Fetch members
     const fetchMembers = useCallback(async (sport: Sport | null) => {
         setMembersLoading(true);
         try {
@@ -247,15 +282,19 @@ export default function SportManagementPage() {
             setMembers(Array.isArray(res?.data?.data) ? res.data.data : []);
         } catch (err) {
             setMembers([]);
-            toast({ title: "تعذر تحميل الأعضاء", description: err instanceof Error ? err.message : "خطأ", variant: "destructive" });
+            toast({
+                title: t("toasts.loadMembersFailed.title"),
+                description: err instanceof Error ? err.message : t("common.error"),
+                variant: "destructive",
+            });
         } finally {
             setMembersLoading(false);
         }
-    }, [toast]);
+    }, [t, toast]);
 
     useEffect(() => { void fetchMembers(selectedSport); }, [selectedSport, fetchMembers]);
 
-    // ── Fetch teams for selected sport (same pattern as SportsMembersPage line 338) ─────────
+    // Fetch teams for selected sport
     const fetchTeamsForSport = useCallback(async (sport: Sport) => {
         setTeamsLoading(true);
         setTeamsForSport([]);
@@ -283,7 +322,7 @@ export default function SportManagementPage() {
         }
     }, [selectedSport, fetchTeamsForSport]);
 
-    // ── Handle sport selection ────────────────────────────────────────────────────────────
+    // Handle sport selection
     const handleSelectSport = (sport: Sport | null) => {
         setSelectedSport(sport);
         setSelectedTeam(null);
@@ -293,13 +332,13 @@ export default function SportManagementPage() {
         setPage(1);
     };
 
-    // ── Sort ──────────────────────────────────────────────────────────────────────
+    // Sort
     const handleSort = (f: SortField) => {
         if (f === sortField) setSortDir((d) => d === "asc" ? "desc" : "asc");
         else { setSortField(f); setSortDir(f === "created_at" ? "desc" : "asc"); }
     };
 
-    // ── Processed list ────────────────────────────────────────────────────────────
+    // Processed list
     const processed = useMemo(() => {
         let r = [...members];
 
@@ -308,21 +347,23 @@ export default function SportManagementPage() {
         // Filter by selected team (client-side: match team_name in nested team_member_teams)
         if (selectedTeam) {
             r = r.filter((m) =>
-                (m.team_member_teams ?? []).some((t) => t.team_name === selectedTeam.name_ar)
+                (m.team_member_teams ?? []).some((t) =>
+                    t.team_name === selectedTeam.name_ar || t.team_name === selectedTeam.name_en
+                )
             );
         }
 
         if (search.trim()) {
             const q = search.toLowerCase();
             r = r.filter((m) =>
-                [fullNameAr(m), m.first_name_en, m.last_name_en, m.national_id, m.phone ?? ""]
+                [fullNameAr(m), fullNameEn(m), m.national_id, m.phone ?? ""]
                     .some((v) => v.toLowerCase().includes(q))
             );
         }
 
         r.sort((a, b) => {
             let cmp = 0;
-            if (sortField === "name") cmp = fullNameAr(a).localeCompare(fullNameAr(b));
+            if (sortField === "name") cmp = fullName(a, language).localeCompare(fullName(b, language));
             if (sortField === "national_id") cmp = a.national_id.localeCompare(b.national_id);
             if (sortField === "status") cmp = a.status.localeCompare(b.status);
             if (sortField === "created_at") cmp = a.created_at.localeCompare(b.created_at);
@@ -330,45 +371,41 @@ export default function SportManagementPage() {
         });
 
         return r;
-    }, [members, search, filterStatus, sortField, sortDir, selectedTeam]);
+    }, [members, search, filterStatus, sortField, sortDir, selectedTeam, language]);
 
     useEffect(() => { setPage(1); }, [search, filterStatus, sortField, sortDir, selectedSport, selectedTeam]);
 
     const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
     const pageRows = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    const thProps = { sortField, sortDir, onSort: handleSort };
+    const thProps = { sortField, sortDir, onSort: handleSort, isRTL };
 
-    // ─────────────────────────────────────────────────────────────────────────────
+
 
     return (
-        <div className="h-full flex flex-col overflow-hidden" dir="rtl">
-
-            {/* ── Page Header ── */}
-            <div
-                className="shrink-0 px-6 py-4 border-b border-border bg-background"
-            >
+        <div className="h-full flex flex-col overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+            <div className="shrink-0 px-6 py-4 border-b border-border bg-background">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                             <Trophy className="w-6 h-6 text-primary" />
-                            الأعضاء بالرياضة
+                            {t("header.title")}
                         </h1>
                         <div className="flex items-center gap-4 mt-1">
                             <p className="text-sm text-muted-foreground">
-                                إجمالي: <strong>{processed.length}</strong> عضو
-                                {membersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
+                                {t("header.total", { count: processed.length })}
+                                {membersLoading && <Loader2 className={`h-3.5 w-3.5 animate-spin inline ${isRTL ? "mr-1" : "ml-1"}`} />}
                             </p>
                             {selectedSport && (
                                 <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
                                     <Trophy className="w-3 h-3" />
-                                    {selectedSport.nameAr}
+                                    {getSportName(selectedSport, language)}
                                 </span>
                             )}
                             {!selectedSport && (
                                 <span className="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
                                     <Users className="w-3 h-3" />
-                                    كل الرياضات: {sports.length}
+                                    {t("header.allSports", { count: sports.length })}
                                 </span>
                             )}
                         </div>
@@ -379,31 +416,29 @@ export default function SportManagementPage() {
                         className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
                     >
                         <RefreshCw className={`h-4 w-4 ${(membersLoading || sportsLoading) ? "animate-spin" : ""}`} />
-                        تحديث
+                        {t("header.refresh")}
                     </button>
                 </div>
             </div>
 
-            {/* ── Body: two-panel ── */}
             <div className="flex flex-1 overflow-hidden">
-
-                {/* ── Left — Sport Cards ── */}
-                <aside className="flex w-[280px] shrink-0 flex-col border-l border-border overflow-y-auto">
+                <aside className={`flex w-[280px] shrink-0 flex-col ${isRTL ? "border-l" : "border-r"} border-border overflow-y-auto`}>
                     <div className="shrink-0 px-4 pt-4 pb-2">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                             {sportsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                            الرياضات
+                            {t("sidebar.sports")}
                         </p>
                     </div>
                     <div className="flex flex-col gap-2 px-3 pb-6">
-                        {/* All card */}
                         <SportCard
                             sport={null}
                             count={selectedSport ? 0 : members.length}
                             selected={selectedSport === null}
                             onClick={() => handleSelectSport(null)}
+                            language={language}
+                            isRTL={isRTL}
+                            allLabel={t("sidebar.all")}
                         />
-                        {/* Per-sport cards */}
                         {sports.map((sport) => (
                             <SportCard
                                 key={sport.id}
@@ -411,54 +446,52 @@ export default function SportManagementPage() {
                                 count={selectedSport?.id === sport.id ? members.length : sport.membersCount}
                                 selected={selectedSport?.id === sport.id}
                                 onClick={() => handleSelectSport(sport)}
+                                language={language}
+                                isRTL={isRTL}
+                                allLabel={t("sidebar.all")}
                             />
                         ))}
                     </div>
                 </aside>
 
-                {/* ── Right — Members ── */}
                 <main className="flex flex-1 flex-col overflow-hidden">
-
-                    {/* Toolbar */}
                     <div className="shrink-0 flex items-center gap-3 px-6 py-3 border-b border-border bg-muted/20">
                         <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none`} />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="بحث بالاسم أو الهاتف أو الرقم القومي..."
-                                className="pr-9 h-9"
+                                placeholder={t("toolbar.searchPlaceholder")}
+                                className={`${isRTL ? "pr-9" : "pl-9"} h-9`}
                             />
                         </div>
                         <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
                         <Select value={filterStatus} onValueChange={setFilterStatus}>
                             <SelectTrigger className="w-40 h-9">
-                                <SelectValue placeholder="كل الحالات" />
+                                <SelectValue placeholder={t("toolbar.allStatuses")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">كل الحالات</SelectItem>
-                                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                                <SelectItem value="all">{t("toolbar.allStatuses")}</SelectItem>
+                                {Object.keys(STATUS_CLASSES).map((status) => (
+                                    <SelectItem key={status} value={status}>{t(`status.${status}`)}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-xs text-muted-foreground">
-                            {processed.length} نتيجة
+                            {t("toolbar.results", { count: processed.length })}
                         </span>
                     </div>
 
-                    {/* ── Teams chip sub-nav (shown only when a sport is selected) ── */}
                     {selectedSport && (
                         <div className="shrink-0 border-b border-border bg-background px-6 py-2">
                             <div className="flex items-center gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
                                 {teamsLoading ? (
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        <span>جارٍ تحميل الفرق...</span>
+                                        <span>{t("teams.loading")}</span>
                                     </div>
                                 ) : (
                                     <>
-                                        {/* الكل chip */}
                                         <button
                                             onClick={() => setSelectedTeam(null)}
                                             className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-150 ${
@@ -467,12 +500,12 @@ export default function SportManagementPage() {
                                                     : "border-border bg-card text-muted-foreground hover:border-[#214474]/50 hover:text-foreground"
                                             }`}
                                         >
-                                            الكل
+                                            {t("teams.all")}
                                         </button>
                                         {teamsForSport.map((team) => (
                                             <button
                                                 key={team.id}
-                                                onClick={() => setSelectedTeam({ id: team.id, name_ar: team.name_ar })}
+                                                onClick={() => setSelectedTeam({ id: team.id, name_ar: team.name_ar, name_en: team.name_en })}
                                                 className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-150 ${
                                                     selectedTeam?.id === team.id
                                                         ? "border-[#214474] bg-[#214474] text-white shadow-sm"
@@ -480,7 +513,7 @@ export default function SportManagementPage() {
                                                 }`}
                                             >
                                                 <Trophy className="h-3 w-3" />
-                                                {team.name_ar}
+                                                {getTeamName(team, language)}
                                                 {team.max_participants != null && (
                                                     <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                                                         selectedTeam?.id === team.id ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
@@ -491,7 +524,7 @@ export default function SportManagementPage() {
                                             </button>
                                         ))}
                                         {teamsForSport.length === 0 && (
-                                            <span className="text-xs text-muted-foreground">لا توجد فرق لهذه الرياضة</span>
+                                            <span className="text-xs text-muted-foreground">{t("teams.empty")}</span>
                                         )}
                                     </>
                                 )}
@@ -499,101 +532,102 @@ export default function SportManagementPage() {
                         </div>
                     )}
 
-                    {/* Table */}
                     <div className="flex-1 overflow-auto">
                         {membersLoading ? (
                             <div className="py-20 flex flex-col items-center gap-3 text-muted-foreground">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary opacity-60" />
-                                <p className="text-sm">جارٍ تحميل الأعضاء...</p>
+                                <p className="text-sm">{t("table.loading")}</p>
                             </div>
                         ) : pageRows.length === 0 ? (
                             <div className="py-20 text-center text-muted-foreground">
                                 <UserCheck className="h-12 w-12 opacity-20 mx-auto mb-3" />
                                 <p className="text-sm">
                                     {search || filterStatus !== "all"
-                                        ? "لا توجد نتائج تطابق البحث"
+                                        ? t("table.emptyFiltered")
                                         : selectedSport
-                                            ? `لا يوجد أعضاء في رياضة ${selectedSport.nameAr}`
-                                            : "لا يوجد أعضاء"}
+                                            ? t("table.emptySport", { sport: getSportName(selectedSport, language) })
+                                            : t("table.empty")}
                                 </p>
                             </div>
                         ) : (
                             <table className="w-full text-sm">
                                 <thead className="sticky top-0 bg-muted/70 backdrop-blur border-b border-border z-10">
                                     <tr>
-                                        <Th field="name"       {...thProps}>العضو</Th>
-                                        <Th                    {...thProps}>رقم الهاتف</Th>
-                                        <Th field="national_id"{...thProps}>الرقم القومي</Th>
-                                        <Th                    {...thProps}>الرياضات</Th>
-                                        <Th field="created_at" {...thProps}>تاريخ الاشتراك</Th>
-                                        <Th field="status"     {...thProps} center>الحالة</Th>
+                                        <Th field="name" {...thProps}>{t("table.member")}</Th>
+                                        <Th {...thProps}>{t("table.phone")}</Th>
+                                        <Th field="national_id" {...thProps}>{t("table.nationalId")}</Th>
+                                        <Th {...thProps}>{t("table.sports")}</Th>
+                                        <Th field="created_at" {...thProps}>{t("table.subscriptionDate")}</Th>
+                                        <Th field="status" {...thProps} center>{t("table.status")}</Th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
-                                    {pageRows.map((m) => (
-                                        <tr key={m.id} className="hover:bg-muted/20 transition-colors">
-                                            <td className="px-4 py-3 font-semibold align-middle">
-                                                <div>{fullNameAr(m)}</div>
-                                                {(m.first_name_en || m.last_name_en) && (
-                                                    <div className="text-xs text-muted-foreground font-normal" dir="ltr">
-                                                        {[m.first_name_en, m.last_name_en].filter(Boolean).join(" ")}
+                                    {pageRows.map((m) => {
+                                        const secondary = secondaryName(m, language);
+                                        return (
+                                            <tr key={m.id} className="hover:bg-muted/20 transition-colors">
+                                                <td className="px-4 py-3 font-semibold align-middle">
+                                                    <div>{fullName(m, language)}</div>
+                                                    {secondary && (
+                                                        <div className="text-xs text-muted-foreground font-normal" dir={language === "en" ? "rtl" : "ltr"}>
+                                                            {secondary}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className={`${isRTL ? "text-right" : "text-left"} px-4 py-3 tabular-nums align-middle`}>
+                                                    <span dir="ltr">{m.phone ?? "-"}</span>
+                                                </td>
+                                                <td className={`${isRTL ? "text-right" : "text-left"} px-4 py-3 font-mono text-xs align-middle`}>
+                                                    <span dir="ltr">{m.national_id}</span>
+                                                </td>
+                                                <td className="px-4 py-3 align-middle">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {sportTags(m).length > 0
+                                                            ? sportTags(m).map((tag) => (
+                                                                <span key={tag.id}
+                                                                    className="inline-flex items-center gap-1 text-xs bg-[#214474]/10 text-[#214474] rounded-full px-2 py-0.5 font-medium"
+                                                                >
+                                                                    <Trophy className="h-3 w-3" />
+                                                                    {tag.team_name}
+                                                                </span>
+                                                            ))
+                                                            : <span className="text-muted-foreground text-xs">-</span>
+                                                        }
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 tabular-nums text-right align-middle">
-                                                <span dir="ltr">{m.phone ?? "—"}</span>
-                                            </td>
-                                            <td className="px-4 py-3 font-mono text-xs text-right align-middle">
-                                                <span dir="ltr">{m.national_id}</span>
-                                            </td>
-                                            <td className="px-4 py-3 align-middle">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {sportTags(m).length > 0
-                                                        ? sportTags(m).map((t) => (
-                                                            <span key={t.id}
-                                                                className="inline-flex items-center gap-1 text-xs bg-[#214474]/10 text-[#214474] rounded-full px-2 py-0.5 font-medium"
-                                                            >
-                                                                <Trophy className="h-3 w-3" />
-                                                                {t.team_name}
-                                                            </span>
-                                                        ))
-                                                        : <span className="text-muted-foreground text-xs">—</span>
-                                                    }
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums text-right align-middle">
-                                                <span dir="ltr">
-                                                    {m.created_at
-                                                        ? new Date(m.created_at).toLocaleDateString("ar-EG")
-                                                        : "—"}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center align-middle">
-                                                <span className={`inline-flex text-[11px] font-semibold rounded-full px-2.5 py-0.5
-                          ${STATUS_CONFIG[m.status]?.cls ?? "bg-muted text-muted-foreground"}`}>
-                                                    {STATUS_CONFIG[m.status]?.label ?? m.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className={`${isRTL ? "text-right" : "text-left"} px-4 py-3 text-xs text-muted-foreground tabular-nums align-middle`}>
+                                                    <span dir="ltr">
+                                                        {m.created_at
+                                                            ? new Date(m.created_at).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")
+                                                            : "-"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center align-middle">
+                                                    <span className={`inline-flex text-[11px] font-semibold rounded-full px-2.5 py-0.5 ${STATUS_CLASSES[m.status] ?? "bg-muted text-muted-foreground"}`}>
+                                                        {t(`status.${m.status}`, { defaultValue: m.status })}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         )}
                     </div>
 
-                    {/* Pagination */}
                     {!membersLoading && processed.length > PAGE_SIZE && (
                         <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border bg-muted/20 text-sm">
                             <span className="text-muted-foreground text-xs">
-                                صفحة {page} من {totalPages} · {processed.length} نتيجة
+                                {t("pagination.summary", { page, totalPages, count: processed.length })}
                             </span>
                             <div className="flex items-center gap-1">
                                 <button
                                     disabled={page <= 1}
                                     onClick={() => setPage((p) => p - 1)}
                                     className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"
+                                    aria-label={t("pagination.previous")}
                                 >
-                                    <ChevronRight className="h-4 w-4" />
+                                    {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                                 </button>
                                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                     const pg = page <= 3 ? i + 1
@@ -615,8 +649,9 @@ export default function SportManagementPage() {
                                     disabled={page >= totalPages}
                                     onClick={() => setPage((p) => p + 1)}
                                     className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"
+                                    aria-label={t("pagination.next")}
                                 >
-                                    <ChevronLeft className="h-4 w-4" />
+                                    {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                 </button>
                             </div>
                         </div>

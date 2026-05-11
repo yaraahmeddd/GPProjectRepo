@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Plus, Loader2, Pencil, Eye, Trash2, Search, RefreshCw, ChevronRight, ChevronLeft, Building2, XCircle } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import api from "../api/axios";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,8 @@ const PAGE_SIZE = 10;
 
 export default function FacultyManagementPage() {
     const { toast } = useToast();
+    const { t, i18n } = useTranslation("FacultyManagementPage");
+    const isRTL = i18n.language === 'ar';
     
     // State
     const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -57,13 +60,13 @@ export default function FacultyManagementPage() {
                 setFaculties([]);
             }
         } catch (err) {
-            const message = err instanceof Error ? err.message : "تعذر تحميل الكليات";
-            toast({ title: "فشل التحميل", description: message, variant: "destructive" });
+            const message = err instanceof Error ? err.message : t("errors.fetchFailed");
+            toast({ title: t("errors.fetchFailedTitle"), description: message, variant: "destructive" });
             setFaculties([]);
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [toast, t]);
 
     useEffect(() => {
         void fetchFaculties();
@@ -77,7 +80,7 @@ export default function FacultyManagementPage() {
         if (!q) return faculties;
         return faculties.filter((f) => 
             f.name_ar.toLowerCase().includes(q) || 
-            f.name_en.toLowerCase().includes(q) || 
+            (f.name_en && f.name_en.toLowerCase().includes(q)) || 
             f.code.toLowerCase().includes(q)
         );
     }, [faculties, search]);
@@ -100,7 +103,7 @@ export default function FacultyManagementPage() {
 
     const handleSave = async () => {
         if (!form.code.trim() || !form.name_ar.trim() || !form.name_en.trim()) {
-            toast({ title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول المطلوبة.", variant: "destructive" });
+            toast({ title: t("errors.missingDataTitle"), description: t("errors.missingDataDesc"), variant: "destructive" });
             return;
         }
 
@@ -109,17 +112,17 @@ export default function FacultyManagementPage() {
             const body = { code: form.code, name_ar: form.name_ar, name_en: form.name_en };
             if (editFaculty) {
                 await api.put(`/faculties/${editFaculty.id}`, body);
-                toast({ title: "تم التحديث", description: "تم تحديث بيانات الكلية بنجاح" });
+                toast({ title: t("success.updatedTitle"), description: t("success.updatedDesc") });
             } else {
                 await api.post("/faculties", body);
-                toast({ title: "تمت الإضافة", description: "تمت إضافة الكلية بنجاح" });
+                toast({ title: t("success.addedTitle"), description: t("success.addedDesc") });
             }
             setIsAddOpen(false);
             void fetchFaculties();
         } catch (err) {
             const e = err as { status?: number, responseData?: { message?: string, error?: string }, message?: string };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند الحفظ";
-            toast({ title: "فشل الحفظ", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("errors.saveFailedDesc");
+            toast({ title: t("errors.saveFailedTitle"), description: msg, variant: "destructive" });
         } finally {
             setSaveLoading(false);
         }
@@ -130,13 +133,13 @@ export default function FacultyManagementPage() {
         setDeleteLoading(true);
         try {
             await api.delete(`/faculties/${deleteId}`);
-            toast({ title: "تم الحذف", description: "تم حذف الكلية بنجاح" });
+            toast({ title: t("success.deletedTitle"), description: t("success.deletedDesc") });
             setDeleteId(null);
             void fetchFaculties();
         } catch (err) {
             const e = err as { status?: number, responseData?: { message?: string, error?: string }, message?: string };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند الحذف";
-            toast({ title: "فشل الحذف", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("errors.deleteFailedDesc");
+            toast({ title: t("errors.deleteFailedTitle"), description: msg, variant: "destructive" });
         } finally {
             setDeleteLoading(false);
         }
@@ -155,7 +158,7 @@ export default function FacultyManagementPage() {
                 const res = await api.get<{ data: { name_ar?: string, full_name?: string, first_name_ar?: string, last_name_ar?: string } }>(`/members/${numericId}`);
                 const m = res?.data?.data;
                 if (m) {
-                    const fullName = m.name_ar || m.full_name || [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ") || "عضو";
+                    const fullName = m.name_ar || m.full_name || [m.first_name_ar, m.last_name_ar].filter(Boolean).join(" ") || t("page.genericMember");
                     setMemberName(fullName);
                     setMemberLookupState("found");
                 } else {
@@ -166,31 +169,31 @@ export default function FacultyManagementPage() {
             }
         }, 500);
         return () => clearTimeout(timer);
-    }, [memberIdForAssign]);
+    }, [memberIdForAssign, t]);
 
     const handleAssign = async () => {
         if (!assignFaculty || !memberIdForAssign.trim()) {
-            toast({ title: "بيانات ناقصة", description: "يرجى تحديد العضو المطلوب.", variant: "destructive" });
+            toast({ title: t("errors.missingDataTitle"), description: t("errors.missingMemberDesc"), variant: "destructive" });
             return;
         }
         setAssignLoading(true);
         try {
             await api.post(`/faculties/${assignFaculty.id}/assign-to-member/${memberIdForAssign.trim()}`);
-            toast({ title: "تم التعيين", description: "تم ربط العضو بالكلية بنجاح" });
+            toast({ title: t("success.assignedTitle"), description: t("success.assignedDesc") });
             setAssignFaculty(null);
             setMemberIdForAssign("");
             setMemberName("");
         } catch (err) {
             const e = err as { status?: number, responseData?: { message?: string, error?: string }, message?: string };
-            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || "حدث خطأ غير متوقع عند التعيين";
-            toast({ title: "فشل التعيين", description: msg, variant: "destructive" });
+            const msg = e?.responseData?.error || e?.responseData?.message || e?.message || t("errors.assignFailedDesc");
+            toast({ title: t("errors.assignFailedTitle"), description: msg, variant: "destructive" });
         } finally {
             setAssignLoading(false);
         }
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col gap-0 bg-zinc-50/50" dir="rtl">
+        <div className="h-[calc(100vh-4rem)] flex flex-col gap-0 bg-zinc-50/50" dir={isRTL ? "rtl" : "ltr"}>
 
             {/* ── Page Header ── */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-zinc-200/60 bg-white shrink-0 z-10 shadow-[0_1px_3px_0_rgb(0,0,0,0.01)]">
@@ -199,10 +202,10 @@ export default function FacultyManagementPage() {
                         <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                             <Building2 className="w-5 h-5 text-primary" />
                         </div>
-                        إدارة الكليات
+                        {t("page.title")}
                     </h1>
-                    <p className="text-[13px] font-medium text-zinc-500 mt-1.5 pr-12">
-                        إجمالي الكليات الأكاديمية المسجلة: <strong className="text-zinc-800">{faculties.length}</strong>
+                    <p className={`text-[13px] font-medium text-zinc-500 mt-1.5 ${isRTL ? "pr-12" : "pl-12"}`}>
+                        {t("page.totalFaculties")} <strong className="text-zinc-800">{faculties.length}</strong>
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -213,7 +216,7 @@ export default function FacultyManagementPage() {
                             onClick={openAdd}
                         >
                             <Plus className="w-4 h-4" />
-                            إضافة كلية
+                            {t("page.addFacultyBtn")}
                         </Button>
                     </RoleGuard>
                 </div>
@@ -227,14 +230,14 @@ export default function FacultyManagementPage() {
                     <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 bg-white shrink-0 flex-wrap">
 
                         {/* Pagination component */}
-                        <div className="flex items-center gap-1.5 shrink-0 bg-zinc-50/80 p-1 rounded-lg border border-zinc-100">
+                        <div className="flex items-center gap-1.5 shrink-0 bg-zinc-50/80 p-1 rounded-lg border border-zinc-100" dir="ltr">
                             <button
                                 disabled={page <= 1 || loading}
                                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                                 className="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-zinc-500 transition-all disabled:opacity-40"
-                                aria-label="الصفحة السابقة"
+                                aria-label={t("page.prevPage")}
                             >
-                                <ChevronRight className="w-4 h-4" />
+                                <ChevronLeft className="w-4 h-4" />
                             </button>
 
                             {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -265,9 +268,9 @@ export default function FacultyManagementPage() {
                                 disabled={page >= totalPages || loading}
                                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                 className="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-zinc-500 transition-all disabled:opacity-40"
-                                aria-label="الصفحة التالية"
+                                aria-label={t("page.nextPage")}
                             >
-                                <ChevronLeft className="w-4 h-4" />
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
 
@@ -275,12 +278,12 @@ export default function FacultyManagementPage() {
 
                         {/* Search Input */}
                         <div className="relative w-full sm:w-80">
-                            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                            <Search className={`absolute ${isRTL ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none`} />
                             <Input
-                                placeholder="بحث بالاسم، أو الكود..."
+                                placeholder={t("page.searchPlaceholder")}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pr-10 h-10 text-[13px] bg-zinc-50/50 border-zinc-200/80 rounded-xl focus-visible:ring-primary/20 focus-visible:bg-white transition-all shadow-inner"
+                                className={`${isRTL ? "pr-10 pl-4" : "pl-10 pr-4"} h-10 text-[13px] bg-zinc-50/50 border-zinc-200/80 rounded-xl focus-visible:ring-primary/20 focus-visible:bg-white transition-all shadow-inner`}
                             />
                         </div>
 
@@ -289,7 +292,7 @@ export default function FacultyManagementPage() {
                             onClick={() => { void fetchFaculties(); }}
                             disabled={loading}
                             className="p-2.5 rounded-xl hover:bg-zinc-100 transition-colors text-zinc-500 disabled:opacity-40 border border-transparent hover:border-zinc-200"
-                            title="تحديث البيانات"
+                            title={t("page.refreshBtn")}
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                         </button>
@@ -300,27 +303,26 @@ export default function FacultyManagementPage() {
                         {loading ? (
                             <div className="py-24 text-center text-zinc-400">
                                 <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-4" />
-                                <p className="text-sm font-medium tracking-wide">جارٍ جلب السجلات...</p>
+                                <p className="text-sm font-medium tracking-wide">{t("page.fetchingRecords")}</p>
                             </div>
                         ) : filteredRows.length === 0 ? (
                             <div className="py-24 text-center text-zinc-400 flex flex-col items-center">
                                 <div className="rounded-full bg-zinc-50 border border-zinc-100 p-6 mb-5">
                                     <Building2 className="h-10 w-10 text-zinc-300" />
                                 </div>
-                                <h3 className="text-[15px] font-bold text-zinc-800 mb-1.5">لا توجد كليات مسجلة</h3>
+                                <h3 className="text-[15px] font-bold text-zinc-800 mb-1.5">{t("page.noFaculties")}</h3>
                                 <p className="text-[13px] max-w-sm">
-                                    {search ? `لا توجد نتائج مطابقة لـ "${search}"` : "لم يتم إدراج أي كليات بعد. أضف كلياتك الأكاديمية الآن."}
+                                    {search ? t("page.noSearchResults", { search }) : t("page.noFacultiesDesc")}
                                 </p>
                             </div>
                         ) : (
-                            <table className="w-full text-sm text-right">
+                            <table className={`w-full text-sm ${isRTL ? "text-right" : "text-left"}`}>
                                 <thead className="sticky top-0 bg-white z-10 before:absolute before:inset-0 before:border-b before:border-zinc-100 before:pointer-events-none">
                                     <tr>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle w-12">#</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الكلية (عربي)</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الكلية (إنجليزي)</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle">الكود المرجعي</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">الإجراءات</th>
+                                        <th className={`px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle w-12 ${isRTL ? "text-right" : "text-left"}`}>{t("table.serial")}</th>
+                                        <th className={`px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle ${isRTL ? "text-right" : "text-left"}`}>{t("table.name")}</th>
+                                        <th className={`px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle ${isRTL ? "text-right" : "text-left"}`}>{t("table.code")}</th>
+                                        <th className="px-6 py-4 font-bold text-[11px] uppercase tracking-wider text-zinc-400 whitespace-nowrap align-middle text-center">{t("table.actions")}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100">
@@ -331,19 +333,14 @@ export default function FacultyManagementPage() {
                                                 {(page - 1) * PAGE_SIZE + idx + 1}
                                             </td>
 
-                                            {/* Name (AR) */}
-                                            <td className="px-6 py-3.5 align-middle font-bold text-zinc-900 border-r-2 border-transparent group-hover:border-primary/40 transition-all">
-                                                {faculty.name_ar}
-                                            </td>
-
-                                            {/* Name (EN) */}
-                                            <td className="px-6 py-3.5 align-middle text-zinc-500 font-medium tracking-wide" dir="ltr">
-                                                {faculty.name_en || "—"}
+                                            {/* Name */}
+                                            <td className={`px-6 py-3.5 align-middle font-bold text-zinc-900 border-transparent group-hover:border-primary/40 transition-all ${isRTL ? "border-r-2" : "border-l-2"}`} dir={isRTL ? "rtl" : "ltr"}>
+                                                {isRTL ? faculty.name_ar : (faculty.name_en || faculty.name_ar)}
                                             </td>
 
                                             {/* Code */}
                                             <td className="px-6 py-3.5 align-middle">
-                                                <span className="bg-zinc-100/80 text-zinc-600 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-widest border border-zinc-200/60 shadow-sm">
+                                                <span className="bg-zinc-100/80 text-zinc-600 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-widest border border-zinc-200/60 shadow-sm" dir="ltr">
                                                     {faculty.code}
                                                 </span>
                                             </td>
@@ -354,7 +351,7 @@ export default function FacultyManagementPage() {
                                                     
                                                     <RoleGuard privilege="UPDATE_FACULTY">
                                                         <button
-                                                            title="تعديل"
+                                                            title={t("actions.edit")}
                                                             onClick={() => openEdit(faculty)}
                                                             className="p-1.5 rounded-lg hover:bg-zinc-900 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-zinc-800"
                                                         >
@@ -364,7 +361,7 @@ export default function FacultyManagementPage() {
 
                                                     <RoleGuard privilege="ASSIGN_FACULTY_TO_MEMBER">
                                                         <button
-                                                            title="تعيين عضو"
+                                                            title={t("actions.assignMember")}
                                                             onClick={() => setAssignFaculty(faculty)}
                                                             className="p-1.5 rounded-lg hover:bg-zinc-900 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-zinc-800"
                                                         >
@@ -374,7 +371,7 @@ export default function FacultyManagementPage() {
 
                                                     <RoleGuard privilege="DELETE_FACULTY">
                                                         <button
-                                                            title="حذف الكلية"
+                                                            title={t("actions.delete")}
                                                             onClick={() => setDeleteId(faculty.id)}
                                                             className="p-1.5 rounded-lg hover:bg-rose-500 hover:text-white text-zinc-500 transition-all shadow-sm border border-transparent hover:border-rose-600"
                                                         >
@@ -396,72 +393,73 @@ export default function FacultyManagementPage() {
 
             {/* ── Dialogs ── */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogContent className="sm:max-w-[425px]" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle>{editFaculty ? "تعديل كلية" : "إضافة كلية جديدة"}</DialogTitle>
+                <DialogContent className="sm:max-w-[425px]" dir={isRTL ? "rtl" : "ltr"}>
+                    <DialogHeader className={isRTL ? "text-right" : "text-left"}>
+                        <DialogTitle>{editFaculty ? t("modalAdd.editTitle") : t("modalAdd.addTitle")}</DialogTitle>
                         <DialogDescription>
-                            {editFaculty ? "قم بتعديل بيانات الكلية المحددة." : "أدخل بيانات الكلية الجديدة، الكود يستخدم للتعريف السريع."}
+                            {editFaculty ? t("modalAdd.editDesc") : t("modalAdd.addDesc")}
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="code">الكود (Code) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="code" className={isRTL ? "text-right" : "text-left"}>{t("modalAdd.codeLabel")}</Label>
                             <Input 
                                 id="code" 
                                 dir="ltr" 
-                                className="text-left font-mono uppercase" 
+                                className={`text-left font-mono uppercase`} 
                                 value={form.code} 
                                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} 
-                                placeholder="ENG" 
+                                placeholder={t("modalAdd.codePlaceholder")} 
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="name_ar">الاسم (عربي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="name_ar" className={isRTL ? "text-right" : "text-left"}>{t("modalAdd.nameArLabel")}</Label>
                             <Input 
                                 id="name_ar" 
                                 value={form.name_ar} 
                                 onChange={(e) => setForm({ ...form, name_ar: e.target.value })} 
-                                placeholder="مثال: هندسة" 
+                                placeholder={t("modalAdd.nameArPlaceholder")} 
+                                dir={isRTL ? "rtl" : "auto"}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="name_en">الاسم (إنجليزي) <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="name_en" className={isRTL ? "text-right" : "text-left"}>{t("modalAdd.nameEnLabel")}</Label>
                             <Input 
                                 id="name_en" 
                                 dir="ltr" 
                                 className="text-left" 
                                 value={form.name_en} 
                                 onChange={(e) => setForm({ ...form, name_en: e.target.value })} 
-                                placeholder="Engineering" 
+                                placeholder={t("modalAdd.nameEnPlaceholder")} 
                             />
                         </div>
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saveLoading}>إلغاء</Button>
+                    <DialogFooter className={`gap-2 sm:gap-0 ${isRTL ? 'sm:justify-start' : 'sm:justify-end'}`}>
+                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saveLoading}>{t("common.cancel")}</Button>
                         <Button onClick={() => void handleSave()} disabled={saveLoading} className="w-full sm:w-auto">
-                            {saveLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {saveLoading ? "جارٍ الحفظ..." : "حفظ الكلية"}
+                            {saveLoading && <Loader2 className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />}
+                            {saveLoading ? t("modalAdd.saving") : t("modalAdd.saveBtn")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-                <DialogContent dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-destructive">تأكيد الحذف</DialogTitle>
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
+                    <DialogHeader className={isRTL ? "text-right" : "text-left"}>
+                        <DialogTitle className="text-destructive">{t("modalDelete.title")}</DialogTitle>
                         <DialogDescription>
-                            هل أنت متأكد من حذف هذه الكلية؟ لا يمكن التراجع عن هذا الإجراء وسيؤثر على السجلات المرتبطة بها.
+                            {t("modalDelete.desc")}
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter className="gap-2 sm:justify-start">
+                    <DialogFooter className={`gap-2 ${isRTL ? 'sm:justify-start' : 'sm:justify-end'}`}>
                         <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteLoading}>
-                            {deleteLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {deleteLoading ? "جارٍ الحذف..." : "تأكيد الحذف"}
+                            {deleteLoading && <Loader2 className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />}
+                            {deleteLoading ? t("modalDelete.deleting") : t("modalDelete.confirmBtn")}
                         </Button>
-                        <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>{t("common.cancel")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -469,60 +467,60 @@ export default function FacultyManagementPage() {
             <Dialog open={assignFaculty !== null} onOpenChange={(open) => { 
                 if (!open) { setAssignFaculty(null); setMemberIdForAssign(""); setMemberName(""); } 
             }}>
-                <DialogContent dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle>تعيين عضو في الكلية</DialogTitle>
+                <DialogContent dir={isRTL ? "rtl" : "ltr"}>
+                    <DialogHeader className={isRTL ? "text-right" : "text-left"}>
+                        <DialogTitle>{t("modalAssign.title")}</DialogTitle>
                         <DialogDescription>
-                            تحديد العضو المراد ربطه بكلية: <span className="font-bold underline text-primary">{assignFaculty?.name_ar}</span>
+                            {t("modalAssign.desc")} <span className="font-bold underline text-primary">{assignFaculty?.name_ar}</span>
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="py-4">
-                        <Label htmlFor="memberIdAssign">رقم العضو <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="memberIdAssign" className={isRTL ? "text-right block" : "text-left block"}>{t("modalAssign.memberIdLabel")}</Label>
                         <div className="relative mt-2">
                             <Input
                                 id="memberIdAssign"
                                 dir="ltr"
-                                className="text-left font-mono pr-8"
-                                placeholder="رقم العضو (مثل: 5049)"
+                                className={`text-left font-mono ${isRTL ? 'pr-8 pl-3' : 'pr-3 pl-8'}`}
+                                placeholder={t("modalAssign.memberIdPlaceholder")}
                                 value={memberIdForAssign}
                                 onChange={(e) => setMemberIdForAssign(e.target.value)}
                             />
                             {memberLookupState === "loading" && (
-                                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                <Loader2 className={`absolute ${isRTL ? 'right-2.5' : 'left-2.5'} top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground`} />
                             )}
                             {memberLookupState === "found" && (
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 bg-emerald-100 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold">✓</span>
+                                <span className={`absolute ${isRTL ? 'right-2' : 'left-2'} top-1/2 -translate-y-1/2 text-emerald-600 bg-emerald-100 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold`}>✓</span>
                             )}
                         </div>
                         {memberLookupState === "notfound" && (
                             <p className="text-[12px] text-destructive flex items-center gap-1 mt-2">
                                 <XCircle className="w-3 h-3" />
-                                لم يُعثر على عضو يطابق هذا الرقم
+                                {t("modalAssign.memberNotFound")}
                             </p>
                         )}
                         {memberLookupState === "idle" && !memberIdForAssign.trim() && (
                             <p className="text-[12px] text-muted-foreground mt-2">
-                                أدخل أرقاماً صحيحة وسيبدأ البحث التلقائي
+                                {t("modalAssign.enterNumbers")}
                             </p>
                         )}
                         {memberLookupState === "found" && (
                             <p className="text-sm font-medium text-emerald-700 mt-3 p-2 bg-emerald-50 rounded-md border border-emerald-100">
-                                الاسم: {memberName}
+                                {t("modalAssign.nameLabel")} {memberName}
                             </p>
                         )}
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
+                    <DialogFooter className={`gap-2 sm:gap-0 ${isRTL ? 'sm:justify-start' : 'sm:justify-end'}`}>
                         <Button 
                             onClick={() => void handleAssign()} 
                             disabled={assignLoading || memberLookupState !== "found"}
                             className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
                         >
-                            {assignLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {assignLoading ? "جارٍ الربط..." : "تأكيد التعيين"}
+                            {assignLoading && <Loader2 className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />}
+                            {assignLoading ? t("modalAssign.assigning") : t("modalAssign.assignBtn")}
                         </Button>
-                        <Button variant="outline" onClick={() => setAssignFaculty(null)} disabled={assignLoading}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setAssignFaculty(null)} disabled={assignLoading}>{t("common.cancel")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
