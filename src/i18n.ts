@@ -27,6 +27,15 @@ import arCourtsManagementPage from './i18n/locales/ar/CourtsManagementPage.json'
 import arCourtBookingsPage from './i18n/locales/ar/CourtBookingsPage.json';
 import arTeamsManagementPage from './i18n/locales/ar/TeamsManagementPage.json';
 import arSportsMembersPage from './i18n/locales/ar/SportsMembersPage.json';
+import arSportManagementPage from './i18n/locales/ar/SportManagementPage.json';
+import arMemberShipsPage from './i18n/locales/ar/MemberShipsPage.json';
+import arPackageManagementPage from './i18n/locales/ar/PackageManagementPage.json';
+import arPrivilegePackageAdminPage from './i18n/locales/ar/PrivilegePackageAdminPage.json';
+import arMediaGalleryDashboard from './i18n/locales/ar/MediaGalleryDashboard.json';
+import arBranchManagementPage from './i18n/locales/ar/BranchManagementPage.json';
+import arMediaManagerPage from './i18n/locales/ar/MediaManagerPage.json';
+import arFacultyManagementPage from './i18n/locales/ar/FacultyManagementPage.json';
+import arProfessionManagementPage from './i18n/locales/ar/ProfessionManagementPage.json';
 
 // ─── English namespaces ───────────────────────────────────────────────────────
 import enCommon from './i18n/locales/en/common.json';
@@ -53,6 +62,15 @@ import enCourtsManagementPage from './i18n/locales/en/CourtsManagementPage.json'
 import enCourtBookingsPage from './i18n/locales/en/CourtBookingsPage.json';
 import enTeamsManagementPage from './i18n/locales/en/TeamsManagementPage.json';
 import enSportsMembersPage from './i18n/locales/en/SportsMembersPage.json';
+import enSportManagementPage from './i18n/locales/en/SportManagementPage.json';
+import enMemberShipsPage from './i18n/locales/en/MemberShipsPage.json';
+import enPackageManagementPage from './i18n/locales/en/PackageManagementPage.json';
+import enPrivilegePackageAdminPage from './i18n/locales/en/PrivilegePackageAdminPage.json';
+import enMediaGalleryDashboard from './i18n/locales/en/MediaGalleryDashboard.json';
+import enBranchManagementPage from './i18n/locales/en/BranchManagementPage.json';
+import enMediaManagerPage from './i18n/locales/en/MediaManagerPage.json';
+import enFacultyManagementPage from './i18n/locales/en/FacultyManagementPage.json';
+import enProfessionManagementPage from './i18n/locales/en/ProfessionManagementPage.json';
 
 const RTL_LANGUAGES = new Set(['ar']);
 
@@ -97,6 +115,15 @@ void i18n
         CourtBookingsPage: arCourtBookingsPage,
         TeamsManagementPage: arTeamsManagementPage,
         SportsMembersPage: arSportsMembersPage,
+        SportManagementPage: arSportManagementPage,
+        MemberShipsPage: arMemberShipsPage,
+        PackageManagementPage: arPackageManagementPage,
+        PrivilegePackageAdminPage: arPrivilegePackageAdminPage,
+        MediaGalleryDashboard: arMediaGalleryDashboard,
+        BranchManagementPage: arBranchManagementPage,
+        MediaManagerPage: arMediaManagerPage,
+        FacultyManagementPage: arFacultyManagementPage,
+        ProfessionManagementPage: arProfessionManagementPage,
       },
       en: {
         common: enCommon,
@@ -123,6 +150,15 @@ void i18n
         CourtBookingsPage: enCourtBookingsPage,
         TeamsManagementPage: enTeamsManagementPage,
         SportsMembersPage: enSportsMembersPage,
+        SportManagementPage: enSportManagementPage,
+        MemberShipsPage: enMemberShipsPage,
+        PackageManagementPage: enPackageManagementPage,
+        PrivilegePackageAdminPage: enPrivilegePackageAdminPage,
+        MediaGalleryDashboard: enMediaGalleryDashboard,
+        BranchManagementPage: enBranchManagementPage,
+        MediaManagerPage: enMediaManagerPage,
+        FacultyManagementPage: enFacultyManagementPage,
+        ProfessionManagementPage: enProfessionManagementPage,
       },
     },
 
@@ -137,7 +173,8 @@ void i18n
       'RegistrationManagementPage', 'faculties', 'branches',
       'professions', 'media', 'admin', 'landing', 'team', 'member',
       'MemberManagementPage', 'ManageInvitationsPage', 'SportsPage',
-      'CourtsManagementPage', 'CourtBookingsPage', 'TeamsManagementPage', 'SportsMembersPage'
+      'CourtsManagementPage', 'CourtBookingsPage', 'TeamsManagementPage', 'SportsMembersPage',
+      'SportManagementPage', 'MemberShipsPage', 'PackageManagementPage', 'PrivilegePackageAdminPage', 'MediaGalleryDashboard', 'MediaManagerPage', 'FacultyManagementPage', 'BranchManagementPage', 'ProfessionManagementPage'
     ],
 
     interpolation: { escapeValue: false },

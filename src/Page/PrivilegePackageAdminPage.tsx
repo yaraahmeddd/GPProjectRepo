@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, X, Search, CheckSquare, Square } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 // ─── Brand tokens (unchanged) ────────────────────────────────────────────────
 const theme = {
@@ -16,40 +17,40 @@ const theme = {
 type PrivilegeItem = { id: number; name: string };
 type ModuleItem = { id: string; name: string; privileges: PrivilegeItem[] };
 
-// ─── Fallback mock data ───────────────────────────────────────────────────────
-const mockModules: ModuleItem[] = [
-  { id: "members", name: "إدارة الأعضاء", privileges: [{ id: -1, name: "إضافة عضو" }, { id: -2, name: "تعديل بيانات عضو" }, { id: -3, name: "حذف عضو" }, { id: -4, name: "طباعة بطاقة عضو" }] },
-  { id: "teams", name: "إدارة الفرق", privileges: [{ id: -5, name: "إضافة فريق" }, { id: -6, name: "تعديل فريق" }, { id: -7, name: "حذف فريق" }] },
-  { id: "media", name: "الوسائط", privileges: [{ id: -8, name: "إضافة وسائط" }, { id: -9, name: "حذف وسائط" }] },
-  { id: "finance", name: "إدارة المالية", privileges: [{ id: -10, name: "عرض البيانات المالية" }, { id: -11, name: "إنشاء معاملة" }, { id: -12, name: "تعديل معاملة" }, { id: -13, name: "حذف معاملة" }] },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const toModuleId = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-const moduleNameTranslations: Record<string, string> = {
-  members: "الأعضاء", member: "العضو", member_types: "أنواع الأعضاء",
-  team_members: "أعضاء الفريق", membership_plans: "خطط العضوية",
-  staff: "الموظفون", staff_types: "أنواع الموظفين", finance: "الشؤون المالية",
-  events: "الفعاليات", sports: "الأنشطة الرياضية", maintenance: "الصيانة",
-  media: "الوسائط", media_center: "المركز الإعلامي", mediagallery: "معرض الوسائط",
-  faculties: "الكليات", professions: "المهن", admin: "الإدارة",
-  privilege_management: "إدارة الصلاحيات", package_management: "إدارة الحزم",
-  general: "عام", teams: "الفرق", reports: "التقارير", tasks: "المهام",
-  audit: "سجلات التدقيق",
-};
-
-const getArabicModuleName = (name: string): string => {
-  const key = name.toLowerCase().trim().replace(/[-\s]/g, "_");
-  return moduleNameTranslations[key] ?? moduleNameTranslations[name.toLowerCase().trim()] ?? name;
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PrivilegePackageAdminPage() {
   const { toast } = useToast();
+  const { t, i18n } = useTranslation("PrivilegePackageAdminPage");
+  const isRTL = i18n.language === "ar";
+
+  // Fallback mock data
+  const mockModules: ModuleItem[] = [
+    { id: "members", name: t("modules.members"), privileges: [{ id: -1, name: "إضافة عضو" }, { id: -2, name: "تعديل بيانات عضو" }, { id: -3, name: "حذف عضو" }, { id: -4, name: "طباعة بطاقة عضو" }] },
+    { id: "teams", name: t("modules.teams"), privileges: [{ id: -5, name: "إضافة فريق" }, { id: -6, name: "تعديل فريق" }, { id: -7, name: "حذف فريق" }] },
+    { id: "media", name: t("modules.media"), privileges: [{ id: -8, name: "إضافة وسائط" }, { id: -9, name: "حذف وسائط" }] },
+    { id: "finance", name: t("modules.finance"), privileges: [{ id: -10, name: "عرض البيانات المالية" }, { id: -11, name: "إنشاء معاملة" }, { id: -12, name: "تعديل معاملة" }, { id: -13, name: "حذف معاملة" }] },
+  ];
+
+  // Helper to translate module names
+  const getArabicModuleName = (name: string): string => {
+    const key = name.toLowerCase().trim().replace(/[-\s]/g, "_");
+    const trans = t(`modules.${key}`);
+    // If translation doesn't exist, i18next returns the key string
+    if (trans && !trans.startsWith("modules.")) {
+      return trans;
+    }
+    const exactTrans = t(`modules.${name.toLowerCase().trim()}`);
+    if (exactTrans && !exactTrans.startsWith("modules.")) {
+      return exactTrans;
+    }
+    return name;
+  };
 
   // Form fields
   const [packageName, setPackageName] = useState("");
@@ -85,7 +86,7 @@ export default function PrivilegePackageAdminPage() {
                 .map((item) => {
                   const priv = item as Record<string, unknown>;
                   const id = Number(priv?.id);
-                  const name = String(priv?.name_ar || priv?.name_en || priv?.code || priv?.id || "").trim();
+                  const name = String(isRTL ? (priv?.name_ar || priv?.name_en || priv?.code) : (priv?.name_en || priv?.name_ar || priv?.code) || priv?.id || "").trim();
                   return { id, name };
                 })
                 .filter((p) => Number.isFinite(p.id) && p.id > 0 && p.name)
@@ -106,7 +107,7 @@ export default function PrivilegePackageAdminPage() {
       }
     };
     void load();
-  }, []);
+  }, [isRTL]); // Reload on language change so names get updated
 
   // ── Computed values ────────────────────────────────────────────────────────
 
@@ -178,11 +179,11 @@ export default function PrivilegePackageAdminPage() {
 
   const handleSave = async () => {
     setError("");
-    if (!packageName.trim()) { setError("اسم الباقة مطلوب"); return; }
-    if (selectedPrivileges.size === 0) { setError("يجب تحديد صلاحية واحدة على الأقل"); return; }
+    if (!packageName.trim()) { setError(t("errors.nameRequired")); return; }
+    if (selectedPrivileges.size === 0) { setError(t("errors.minPrivilege")); return; }
     const privilegeIds = Array.from(selectedPrivileges);
     if (privilegeIds.some((id) => id < 0)) {
-      setError("الصلاحيات لم تُحمَّل من الخادم بعد. يرجى الانتظار أو تحديث الصفحة.");
+      setError(t("errors.notLoaded"));
       return;
     }
     setIsSaving(true);
@@ -194,11 +195,11 @@ export default function PrivilegePackageAdminPage() {
         code, name_en: packageName.trim(), name_ar: packageName.trim(),
         description: description.trim() || undefined, privilege_ids: privilegeIds,
       });
-      toast({ title: "تم الحفظ", description: "تم إنشاء الباقة على الخادم بنجاح" });
+      toast({ title: t("toast.saveSuccessTitle"), description: t("toast.saveSuccessDesc") });
       handleReset();
     } catch (err) {
       console.error(err);
-      setError("حدث خطأ أثناء حفظ الباقة. يرجى المحاولة مرة أخرى.");
+      setError(t("errors.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -207,14 +208,14 @@ export default function PrivilegePackageAdminPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden" dir="rtl" style={{ backgroundColor: theme.background }}>
+    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden" dir={isRTL ? "rtl" : "ltr"} style={{ backgroundColor: theme.background }}>
 
       {/* ── Compact Header ── */}
       <div className="flex items-center justify-between px-6 py-3 border-b bg-white shrink-0" style={{ borderColor: theme.border }}>
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: theme.primaryDark }}>إنشاء باقة صلاحيات</h1>
+        <div className={isRTL ? "text-right" : "text-left"}>
+          <h1 className="text-xl font-bold" style={{ color: theme.primaryDark }}>{t("page.title")}</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            {loadingModules ? "⏳ جارٍ تحميل الصلاحيات..." : `${totalPrivileges} صلاحية في ${modules.length} وحدة`}
+            {loadingModules ? t("page.loading") : t("page.stats", { total: totalPrivileges, modules: modules.length })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -224,7 +225,7 @@ export default function PrivilegePackageAdminPage() {
             <span>{selectedCount}</span>
             <span className="text-gray-400 font-normal">/</span>
             <span className="text-gray-500 font-normal">{totalPrivileges}</span>
-            <span className="text-gray-500 font-normal text-xs">مختارة</span>
+            <span className="text-gray-500 font-normal text-xs">{t("page.selected")}</span>
           </div>
         </div>
       </div>
@@ -233,62 +234,66 @@ export default function PrivilegePackageAdminPage() {
       <div className="flex flex-1 min-h-0 gap-0">
 
         {/* ── LEFT: Package form (sticky, 25%) ── */}
-        <div className="w-64 shrink-0 flex flex-col border-l overflow-y-auto bg-white" style={{ borderColor: theme.border }}>
+        <div className={`w-64 shrink-0 flex flex-col ${isRTL ? "border-l" : "border-r"} overflow-y-auto bg-white`} style={{ borderColor: theme.border }}>
           <div className="p-4 space-y-4 flex-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">تفاصيل الباقة</p>
+            <p className={`text-xs font-bold uppercase tracking-widest text-gray-400 ${isRTL ? "text-right" : "text-left"}`}>{t("page.packageDetails")}</p>
 
             {/* Package name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">اسم الباقة *</label>
+              <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${isRTL ? "text-right" : "text-left"}`}>{t("page.packageName")}</label>
               <input
                 type="text"
                 value={packageName}
                 onChange={(e) => setPackageName(e.target.value)}
-                placeholder="مثال: باقة مدير الفرع"
+                placeholder={t("page.packageNamePlaceholder")}
                 className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all"
                 style={{ borderColor: error && !packageName.trim() ? "#EF4444" : theme.border }}
+                dir="auto"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">الوصف <span className="text-gray-400 font-normal">(اختياري)</span></label>
+              <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${isRTL ? "text-right" : "text-left"}`}>
+                {t("page.description")} <span className="text-gray-400 font-normal">{t("page.optional")}</span>
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="وصف مختصر..."
+                placeholder={t("page.descriptionPlaceholder")}
                 rows={3}
                 className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all resize-none"
                 style={{ borderColor: theme.border }}
+                dir="auto"
               />
             </div>
 
             {/* Error */}
             {error && (
-              <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <div className={`text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 ${isRTL ? "text-right" : "text-left"}`}>
                 {error}
               </div>
             )}
 
             {/* Stats */}
             <div className="rounded-xl p-3 border space-y-2" style={{ borderColor: theme.border, backgroundColor: `${theme.accentBlue}08` }}>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">إحصاء</p>
+              <p className={`text-xs font-bold text-gray-500 uppercase tracking-wide ${isRTL ? "text-right" : "text-left"}`}>{t("page.statsTitle")}</p>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">الصلاحيات المختارة</span>
+                <span className="text-gray-600">{t("page.selectedPrivileges")}</span>
                 <span className="font-bold" style={{ color: theme.accentBlue }}>{selectedCount}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">الإجمالي</span>
+                <span className="text-gray-600">{t("page.total")}</span>
                 <span className="font-bold text-gray-700">{totalPrivileges}</span>
               </div>
               {/* Progress bar */}
-              <div className="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden" dir="ltr">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${totalPrivileges > 0 ? (selectedCount / totalPrivileges) * 100 : 0}%`, backgroundColor: theme.accentBlue }}
                 />
               </div>
-              <div className="text-[10px] text-gray-400 text-left" dir="ltr">
+              <div className={`text-[10px] text-gray-400 ${isRTL ? "text-right" : "text-left"}`} dir="ltr">
                 {totalPrivileges > 0 ? Math.round((selectedCount / totalPrivileges) * 100) : 0}%
               </div>
             </div>
@@ -296,14 +301,14 @@ export default function PrivilegePackageAdminPage() {
             {/* Module breakdown */}
             {selectedCount > 0 && (
               <div className="space-y-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">توزيع الوحدات</p>
+                <p className={`text-xs font-bold text-gray-400 uppercase tracking-wide ${isRTL ? "text-right" : "text-left"}`}>{t("page.moduleDistribution")}</p>
                 {modules.map((m) => {
                   const count = m.privileges.filter((p) => selectedPrivileges.has(p.id)).length;
                   if (count === 0) return null;
                   return (
                     <div key={m.id} className="flex items-center justify-between text-xs py-1">
                       <span className="text-gray-600 truncate">{m.name}</span>
-                      <span className="shrink-0 font-semibold text-gray-800 mr-1">{count}/{m.privileges.length}</span>
+                      <span className={`shrink-0 font-semibold text-gray-800 ${isRTL ? "ml-1" : "mr-1"}`} dir="ltr">{count}/{m.privileges.length}</span>
                     </div>
                   );
                 })}
@@ -313,23 +318,23 @@ export default function PrivilegePackageAdminPage() {
         </div>
 
         {/* ── CENTER: Modules accordion (scrollable, 50%) ── */}
-        <div className="flex-1 flex flex-col min-w-0 border-l" style={{ borderColor: theme.border }}>
+        <div className={`flex-1 flex flex-col min-w-0 ${isRTL ? "border-l" : "border-r"}`} style={{ borderColor: theme.border }}>
 
           {/* Search + filter bar */}
           <div className="px-4 py-3 border-b bg-white shrink-0" style={{ borderColor: theme.border }}>
             <div className="relative mb-3">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
               <input
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder="ابحث في الوحدات والصلاحيات..."
-                className="w-full pr-10 pl-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all"
+                placeholder={t("page.searchPlaceholder")}
+                className={`w-full ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"} py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all`}
                 style={{ borderColor: theme.border }}
               />
             </div>
             {/* Quick filter pills */}
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {(["all", "selected", "unselected"] as const).map((f) => (
                 <button
                   key={f}
@@ -340,7 +345,7 @@ export default function PrivilegePackageAdminPage() {
                     : { backgroundColor: theme.border, color: "#4B5563" }
                   }
                 >
-                  {f === "all" ? "الكل" : f === "selected" ? `المحددة (${selectedCount})` : "غير المحددة"}
+                  {f === "all" ? t("page.all") : f === "selected" ? t("page.selectedFilter", { count: selectedCount }) : t("page.unselectedFilter")}
                 </button>
               ))}
               {(globalSearch || viewFilter !== "all") && (
@@ -348,7 +353,7 @@ export default function PrivilegePackageAdminPage() {
                   onClick={() => { setGlobalSearch(""); setViewFilter("all"); }}
                   className="px-2 py-1 rounded-full text-xs text-gray-500 hover:text-red-500 transition-colors flex items-center gap-1"
                 >
-                  <X className="w-3 h-3" /> مسح
+                  <X className="w-3 h-3" /> {t("page.clear")}
                 </button>
               )}
             </div>
@@ -361,7 +366,7 @@ export default function PrivilegePackageAdminPage() {
                 <div key={i} className="h-14 rounded-xl bg-white border animate-pulse" style={{ borderColor: theme.border }} />
               ))
             ) : filteredModules.length === 0 ? (
-              <div className="py-16 text-center text-gray-400 text-sm">لا توجد صلاحيات مطابقة للبحث</div>
+              <div className="py-16 text-center text-gray-400 text-sm">{t("page.noResults")}</div>
             ) : (
               filteredModules.map((m) => {
                 const isExpanded = expandedModules.has(m.id);
@@ -374,16 +379,16 @@ export default function PrivilegePackageAdminPage() {
                     {/* Module header */}
                     <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none hover:bg-gray-50 transition-colors"
                       onClick={() => toggleExpand(m.id)}>
-                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isExpanded ? "" : "-rotate-90"}`} />
-                      <div className="flex-1 min-w-0">
+                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isExpanded ? "" : (isRTL ? "rotate-90" : "-rotate-90")}`} />
+                      <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
                         <p className="font-semibold text-gray-800 text-sm truncate">{m.name}</p>
-                        <p className="text-[11px] text-gray-400">{m.privileges.length} صلاحية</p>
+                        <p className="text-[11px] text-gray-400">{t("page.privilegeCount", { count: m.privileges.length })}</p>
                       </div>
 
                       {/* Selection badge */}
                       {moduleSelected > 0 && (
                         <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                          style={{ backgroundColor: allSel ? theme.accentBlue : `${theme.accentBlue}99` }}>
+                          style={{ backgroundColor: allSel ? theme.accentBlue : `${theme.accentBlue}99` }} dir="ltr">
                           {moduleSelected}/{m.privileges.length}
                         </span>
                       )}
@@ -396,10 +401,10 @@ export default function PrivilegePackageAdminPage() {
                           ? { borderColor: theme.accentBlue, color: theme.accentBlue, backgroundColor: `${theme.accentBlue}12` }
                           : { borderColor: theme.border, color: "#6B7280" }
                         }
-                        title={allSel ? "إلغاء تحديد الكل" : "تحديد الكل"}
+                        title={allSel ? t("page.deselectAll") : t("page.selectAll")}
                       >
                         {allSel ? <CheckSquare className="w-3.5 h-3.5" /> : someSel ? <CheckSquare className="w-3.5 h-3.5 opacity-50" /> : <Square className="w-3.5 h-3.5" />}
-                        {allSel ? "إلغاء الكل" : "تحديد الكل"}
+                        {allSel ? t("page.deselectAll") : t("page.selectAll")}
                       </button>
                     </div>
 
@@ -432,28 +437,28 @@ export default function PrivilegePackageAdminPage() {
         </div>
 
         {/* ── RIGHT: Selected privileges sidebar (sticky, 25%) ── */}
-        <div className="w-64 shrink-0 flex flex-col bg-white border-r" style={{ borderColor: theme.border }}>
+        <div className={`w-64 shrink-0 flex flex-col bg-white ${isRTL ? "border-r" : "border-l"}`} style={{ borderColor: theme.border }}>
           <div className="px-4 py-3 border-b shrink-0" style={{ borderColor: theme.border }}>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">المختارة</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{t("page.selectedTitle")}</p>
               {selectedCount > 0 && (
                 <button
                   onClick={() => setSelectedPrivileges(new Set())}
                   className="text-[11px] text-red-500 hover:text-red-600 transition-colors font-medium"
                 >
-                  مسح الكل
+                  {t("page.clearAll")}
                 </button>
               )}
             </div>
             {selectedCount > 0 && (
               <div className="relative">
-                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Search className={`absolute ${isRTL ? "right-2.5" : "left-2.5"} top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400`} />
                 <input
                   type="text"
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
-                  placeholder="بحث داخل المختارة..."
-                  className="w-full pr-8 pl-2 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-all"
+                  placeholder={t("page.sidebarSearch")}
+                  className={`w-full ${isRTL ? "pr-8 pl-2" : "pl-8 pr-2"} py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-all`}
                   style={{ borderColor: theme.border }}
                 />
               </div>
@@ -467,16 +472,16 @@ export default function PrivilegePackageAdminPage() {
                   style={{ backgroundColor: `${theme.accentBlue}12` }}>
                   <CheckSquare className="w-6 h-6" style={{ color: theme.accentBlue }} />
                 </div>
-                <p className="text-sm font-medium text-gray-500">لم تُحدَّد صلاحيات بعد</p>
-                <p className="text-xs mt-1 leading-relaxed">اضغط على أي صلاحية في القائمة لإضافتها</p>
+                <p className="text-sm font-medium text-gray-500">{t("page.noSelectedTitle")}</p>
+                <p className="text-xs mt-1 leading-relaxed">{t("page.noSelectedDesc")}</p>
               </div>
             ) : sidebarGroups.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-6">لا توجد نتائج للبحث</p>
+              <p className="text-xs text-gray-400 text-center py-6">{t("page.noSidebarResults")}</p>
             ) : (
               <div className="space-y-4">
                 {sidebarGroups.map((g) => (
                   <div key={g.moduleId}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 px-1">{g.moduleName}</p>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 px-1 ${isRTL ? "text-right" : "text-left"}`}>{g.moduleName}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {g.items.map((p) => (
                         <span
@@ -488,7 +493,7 @@ export default function PrivilegePackageAdminPage() {
                           <button
                             onClick={() => togglePrivilege(p.id)}
                             className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
-                            title="إزالة"
+                            title={t("page.remove")}
                           >
                             <X className="w-2.5 h-2.5" />
                           </button>
@@ -510,7 +515,7 @@ export default function PrivilegePackageAdminPage() {
       >
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-600">
-            <span className="font-bold" style={{ color: theme.accentBlue }}>{selectedCount}</span> صلاحية مختارة
+            <span className="font-bold mx-1" style={{ color: theme.accentBlue }}>{selectedCount}</span> {t("page.selectedSummarySuffix")}
           </span>
           {error && <span className="text-xs text-red-500">{error}</span>}
         </div>
@@ -520,7 +525,7 @@ export default function PrivilegePackageAdminPage() {
             disabled={isSaving}
             className="px-5 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40"
           >
-            إلغاء
+            {t("page.cancel")}
           </button>
           <button
             onClick={() => void handleSave()}
@@ -528,7 +533,7 @@ export default function PrivilegePackageAdminPage() {
             className="px-6 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             style={{ backgroundColor: theme.primaryDark }}
           >
-            {isSaving ? "جارٍ الحفظ..." : "حفظ الباقة"}
+            {isSaving ? t("page.saving") : t("page.save")}
           </button>
         </div>
       </div>

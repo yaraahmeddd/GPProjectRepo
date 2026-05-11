@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, ShieldCheck, X, AlertTriangle, Eye, Search } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const theme = {
   primaryDark: "#1F3A5F",
@@ -36,6 +37,8 @@ function PrivilegesModal({
   pkg: Package;
   onClose: () => void;
 }) {
+  const { t, i18n } = useTranslation("PackageManagementPage");
+  const isRTL = i18n.language === "ar";
   const [search, setSearch] = useState("");
   const privileges = pkg.privileges ?? [];
 
@@ -49,21 +52,19 @@ function PrivilegesModal({
     });
   }, [privileges, search]);
 
-  // Group by module if available
   const grouped = useMemo(() => {
     const hasModules = filtered.some((p) => p.module);
     if (!hasModules) return null;
 
     const map = new Map<string, Privilege[]>();
     filtered.forEach((p) => {
-      const key = p.module || "عام";
+      const key = p.module || t("privModal.generalModule");
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     });
     return Array.from(map.entries());
-  }, [filtered]);
+  }, [filtered, t]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -73,12 +74,10 @@ function PrivilegesModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      dir="rtl"
+      dir={isRTL ? "rtl" : "ltr"}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-
-        {/* Header */}
         <div className="px-6 py-4 border-b shrink-0" style={{ borderColor: theme.border }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -86,9 +85,10 @@ function PrivilegesModal({
                 <ShieldCheck className="w-4 h-4" style={{ color: theme.accentBlue }} />
               </div>
               <div>
-                <h2 className="text-base font-bold" style={{ color: theme.primaryDark }}>{pkg.name_en}</h2>
+                <h2 className="text-base font-bold" style={{ color: theme.primaryDark }}>{isRTL ? (pkg.name_ar || pkg.name_en) : pkg.name_en}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  <span className="font-semibold" style={{ color: theme.accentBlue }}>{privileges.length}</span> صلاحية مرتبطة
+                  <span className="font-semibold mx-1" style={{ color: theme.accentBlue }}>{privileges.length}</span>
+                  {t("privModal.associatedPrivileges")}
                 </p>
               </div>
             </div>
@@ -100,22 +100,21 @@ function PrivilegesModal({
             </button>
           </div>
 
-          {/* Search */}
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="ابحث في الصلاحيات..."
+              placeholder={t("privModal.searchPlaceholder")}
               autoFocus
-              className="w-full pr-10 pl-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all"
+              className={`w-full ${isRTL ? "pr-10 pl-3" : "pl-10 pr-3"} py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all`}
               style={{ borderColor: theme.border }}
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600`}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -123,26 +122,24 @@ function PrivilegesModal({
           </div>
           {search && (
             <p className="text-xs text-gray-400 mt-2">
-              {filtered.length} نتيجة من {privileges.length}
+              {t("privModal.resultsCount", { filtered: filtered.length, total: privileges.length })}
             </p>
           )}
         </div>
 
-        {/* Privilege list */}
         <div className="flex-1 overflow-y-auto p-5">
           {filtered.length === 0 ? (
             <div className="py-16 text-center text-gray-400">
               <Search className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">لا توجد صلاحيات مطابقة</p>
+              <p className="text-sm">{t("privModal.noResults")}</p>
             </div>
           ) : grouped ? (
-            // Grouped by module
             <div className="space-y-5">
               {grouped.map(([mod, items]) => (
                 <div key={mod}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">
+                  <p className={`text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1 ${isRTL ? "text-right" : "text-left"}`}>
                     {mod}
-                    <span className="mr-1.5 text-gray-300">({items.length})</span>
+                    <span className="mx-1.5 text-gray-300">({items.length})</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {items.map((p) => (
@@ -151,7 +148,7 @@ function PrivilegesModal({
                         className="px-3 py-1.5 rounded-full text-xs font-medium text-white"
                         style={{ backgroundColor: theme.accentBlue }}
                       >
-                        {p.name_ar || p.name_en || p.code}
+                        {isRTL ? (p.name_ar || p.name_en || p.code) : (p.name_en || p.name_ar || p.code)}
                       </span>
                     ))}
                   </div>
@@ -159,7 +156,6 @@ function PrivilegesModal({
               ))}
             </div>
           ) : (
-            // Flat list
             <div className="flex flex-wrap gap-2">
               {filtered.map((p) => (
                 <span
@@ -167,21 +163,20 @@ function PrivilegesModal({
                   className="px-3 py-1.5 rounded-full text-xs font-medium text-white"
                   style={{ backgroundColor: theme.accentBlue }}
                 >
-                  {p.name_ar || p.name_en || p.code}
+                  {isRTL ? (p.name_ar || p.name_en || p.code) : (p.name_en || p.name_ar || p.code)}
                 </span>
               ))}
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-3 border-t bg-gray-50 shrink-0 flex justify-end" style={{ borderColor: theme.border }}>
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border hover:bg-gray-100 transition-colors"
             style={{ borderColor: theme.border }}
           >
-            إغلاق
+            {t("common.close")}
           </button>
         </div>
       </div>
@@ -201,8 +196,11 @@ function DeleteModal({
   onCancel: () => void;
   isDeleting: boolean;
 }) {
+  const { t, i18n } = useTranslation("PackageManagementPage");
+  const isRTL = i18n.language === "ar";
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" dir={isRTL ? "rtl" : "ltr"}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         <div className="p-6">
           <div className="flex items-start gap-4">
@@ -210,10 +208,9 @@ function DeleteModal({
               <AlertTriangle className="w-6 h-6 text-red-600" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-gray-900 mb-1">حذف الباقة</h2>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                هل أنت متأكد من حذف باقة <span className="font-bold text-gray-800">"{pkg.name_en}"</span>؟
-                سيتم إزالة هذه الباقة من جميع الموظفين المرتبطين بها. لا يمكن التراجع عن هذا الإجراء.
+              <h2 className={`text-lg font-bold text-gray-900 mb-1 ${isRTL ? "text-right" : "text-left"}`}>{t("deleteModal.title")}</h2>
+              <p className={`text-sm text-gray-500 leading-relaxed ${isRTL ? "text-right" : "text-left"}`}>
+                {t("deleteModal.desc1")} <span className="font-bold text-gray-800">"{isRTL ? (pkg.name_ar || pkg.name_en) : pkg.name_en}"</span>{t("deleteModal.desc2")}
               </p>
             </div>
           </div>
@@ -225,14 +222,14 @@ function DeleteModal({
             className="px-5 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border hover:bg-gray-100 transition-colors disabled:opacity-40"
             style={{ borderColor: theme.border }}
           >
-            إلغاء
+            {t("common.cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={isDeleting}
             className="px-5 py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isDeleting ? "جارٍ الحذف..." : "تأكيد الحذف"}
+            {isDeleting ? t("common.deleting") : t("deleteModal.confirm")}
           </button>
         </div>
       </div>
@@ -252,51 +249,60 @@ function EditModal({
   onCancel: () => void;
   isSaving: boolean;
 }) {
-  const [name, setName] = useState(pkg.name_en);
+  const { t, i18n } = useTranslation("PackageManagementPage");
+  const isRTL = i18n.language === "ar";
+  
+  const initialName = isRTL ? (pkg.name_ar || pkg.name_en) : pkg.name_en;
+  
+  const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(pkg.description || "");
   const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    if (!name.trim()) { setError("اسم الباقة مطلوب"); return; }
+    if (!name.trim()) { setError(t("editModal.nameRequired")); return; }
     onSave(pkg.id, name.trim(), description.trim());
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" dir={isRTL ? "rtl" : "ltr"}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: theme.border }}>
-          <h2 className="text-lg font-bold" style={{ color: theme.primaryDark }}>تعديل الباقة</h2>
+          <h2 className="text-lg font-bold" style={{ color: theme.primaryDark }}>{t("editModal.title")}</h2>
           <button onClick={onCancel} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">اسم الباقة *</label>
+            <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${isRTL ? "text-right" : "text-left"}`}>{t("editModal.nameLabel")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(""); }}
               className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all"
               style={{ borderColor: error ? "#EF4444" : theme.border }}
+              dir="auto"
             />
-            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+            {error && <p className={`text-xs text-red-500 mt-1 ${isRTL ? "text-right" : "text-left"}`}>{error}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">الوصف <span className="text-gray-400 font-normal">(اختياري)</span></label>
+            <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${isRTL ? "text-right" : "text-left"}`}>
+              {t("editModal.descLabel")} <span className="text-gray-400 font-normal">{t("editModal.optional")}</span>
+            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="وصف مختصر..."
+              placeholder={t("editModal.descPlaceholder")}
               className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 transition-all resize-none"
               style={{ borderColor: theme.border }}
+              dir="auto"
             />
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t" style={{ borderColor: theme.border }}>
           <button onClick={onCancel} disabled={isSaving} className="px-5 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border hover:bg-gray-100 transition-colors disabled:opacity-40" style={{ borderColor: theme.border }}>
-            إلغاء
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
@@ -304,7 +310,7 @@ function EditModal({
             className="px-6 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             style={{ backgroundColor: theme.primaryDark }}
           >
-            {isSaving ? "جارٍ الحفظ..." : "حفظ التعديلات"}
+            {isSaving ? t("common.saving") : t("editModal.save")}
           </button>
         </div>
       </div>
@@ -324,7 +330,12 @@ function PackageCard({
   onDelete: (pkg: Package) => void;
   onViewPrivileges: (pkg: Package) => void;
 }) {
+  const { t, i18n } = useTranslation("PackageManagementPage");
+  const isRTL = i18n.language === "ar";
   const privCount = pkg.privileges?.length ?? 0;
+  
+  const mainName = isRTL ? (pkg.name_ar || pkg.name_en) : pkg.name_en;
+  const secondaryName = isRTL ? (pkg.name_en && pkg.name_en !== pkg.name_ar ? pkg.name_en : null) : (pkg.name_ar && pkg.name_ar !== pkg.name_en ? pkg.name_ar : null);
 
   return (
     <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden" style={{ borderColor: theme.border }}>
@@ -334,14 +345,14 @@ function PackageCard({
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${theme.accentBlue}15` }}>
               <ShieldCheck className="w-5 h-5" style={{ color: theme.accentBlue }} />
             </div>
-            <div className="min-w-0">
-              <p className="font-bold text-gray-900 text-base leading-tight truncate">{pkg.name_en}</p>
-              {pkg.name_ar && pkg.name_ar !== pkg.name_en && (
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{pkg.name_ar}</p>
+            <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+              <p className="font-bold text-gray-900 text-base leading-tight truncate" dir="auto">{mainName}</p>
+              {secondaryName && (
+                <p className="text-xs text-gray-400 mt-0.5 truncate" dir="auto">{secondaryName}</p>
               )}
               <span className="inline-block mt-1 text-[11px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-500">{pkg.code}</span>
               {pkg.description && (
-                <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-2">{pkg.description}</p>
+                <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-2" dir="auto">{pkg.description}</p>
               )}
             </div>
           </div>
@@ -350,7 +361,7 @@ function PackageCard({
               onClick={() => onEdit(pkg)}
               className="w-8 h-8 rounded-lg flex items-center justify-center border text-gray-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all"
               style={{ borderColor: theme.border }}
-              title="تعديل"
+              title={t("card.editTooltip")}
             >
               <Pencil className="w-4 h-4" />
             </button>
@@ -358,14 +369,13 @@ function PackageCard({
               onClick={() => onDelete(pkg)}
               className="w-8 h-8 rounded-lg flex items-center justify-center border text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all"
               style={{ borderColor: theme.border }}
-              title="حذف"
+              title={t("card.deleteTooltip")}
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Privilege count pill → click to open modal */}
         <div className="mt-4 pt-4 border-t flex items-center justify-between" style={{ borderColor: theme.border }}>
           {privCount > 0 ? (
             <button
@@ -378,10 +388,10 @@ function PackageCard({
               }}
             >
               <Eye className="w-3.5 h-3.5" />
-              عرض {privCount} صلاحية
+              {t("card.viewPrivileges", { count: privCount })}
             </button>
           ) : (
-            <span className="text-xs text-gray-400">لا توجد صلاحيات مرتبطة</span>
+            <span className="text-xs text-gray-400">{t("card.noPrivileges")}</span>
           )}
         </div>
       </div>
@@ -393,6 +403,8 @@ function PackageCard({
 export default function PackageManagementPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, i18n } = useTranslation("PackageManagementPage");
+  const isRTL = i18n.language === "ar";
 
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
@@ -411,7 +423,6 @@ export default function PackageManagementPage() {
         ? res.data.data
         : Array.isArray(res.data) ? res.data : [];
 
-      // Fetch privileges for each package in parallel
       const withPrivileges = await Promise.all(
         data.map(async (pkg) => {
           try {
@@ -427,7 +438,7 @@ export default function PackageManagementPage() {
       );
       setPackages(withPrivileges);
     } catch {
-      toast({ title: "خطأ", description: "تعذر تحميل الباقات", variant: "destructive" });
+      toast({ title: t("toast.errorTitle"), description: t("toast.loadError"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -443,11 +454,11 @@ export default function PackageManagementPage() {
         name_ar: name,
         description: description || undefined,
       });
-      toast({ title: "تم التعديل", description: "تم تحديث الباقة بنجاح" });
+      toast({ title: t("toast.editSuccessTitle"), description: t("toast.editSuccessDesc") });
       setEditTarget(null);
       void fetchPackages();
     } catch {
-      toast({ title: "خطأ", description: "تعذر تعديل الباقة", variant: "destructive" });
+      toast({ title: t("toast.errorTitle"), description: t("toast.editError"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -458,20 +469,19 @@ export default function PackageManagementPage() {
     setIsDeleting(true);
     try {
       await api.delete(`/staff/packages/${deleteTarget.id}`);
-      toast({ title: "تم الحذف", description: "تم حذف الباقة بنجاح" });
+      toast({ title: t("toast.deleteSuccessTitle"), description: t("toast.deleteSuccessDesc") });
       setDeleteTarget(null);
       void fetchPackages();
     } catch {
-      toast({ title: "خطأ", description: "تعذر حذف الباقة", variant: "destructive" });
+      toast({ title: t("toast.errorTitle"), description: t("toast.deleteError"), variant: "destructive" });
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <div className="min-h-screen" dir="rtl" style={{ backgroundColor: theme.background }}>
+    <div className="min-h-screen" dir={isRTL ? "rtl" : "ltr"} style={{ backgroundColor: theme.background }}>
 
-      {/* Modals */}
       {viewTarget && (
         <PrivilegesModal pkg={viewTarget} onClose={() => setViewTarget(null)} />
       )}
@@ -492,12 +502,11 @@ export default function PackageManagementPage() {
         />
       )}
 
-      {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: theme.border }}>
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: theme.primaryDark }}>إدارة باقات الصلاحيات</h1>
+        <div className={isRTL ? "text-right" : "text-left"}>
+          <h1 className="text-xl font-bold" style={{ color: theme.primaryDark }}>{t("page.title")}</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            {loading ? "جارٍ التحميل..." : `${packages.length} باقة`}
+            {loading ? t("page.loading") : t("page.packageCount", { count: packages.length })}
           </p>
         </div>
         <button
@@ -506,11 +515,10 @@ export default function PackageManagementPage() {
           style={{ backgroundColor: theme.primaryDark }}
         >
           <Plus className="w-4 h-4" />
-          إضافة باقة جديدة
+          {t("page.addNew")}
         </button>
       </div>
 
-      {/* Content */}
       <div className="p-6">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -523,15 +531,15 @@ export default function PackageManagementPage() {
             <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: `${theme.accentBlue}15` }}>
               <ShieldCheck className="w-8 h-8" style={{ color: theme.accentBlue }} />
             </div>
-            <h2 className="text-lg font-bold text-gray-700 mb-2">لا توجد باقات بعد</h2>
-            <p className="text-sm text-gray-400 mb-6">ابدأ بإنشاء أول باقة صلاحيات للموظفين</p>
+            <h2 className="text-lg font-bold text-gray-700 mb-2">{t("page.emptyStateTitle")}</h2>
+            <p className="text-sm text-gray-400 mb-6">{t("page.emptyStateDesc")}</p>
             <button
               onClick={() => navigate("/staff/dashboard/admin/privilege-packages")}
               className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white shadow-md"
               style={{ backgroundColor: theme.primaryDark }}
             >
               <Plus className="w-4 h-4" />
-              إنشاء باقة
+              {t("page.createPackage")}
             </button>
           </div>
         ) : (

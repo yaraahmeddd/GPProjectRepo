@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { CloudUpload, Search, Image as ImageIcon, Video, FileText, Edit2, Trash2, Calendar, Plus, UploadCloud, AlertTriangle, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { CustomDatePicker } from '../Component/StaffPagesComponents/ui/CustomDatePicker';
+import { useTranslation } from "react-i18next";
 
 interface MediaPost {
     id: string;
@@ -15,6 +16,20 @@ interface MediaPost {
 
 const BACKEND_URL = "http://localhost:3000";
 
+const getCategoryTranslation = (cat: string, t: any) => {
+    const map: Record<string, string> = {
+        "صور": "categories.photos",
+        "فيديو": "categories.video",
+        "فعاليات": "categories.activities",
+        "عرض ترويجي": "categories.promotions",
+        "حدث": "categories.events",
+        "إعلان": "categories.ads",
+        "أخبار": "categories.news",
+        "الصيانة": "categories.maintenance"
+    };
+    return t(map[cat] || cat);
+};
+
 // --- Create/Edit Modal Component ---
 interface CreateMediaModalProps {
     isOpen: boolean;
@@ -24,6 +39,9 @@ interface CreateMediaModalProps {
 }
 
 const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, onSuccess, editPost }) => {
+    const { t, i18n } = useTranslation("MediaManagerPage");
+    const isRTL = i18n.language === 'ar';
+
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -54,7 +72,6 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                 category: editPost.category,
                 date: formattedDate
             });
-            // Handle existing image (take only the first one if multiple exist)
             setExistingImages(editPost.images && editPost.images.length > 0 ? [editPost.images[0]] : []);
             setUploadedImages([]);
             setPreviewImages([]);
@@ -81,7 +98,6 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
             setPreviewImages(prev => [...prev, ...imageUrls]);
             setErrors(prev => ({ ...prev, media: undefined }));
         }
-        // Reset input value so the same files can be selected again if needed
         e.target.value = '';
     };
 
@@ -96,12 +112,12 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
 
     const handleSubmit = async () => {
         const newErrors: { title?: string; media?: string } = {};
-        if (!formData.title.trim()) newErrors.title = 'العنوان مطلوب';
+        if (!formData.title.trim()) newErrors.title = t("errors.titleRequired");
         if (formData.category !== 'فيديو' && uploadedImages.length === 0 && existingImages.length === 0) {
-            newErrors.media = 'يجب تحميل صورة واحدة على الأقل';
+            newErrors.media = t("errors.imageRequired");
         }
         if (formData.category === 'فيديو' && !videoUrl.trim() && !videoFile) {
-            newErrors.media = 'يجب إدخال رابط الفيديو أو رفع ملف';
+            newErrors.media = t("errors.videoRequired");
         }
 
         if (Object.keys(newErrors).length > 0) {
@@ -118,11 +134,9 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
             data.append('date', formData.date);
             data.append('videoUrl', videoUrl);
 
-            // Append all uploaded images
             uploadedImages.forEach(file => data.append('images', file));
 
             if (editPost) {
-                // Append all existing images to keep them
                 existingImages.forEach(img => data.append('existingImages', img));
                 await api.put(`/media-posts/${editPost.id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
             } else {
@@ -133,7 +147,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
             onClose();
         } catch (error) {
             console.error('Failed to save media post:', error);
-            alert('فشل في حفظ المنشور');
+            alert(t("errors.saveFailed"));
         } finally {
             setIsSubmitting(false);
         }
@@ -142,18 +156,17 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
     const combinedImages = [...existingImages.map(img => img.startsWith('http') ? img : `${BACKEND_URL}/${img}`), ...previewImages];
 
     return (
-        <div className="fixed inset-0 z-[100] overflow-y-auto p-4 sm:p-6" dir="rtl">
+        <div className="fixed inset-0 z-[100] overflow-y-auto p-4 sm:p-6" dir={isRTL ? "rtl" : "ltr"}>
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
 
             <div className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-auto my-8 flex flex-col font-['Cairo']">
                 
-                {/* Header matching the image layout */}
                 <div className="p-8 pb-4">
                     <h2 className="text-3xl font-bold text-gray-900 mb-1">
-                        {editPost ? 'تعديل المنشور' : 'إضافة وسائط جديدة'}
+                        {editPost ? t("createModal.editTitle") : t("createModal.createTitle")}
                     </h2>
                     <p className="text-gray-500 text-[0.95rem]">
-                        {editPost ? 'قم بتحديث بيانات ملف الوسائط.' : 'قم برفع وإعداد ملف الوسائط الجديد للمكتبة.'}
+                        {editPost ? t("createModal.editSubtitle") : t("createModal.createSubtitle")}
                     </p>
                 </div>
 
@@ -161,8 +174,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                     <div className="border border-gray-200 rounded-xl p-6 lg:p-8">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
                             
-                            {/* Right Side (Upload Box) - RTL so it's on the right */}
-                            <div className="lg:col-span-5 flex flex-col">
+                            <div className={`lg:col-span-5 flex flex-col ${isRTL ? "order-last lg:order-first" : ""}`}>
                                 {formData.category !== 'فيديو' ? (
                                     <>
                                         {combinedImages.length > 0 ? (
@@ -185,7 +197,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                                                     }}
                                                                     className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
                                                                 >
-                                                                    <Trash2 size={14} /> حذف
+                                                                    <Trash2 size={14} /> {t("createModal.removeBtn")}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -208,22 +220,23 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                                                     }}
                                                                     className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
                                                                 >
-                                                                    <Trash2 size={14} /> حذف
+                                                                    <Trash2 size={14} /> {t("createModal.removeBtn")}
                                                                 </button>
                                                             </div>
-                                                            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-md">جديد</div>
+                                                            <div className={`absolute top-2 ${isRTL ? "right-2" : "left-2"} bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-md`}>
+                                                                {t("createModal.newBadge")}
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                                 
-                                                {/* Add More Images Button */}
                                                 <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-[#2596be] transition-all group bg-white p-6">
                                                     <div className="flex flex-col items-center justify-center text-center">
                                                         <div className="w-12 h-12 bg-[#2596be] rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-md">
                                                             <Plus size={20} className="text-white" />
                                                         </div>
-                                                        <h3 className="text-sm font-bold text-gray-900">إضافة صور</h3>
-                                                        <p className="text-xs text-gray-500">انقر أو اسحب لإضافة المزيد</p>
+                                                        <h3 className="text-sm font-bold text-gray-900">{t("createModal.addImages")}</h3>
+                                                        <p className="text-xs text-gray-500">{t("createModal.clickOrDrag")}</p>
                                                     </div>
                                                     <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
                                                 </label>
@@ -234,9 +247,9 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                                     <div className="w-16 h-16 bg-[#2596be] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-md">
                                                         <UploadCloud size={28} className="text-white" />
                                                     </div>
-                                                    <h3 className="text-lg font-bold text-gray-900 mb-1">انقر للرفع</h3>
-                                                    <p className="text-sm text-gray-500 mb-4">أو قم بسحب وإفلات الملفات هنا</p>
-                                                    <p className="text-xs text-gray-400 font-medium">JPG, PNG حتى 2 جيجابايت - يمكن تحميل عدة صور</p>
+                                                    <h3 className="text-lg font-bold text-gray-900 mb-1">{t("createModal.clickToUpload")}</h3>
+                                                    <p className="text-sm text-gray-500 mb-4">{t("createModal.orDragAndDrop")}</p>
+                                                    <p className="text-xs text-gray-400 font-medium" dir="ltr">{t("createModal.supportedFormats")}</p>
                                                 </div>
                                                 <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
                                             </label>
@@ -244,59 +257,60 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                     </>
                                 ) : (
                                     <div className="flex flex-col justify-center h-full space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                                        <label className="block text-sm font-bold text-gray-700">رابط الفيديو (YouTube/Vimeo)</label>
+                                        <label className="block text-sm font-bold text-gray-700">{t("createModal.videoUrlLabel")}</label>
                                         <input
                                             type="text"
                                             value={videoUrl}
                                             onChange={(e) => setVideoUrl(e.target.value)}
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#2596be] focus:ring-2 focus:ring-[#2596be]/20"
                                             placeholder="https://..."
+                                            dir="ltr"
                                         />
                                         <div className="text-center relative py-2">
-                                            <span className="bg-gray-50 px-3 relative z-10 text-xs font-bold text-gray-400">أو رفع ملف</span>
+                                            <span className="bg-gray-50 px-3 relative z-10 text-xs font-bold text-gray-400">{t("createModal.orUploadFile")}</span>
                                             <div className="absolute top-1/2 inset-x-0 h-px bg-gray-200"></div>
                                         </div>
-                                        <input type="file" accept="video/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setVideoFile(file); setErrors(prev => ({ ...prev, media: undefined })); } }} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[#2596be]/10 file:text-[#2596be] hover:file:bg-[#2596be]/20 transition-all cursor-pointer" />
+                                        <input type="file" accept="video/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setVideoFile(file); setErrors(prev => ({ ...prev, media: undefined })); } }} className={`w-full text-sm text-gray-500 file:${isRTL ? 'ml-4' : 'mr-4'} file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[#2596be]/10 file:text-[#2596be] hover:file:bg-[#2596be]/20 transition-all cursor-pointer`} />
                                     </div>
                                 )}
                                 {errors.media && <p className="mt-2 text-sm text-red-500 font-medium">{errors.media}</p>}
                             </div>
-
-                            {/* Left Side (Form Fields) */}
+                            
                             <div className="lg:col-span-7 flex flex-col space-y-6">
                                 
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-2">العنوان <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-bold text-gray-900 mb-2">{t("createModal.titleLabel")}</label>
                                     <input
                                         type="text"
                                         value={formData.title}
                                         onChange={(e) => { setFormData(prev => ({ ...prev, title: e.target.value })); setErrors(prev => ({ ...prev, title: undefined })); }}
                                         className={`w-full px-4 py-3 bg-white border ${errors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg outline-none focus:border-[#2596be] focus:ring-2 focus:ring-[#2596be]/20 transition-all`}
-                                        placeholder="أدخل عنوان الوسائط"
+                                        placeholder={t("createModal.titlePlaceholder")}
+                                        dir="auto"
                                     />
                                     {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-900 mb-2">الفئة <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">{t("createModal.categoryLabel")}</label>
                                         <select
                                             value={formData.category}
                                             onChange={(e) => { setFormData(prev => ({ ...prev, category: e.target.value as any })); setUploadedImages([]); setPreviewImages([]); setErrors({}); }}
                                             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg outline-none focus:border-[#2596be] focus:ring-2 focus:ring-[#2596be]/20 transition-all appearance-none"
                                         >
-                                            <option value="صور">صور</option>
-                                            <option value="فيديو">فيديو</option>
-                                            <option value="فعاليات">فعاليات</option>
-                                            <option value="عرض ترويجي">عرض ترويجي</option>
-                                            <option value="حدث">حدث</option>
-                                            <option value="إعلان">إعلان</option>
-                                            <option value="أخبار">أخبار</option>
-                                            <option value="الصيانة">الصيانة</option>
+                                            <option value="صور">{t("categories.photos")}</option>
+                                            <option value="فيديو">{t("categories.video")}</option>
+                                            <option value="فعاليات">{t("categories.activities")}</option>
+                                            <option value="عرض ترويجي">{t("categories.promotions")}</option>
+                                            <option value="حدث">{t("categories.events")}</option>
+                                            <option value="إعلان">{t("categories.ads")}</option>
+                                            <option value="أخبار">{t("categories.news")}</option>
+                                            <option value="الصيانة">{t("categories.maintenance")}</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-900 mb-2">التاريخ</label>
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">{t("createModal.dateLabel")}</label>
                                         <CustomDatePicker 
                                             value={formData.date}
                                             onChange={(date) => setFormData(prev => ({ ...prev, date }))}
@@ -305,24 +319,24 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-2">الوصف</label>
+                                    <label className="block text-sm font-bold text-gray-900 mb-2">{t("createModal.descLabel")}</label>
                                     <textarea
                                         value={formData.description}
                                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                         rows={4}
                                         className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg outline-none focus:border-[#2596be] focus:ring-2 focus:ring-[#2596be]/20 transition-all resize-none"
-                                        placeholder="وصف إضافي (اختياري)..."
+                                        placeholder={t("createModal.descPlaceholder")}
+                                        dir="auto"
                                     />
                                 </div>
                                 
-                                {/* Action Buttons at bottom right of form area */}
                                 <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
                                     <button
                                         type="button"
                                         onClick={onClose}
                                         className="px-5 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors"
                                     >
-                                        إلغاء
+                                        {t("createModal.cancelBtn")}
                                     </button>
                                     <button
                                         type="button"
@@ -331,7 +345,7 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
                                         className="px-6 py-2 bg-[#2596be] text-white font-bold rounded-lg hover:bg-[#1e7a9c] transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {isSubmitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                                        حفظ الوسائط
+                                        {t("createModal.saveBtn")}
                                     </button>
                                 </div>
                             </div>
@@ -346,29 +360,44 @@ const CreateMediaModal: React.FC<CreateMediaModalProps> = ({ isOpen, onClose, on
 
 // --- View Media Modal Component ---
 const MediaViewModal: React.FC<{ post: MediaPost | null; onClose: () => void }> = ({ post, onClose }) => {
+    const { t, i18n } = useTranslation("MediaManagerPage");
+    const isRTL = i18n.language === 'ar';
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    // Reset index when post changes
     useEffect(() => { setCurrentIndex(0); }, [post]);
 
     if (!post) return null;
 
     const images = post.images?.map(img => img.startsWith('http') ? img : `${BACKEND_URL}/${img}`) || [];
 
+    const formatDateStr = (dateStr: string) => {
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return new Intl.DateTimeFormat(isRTL ? 'ar-EG' : 'en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }).format(date);
+        } catch {
+            return dateStr;
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-0 lg:p-8 font-['Cairo']" dir="rtl">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-0 lg:p-8 font-['Cairo']" dir={isRTL ? "rtl" : "ltr"}>
             <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-sm animate-fade-in-down" onClick={onClose} />
 
             <div className="relative max-w-7xl w-full h-full lg:h-auto lg:max-h-[95vh] flex flex-col items-center justify-center animate-fade-in-up select-none">
                 <button
                     onClick={onClose}
-                    className="absolute top-6 left-6 w-12 h-12 rounded-full bg-slate-800/50 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all z-50 shadow-2xl ring-1 ring-white/10"
+                    className={`absolute top-6 ${isRTL ? "left-6" : "right-6"} w-12 h-12 rounded-full bg-slate-800/50 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all z-50 shadow-2xl ring-1 ring-white/10`}
                 >
                     <X size={24} />
                 </button>
 
-                <div className="w-full flex-1 flex flex-col lg:flex-row bg-slate-900 overflow-hidden lg:rounded-3xl shadow-2xl ring-1 ring-white/5">
-                    {/* Media Display Area */}
+                <div className={`w-full flex-1 flex flex-col ${isRTL ? 'lg:flex-row' : 'lg:flex-row-reverse'} bg-slate-900 overflow-hidden lg:rounded-3xl shadow-2xl ring-1 ring-white/5`}>
+                    
                     <div className="flex-1 relative flex items-center justify-center bg-black min-h-[40vh] lg:min-h-0">
                         {post.category === 'فيديو' && post.videoUrl ? (
                             <iframe
@@ -400,7 +429,7 @@ const MediaViewModal: React.FC<{ post: MediaPost | null; onClose: () => void }> 
                                             <ChevronRight size={32} />
                                         </button>
                                         <div className="absolute bottom-10 inset-x-0 flex justify-center">
-                                            <div className="bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full text-sm text-white font-black tracking-widest shadow-2xl ring-1 ring-white/20">
+                                            <div className="bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full text-sm text-white font-black tracking-widest shadow-2xl ring-1 ring-white/20" dir="ltr">
                                                 {currentIndex + 1} / {images.length}
                                             </div>
                                         </div>
@@ -410,32 +439,31 @@ const MediaViewModal: React.FC<{ post: MediaPost | null; onClose: () => void }> 
                         )}
                     </div>
 
-                    {/* Content Sidebar */}
-                    <div className="w-full lg:w-[400px] bg-white p-8 lg:p-10 flex flex-col justify-between overflow-y-auto text-right">
+                    <div className={`w-full lg:w-[400px] bg-white p-8 lg:p-10 flex flex-col justify-between overflow-y-auto ${isRTL ? "text-right" : "text-left"}`}>
                         <div>
                             <div className="flex items-center gap-3 mb-6">
                                 <span className="bg-[#2596be]/10 text-[#2596be] px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-[#2596be]/30">
-                                    {post.category}
+                                    {getCategoryTranslation(post.category, t)}
                                 </span>
                                 <div className="h-px bg-slate-100 flex-1"></div>
                             </div>
                             <h3 className="text-3xl font-black text-slate-800 mb-6 leading-tight">
                                 {post.title}
                             </h3>
-                            <p className="text-slate-500 mb-8 leading-relaxed text-lg font-medium">
-                                {post.description || 'لا يوجد وصف متاح لهذا المنشور.'}
+                            <p className="text-slate-500 mb-8 leading-relaxed text-lg font-medium whitespace-pre-line" dir="auto">
+                                {post.description || t("viewModal.noDescription")}
                             </p>
                         </div>
 
                         <div className="pt-8 border-t border-slate-100 space-y-4">
                             <div className="flex items-center gap-3 text-slate-400 font-bold">
                                 <Calendar size={18} />
-                                <span>تم النشر في: {post.date ? new Date(post.date).toLocaleDateString('ar-EG') : ''}</span>
+                                <span>{t("viewModal.publishedAt", { date: post.date ? formatDateStr(post.date) : '' })}</span>
                             </div>
                             {images.length > 0 && post.category !== 'فيديو' && (
                                 <div className="flex items-center gap-3 text-slate-400 font-bold">
                                     <ImageIcon size={18} />
-                                    <span>يتضمن {images.length} صور عالية الجودة</span>
+                                    <span>{t("viewModal.includesImages", { count: images.length })}</span>
                                 </div>
                             )}
                         </div>
@@ -448,18 +476,19 @@ const MediaViewModal: React.FC<{ post: MediaPost | null; onClose: () => void }> 
 
 // --- Main Page Component ---
 const MediaManagerPage: React.FC = () => {
+    const { t, i18n } = useTranslation("MediaManagerPage");
+    const isRTL = i18n.language === 'ar';
+
     const [posts, setPosts] = useState<MediaPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPost, setEditingPost] = useState<MediaPost | null>(null);
     const [viewingPost, setViewingPost] = useState<MediaPost | null>(null);
     
-    // Delete Confirmation State
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     
@@ -488,11 +517,11 @@ const MediaManagerPage: React.FC = () => {
         setIsDeleting(true);
         try {
             await api.delete(`/media-posts/${deleteConfirmId}`);
-            fetchPosts(); // Refresh list
+            fetchPosts();
             setDeleteConfirmId(null);
         } catch (error) {
             console.error('Failed to delete post:', error);
-            alert('حدث خطأ أثناء الحذف');
+            alert(t("mainPage.deleteError"));
         } finally {
             setIsDeleting(false);
         }
@@ -511,11 +540,11 @@ const MediaManagerPage: React.FC = () => {
     };
 
     const filters = [
-        { id: 'all', label: 'الكل' },
-        { id: 'صور', label: 'صور' },
-        { id: 'فيديو', label: 'فيديو' },
-        { id: 'فعاليات', label: 'فعاليات' },
-        { id: 'أخبار', label: 'أخبار' }
+        { id: 'all', label: t("mainPage.filters.all") },
+        { id: 'صور', label: t("mainPage.filters.photos") },
+        { id: 'فيديو', label: t("mainPage.filters.video") },
+        { id: 'فعاليات', label: t("mainPage.filters.activities") },
+        { id: 'أخبار', label: t("mainPage.filters.news") }
     ];
 
     const filteredPosts = posts.filter(post => {
@@ -539,7 +568,7 @@ const MediaManagerPage: React.FC = () => {
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) return dateStr;
-            return new Intl.DateTimeFormat('ar-EG', {
+            return new Intl.DateTimeFormat(isRTL ? 'ar-EG' : 'en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
@@ -550,7 +579,7 @@ const MediaManagerPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8f9fa] text-gray-900 font-['Cairo'] pb-24" dir="rtl">
+        <div className="min-h-screen bg-[#f8f9fa] text-gray-900 font-['Cairo'] pb-24" dir={isRTL ? "rtl" : "ltr"}>
             <style dangerouslySetInnerHTML={{__html: `
                 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
                 
@@ -572,14 +601,13 @@ const MediaManagerPage: React.FC = () => {
             
             <div className="max-w-7xl mx-auto px-6 py-8 md:px-12 md:py-10">
                 
-                {/* Header */}
                 <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12 animate-fade-in-down">
-                    <div>
+                    <div className={isRTL ? "text-right" : "text-left"}>
                         <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">
-                            إدارة الوسائط
+                            {t("mainPage.pageTitle")}
                         </h1>
                         <p className="text-[0.95rem] text-gray-500 font-medium">
-                            إدارة وتنظيم ملفات الوسائط الخاصة بناديك.
+                            {t("mainPage.pageSubtitle")}
                         </p>
                     </div>
                     
@@ -588,31 +616,27 @@ const MediaManagerPage: React.FC = () => {
                         className="flex items-center justify-center gap-3 bg-[#2596be] hover:bg-[#1e7a9c] text-white rounded-md px-6 py-3 w-full sm:w-auto transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5"
                     >
                         <CloudUpload size={20} />
-                        <span className="font-medium text-base">رفع وسائط</span>
+                        <span className="font-medium text-base">{t("mainPage.uploadMediaBtn")}</span>
                     </button>
                 </header>
 
-                {/* Controls Bar (Search & Filter) */}
-                <div className="bg-white p-2 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row justify-between items-center gap-4 mb-12 animate-fade-in-up">
+                <div className={`bg-white p-2 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row justify-between items-center gap-4 mb-12 animate-fade-in-up ${isRTL ? "md:flex-row" : "md:flex-row-reverse"}`}>
                     
-                    {/* Search */}
                     <div className="relative w-full md:max-w-[400px] flex items-center px-4">
-                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                        <div className={`absolute inset-y-0 ${isRTL ? "right-4" : "left-4"} flex items-center pointer-events-none`}>
                             <Search size={20} className="text-gray-500" />
                         </div>
                         <input
                             type="text"
-                            placeholder="البحث في الملفات..."
+                            placeholder={t("mainPage.searchPlaceholder")}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pr-10 pl-4 py-3 bg-transparent text-[0.95rem] text-gray-900 focus:outline-none placeholder:text-gray-400"
+                            className={`w-full ${isRTL ? "pr-10 pl-4" : "pl-10 pr-4"} py-3 bg-transparent text-[0.95rem] text-gray-900 focus:outline-none placeholder:text-gray-400`}
                         />
                     </div>
 
-                    {/* Divider for desktop */}
                     <div className="hidden md:block w-px h-8 bg-gray-200"></div>
 
-                    {/* Filters */}
                     <div className="flex overflow-x-auto w-full md:w-auto px-2 pb-2 md:pb-0 gap-1 hide-scrollbar">
                         {filters.map((filter) => (
                             <button 
@@ -630,7 +654,6 @@ const MediaManagerPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Media Grid */}
                 {loading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
                         {[...Array(8)].map((_, i) => (
@@ -646,8 +669,8 @@ const MediaManagerPage: React.FC = () => {
                 ) : filteredPosts.length === 0 ? (
                     <div className="text-center py-32 flex flex-col items-center">
                         <ImageIcon size={48} className="text-gray-300 mb-4" />
-                        <h2 className="text-xl font-bold text-gray-900 mb-1">لا توجد وسائط</h2>
-                        <p className="text-gray-500 text-sm">عد لاحقاً أو جرب تعديل بحثك.</p>
+                        <h2 className="text-xl font-bold text-gray-900 mb-1">{t("mainPage.noMediaTitle")}</h2>
+                        <p className="text-gray-500 text-sm">{t("mainPage.noMediaDesc")}</p>
                     </div>
                 ) : (
                     <>
@@ -661,8 +684,6 @@ const MediaManagerPage: React.FC = () => {
                                         className="bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-400 group relative flex flex-col cursor-pointer"
                                         style={{ animation: `fadeInUp 0.5s ease-out ${index * 0.05}s both` }}
                                     >
-                                        
-                                        {/* Media Wrapper */}
                                         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 flex items-center justify-center">
                                             {imgUrl ? (
                                                 <img 
@@ -674,20 +695,17 @@ const MediaManagerPage: React.FC = () => {
                                                 <ImageIcon size={48} className="text-gray-300" />
                                             )}
                                             
-                                            {/* Badge */}
-                                            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 z-20">
+                                            <div className={`absolute top-4 ${isRTL ? "right-4" : "left-4"} bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 z-20`}>
                                                 {getIconForCategory(post.category)}
-                                                <span className="text-xs font-semibold text-gray-900 uppercase">{post.category}</span>
+                                                <span className="text-xs font-semibold text-gray-900 uppercase">{getCategoryTranslation(post.category, t)}</span>
                                             </div>
 
-                                            {/* Gradient Overlay for Actions */}
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400 z-10 pointer-events-none"></div>
 
-                                            {/* Hover Actions (Edit & Delete) */}
-                                            <div className="absolute bottom-4 left-4 flex gap-2 z-20">
+                                            <div className={`absolute bottom-4 ${isRTL ? "left-4" : "right-4"} flex gap-2 z-20`}>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); setEditingPost(post); setIsModalOpen(true); }}
-                                                    title="تعديل"
+                                                    title={t("createModal.editTitle")}
                                                     className="w-9 h-9 rounded-full bg-white text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-all duration-300 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
                                                     style={{ transitionDelay: '0.05s' }}
                                                 >
@@ -695,7 +713,7 @@ const MediaManagerPage: React.FC = () => {
                                                 </button>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(post.id); }}
-                                                    title="حذف"
+                                                    title={t("createModal.removeBtn")}
                                                     className="w-9 h-9 rounded-full bg-rose-600 text-white hover:bg-rose-700 flex items-center justify-center transition-all duration-300 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 shadow-sm"
                                                     style={{ transitionDelay: '0.1s' }}
                                                 >
@@ -704,34 +722,31 @@ const MediaManagerPage: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Card Info */}
-                                        <div className="p-5 border-t border-gray-200">
-                                            <h3 className="text-[1.05rem] font-semibold text-gray-900 mb-1.5 truncate">
+                                        <div className={`p-5 border-t border-gray-200 ${isRTL ? "text-right" : "text-left"}`}>
+                                            <h3 className="text-[1.05rem] font-semibold text-gray-900 mb-1.5 truncate" dir="auto">
                                                 {post.title}
                                             </h3>
-                                            <div className="flex items-center gap-1.5 text-gray-500 text-[0.8rem]">
+                                            <div className={`flex items-center gap-1.5 text-gray-500 text-[0.8rem] ${isRTL ? "justify-start" : "justify-start"}`}>
                                                 <Calendar size={14} />
                                                 <time>{formatDate(post.date)}</time>
                                             </div>
                                         </div>
-
                                     </article>
                                 );
                             })}
                         </div>
                         
-                        {/* Pagination Controls */}
                         {totalPages > 1 && (
-                            <div className="flex justify-center items-center gap-2 mt-8">
+                            <div className={`flex justify-center items-center gap-2 mt-8 ${isRTL ? 'flex-row' : 'flex-row'}`}>
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
                                     className="px-4 py-2 rounded-md font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                                 >
-                                    السابق
+                                    {t("mainPage.prevPage")}
                                 </button>
                                 
-                                <div className="flex gap-1">
+                                <div className="flex gap-1" dir="ltr">
                                     {[...Array(totalPages)].map((_, i) => (
                                         <button
                                             key={i}
@@ -752,7 +767,7 @@ const MediaManagerPage: React.FC = () => {
                                     disabled={currentPage === totalPages}
                                     className="px-4 py-2 rounded-md font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                                 >
-                                    التالي
+                                    {t("mainPage.nextPage")}
                                 </button>
                             </div>
                         )}
@@ -760,7 +775,6 @@ const MediaManagerPage: React.FC = () => {
                 )}
             </div>
 
-            {/* Modal Injection */}
             <CreateMediaModal 
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -773,9 +787,8 @@ const MediaManagerPage: React.FC = () => {
                 onClose={() => setViewingPost(null)}
             />
 
-            {/* Delete Confirmation Modal */}
             {deleteConfirmId && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" dir="rtl">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" dir={isRTL ? "rtl" : "ltr"}>
                     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => !isDeleting && setDeleteConfirmId(null)} />
                     
                     <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-auto flex flex-col overflow-hidden font-['Cairo'] animate-fade-in-up">
@@ -783,9 +796,9 @@ const MediaManagerPage: React.FC = () => {
                             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 shadow-inner">
                                 <AlertTriangle size={28} className="text-red-500" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">تأكيد الحذف</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">{t("deleteModal.confirmTitle")}</h3>
                             <p className="text-gray-500 text-[0.95rem]">
-                                هل أنت متأكد أنك تريد حذف هذه الوسائط؟ لا يمكن التراجع عن هذا الإجراء.
+                                {t("deleteModal.confirmDesc")}
                             </p>
                         </div>
                         <div className="p-6 pt-0 flex gap-3">
@@ -794,7 +807,7 @@ const MediaManagerPage: React.FC = () => {
                                 disabled={isDeleting}
                                 className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-colors"
                             >
-                                إلغاء
+                                {t("deleteModal.cancelBtn")}
                             </button>
                             <button 
                                 onClick={confirmDelete}
@@ -802,7 +815,7 @@ const MediaManagerPage: React.FC = () => {
                                 className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors flex justify-center items-center gap-2 shadow-sm"
                             >
                                 {isDeleting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                                نعم، احذف
+                                {t("deleteModal.confirmBtn")}
                             </button>
                         </div>
                     </div>
