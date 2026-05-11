@@ -342,7 +342,7 @@ const App = () => {
         return (
           <>
             {/* Hero Section */}
-            <section className="relative h-[85vh] min-h-[600px] flex items-center overflow-hidden">
+            <section className="relative h-[72vh] sm:h-[85vh] min-h-[520px] sm:min-h-[600px] flex items-center overflow-hidden">
               <div className="absolute inset-0 z-0">
                 <img
                   src={asset("Exposure 1.png")}
@@ -352,17 +352,17 @@ const App = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e1c38]/90 via-[#0e1c38]/60 to-transparent" />
               </div>
 
-              <div className="container mx-auto px-6 relative z-10 pt-20">
+              <div className="container mx-auto px-4 sm:px-6 relative z-10 pt-16 sm:pt-20">
                 <div className="max-w-3xl text-white text-start">
-                  <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight -mt-6">
+                  <h1 className="text-3xl sm:text-4xl md:text-7xl font-black mb-4 sm:mb-6 leading-tight mt-0">
                     {t("hero.title", "نادي جامعة العاصمة")}<br />
-                    <span className="text-[#f8941c] text-3xl md:text-4xl font-bold" style={{ letterSpacing: '0.05em' }}>{t("hero.subtitle", "روح المنافسة.. طاقة المستقبل ")}</span>
+                    <span className="text-[#f8941c] text-2xl sm:text-3xl md:text-4xl font-bold" style={{ letterSpacing: '0.03em' }}>{t("hero.subtitle", "روح المنافسة.. طاقة المستقبل ")}</span>
                   </h1>
-                  <p className="text-lg md:text-xl mb-10 text-gray-200 font-normal leading-relaxed max-w-xl">
+                  <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-gray-200 font-normal leading-relaxed max-w-xl">
                     {t("hero.description", "انضم لأكبر مجتمع رياضي جامعي بمرافق حديثة، مدربين محترفين، وبرامج تناسب كل المستويات، وتجهيزات عالمية لخدمة أكثر من 5000 عضو.")}
                   </p>
                   <div className="flex flex-wrap gap-4">
-                    <button onClick={() => window.location.href = '/re'} className="bg-[#f8941c] hover:bg-[#e07d10] text-white px-8 py-4 rounded-full transition-all duration-300 hover:-translate-y-1 font-bold text-lg flex items-center gap-2">
+                    <button onClick={() => window.location.href = '/re'} className="bg-[#f8941c] hover:bg-[#e07d10] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full transition-all duration-300 hover:-translate-y-1 font-bold text-base sm:text-lg flex items-center gap-2">
                       {t("auth.register", "سجل الآن")} <ArrowRight className="w-5 h-5 rtl:rotate-180" />
                     </button>
                     {/* <button onClick={() => setActiveTab("sports")} className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-8 py-4 rounded-full transition-all duration-300 border border-white/30 font-bold text-lg hover:border-white/60">
@@ -731,26 +731,26 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={i18n.dir()}>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden" dir={i18n.dir()}>
       {/* Sticky Glass Header */}
       <header
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
-          ? "bg-white/80 backdrop-blur-md border-b border-white/20 shadow-lg py-1"
-          : "bg-white py-1.5"
-          }`}
+          ? "bg-white/90 backdrop-blur-md border-b border-white/30 shadow-md"
+          : "bg-white"
+          } py-1.5`}
       >
-        <div className="w-full px-6 md:px-12 lg:px-16">
+        <div className="w-full px-2 sm:px-4 md:px-12 lg:px-16">
           <div className="flex items-center justify-between">
 
             {/* 1. Logo & Brand (Left Side in RTL) */}
             <div
-              className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 cursor-pointer me-2 sm:me-6"
+              className="flex flex-row items-center gap-1 sm:gap-3 cursor-pointer"
               onClick={() => handleTabChange("home")}
             >
-              <div className="flex w-16 h-16 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
+              <div className="flex w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
                 <img src={HUCLogo} alt={t("common.club_name", "نادي جامعه العاصمة")} className="w-full h-full object-contain" />
               </div>
-              <div className="flex w-16 h-16 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
+              <div className="flex w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
                 <img src={CapuniLogo} alt={t("common.capuni", "كاب يوني")} className="w-full h-full object-contain" />
               </div>
               {/* <div className="hidden md:block">
@@ -789,7 +789,7 @@ const App = () => {
             </nav>
 
             {/* 3. Actions (Right Side in RTL) */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
 
               {/* Language Switcher */}
               <div className="relative">
@@ -913,31 +913,31 @@ const App = () => {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[60] bg-[#0e1c38] text-white p-6 animate-fade-in flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <span className="font-bold text-xl text-[#f8941c]">{t("nav.menu", "القائمة")}</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+        <div className="fixed inset-0 z-[60] bg-[#0e1c38] text-white p-4 sm:p-6 animate-fade-in flex flex-col overflow-y-auto">
+          <div className="flex justify-between items-center mb-5">
+            <span className="font-extrabold text-2xl text-[#f8941c]">{t("nav.menu", "القائمة")}</span>
+            <button onClick={() => setMobileMenuOpen(false)} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Mobile Language Switcher */}
-          <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl mb-8">
+          <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl mb-6 border border-white/10">
             <button
               onClick={() => { i18n.changeLanguage('ar'); }}
-              className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('ar') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('ar') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
             >
               <EgFlagIcon className="w-5 h-3.5 rounded-sm" /> AR
             </button>
             <button
               onClick={() => { i18n.changeLanguage('en'); }}
-              className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('en') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl font-bold transition-all ${i18n.language.startsWith('en') ? 'bg-[#f8941c] text-white shadow-md' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
             >
               <GbFlagIcon className="w-5 h-3.5 rounded-sm" /> EN
             </button>
           </div>
 
-          <nav className="flex flex-col gap-2 flex-1">
+          <nav className="flex flex-col gap-2.5 flex-1">
             {[
               { key: "home", label: t("nav.home", "الرئيسية") },
               { key: "clubs", label: t("nav.clubs", "الفروع") },
@@ -949,7 +949,7 @@ const App = () => {
               <button
                 key={item.key}
                 onClick={() => { handleTabChange(item.key); setMobileMenuOpen(false); }}
-                className={`w-full text-start py-4 px-4 rounded-xl font-bold text-lg transition-all ${activeTab === item.key ? "bg-[#f8941c] text-white" : "hover:bg-white/5 text-gray-300"
+                className={`w-full text-start py-3.5 px-4 rounded-xl font-bold text-xl transition-all ${activeTab === item.key ? "bg-[#f8941c] text-white shadow-md" : "bg-white/5 hover:bg-white/10 text-gray-200"
                   }`}
               >
                 {item.label}
@@ -1071,3 +1071,5 @@ const App = () => {
 };
 
 export default App;
+
+
