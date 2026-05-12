@@ -39,6 +39,28 @@ router.post('/change-credentials', authenticate, (req, res) =>
 );
 
 /**
+ * POST /auth/forgot-password
+ * 
+ * Generate reset token and send via email
+ * Body: { email }
+ */
+router.post('/forgot-password', (req, res) =>
+  AuthController.forgotPassword(req, res)
+);
+
+/**
+ * POST /auth/reset-password
+ * 
+ * Reset password using email and national ID
+ * 
+ * Body: { email, national_id, new_password }
+ * Returns: Success message
+ */
+router.post('/reset-password', (req, res) =>
+  AuthController.resetPassword(req, res)
+);
+
+/**
  * GET /auth/me
  * 
  * Get current logged-in user's information

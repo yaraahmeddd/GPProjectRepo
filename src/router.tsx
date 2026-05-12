@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 const Landingpage = lazy(() => import('./Page/Landingpage'));
 const Login = lazy(() => import('./Page/Login'));
 const Register = lazy(() => import('./Page/Register'));
+const ResetPassword = lazy(() => import('./Page/ResetPassword'));
 const IdentityVerification = lazy(() => import('./Page/IdentityVerification'));
 const DocumentUpload = lazy(() => import('./Page/DocumentUpload'));
 const Dashboard = lazy(() => import('./Page/Dashboard'));
@@ -41,6 +42,7 @@ const Router: React.FC = () => {
           <Routes>
             <Route path="/" element={<Landingpage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify" element={<IdentityVerification />} />
             <Route path="/identity-verification" element={<IdentityVerification />} />

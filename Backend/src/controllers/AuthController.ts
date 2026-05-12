@@ -7,7 +7,9 @@ import { TeamMember } from '../entities/TeamMember';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { Repository } from 'typeorm';
+import crypto from 'crypto';
 import PrivilegeCalculationService from '../services/PrivilegeCalculationService';
+import EmailService from '../services/EmailService';
 import { AuditLogService } from '../services/AuditLogService';
 
 /**
@@ -599,6 +601,117 @@ export class AuthController {
         message: 'Error changing credentials',
         error: errorMessage,
       });
+    }
+  }
+
+  /**
+   * POST /auth/forgot-password
+   * Generate token and send reset link
+   */
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json({ success: false, message: 'Email is required' });
+        return;
+      }
+
+      const account = await this.accountRepository.findOne({ where: { email } });
+      
+      if (!account) {
+        res.status(404).json({ success: false, message: 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني' });
+        return;
+      }
+
+      // Generate token
+      const token = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Set token and expiry (1 hour)
+      account.reset_password_token = hashedToken;
+      account.reset_password_expires = new Date(Date.now() + 60 * 60 * 1000);
+      await this.accountRepository.save(account);
+
+      // Create reset URL
+      const origin = req.headers.origin || 'http://localhost:5173';
+      const resetUrl = `${origin}/reset-password?token=${token}`;
+
+      // Send email
+      await EmailService.sendPasswordResetEmail(account.email, resetUrl);
+
+      // Audit Log
+      await this.auditLogService.createLog({
+        userName: account.email,
+        role: account.role || 'Unknown',
+        action: 'Forgot Password',
+        module: 'Auth',
+        description: `Password reset link requested for ${account.email}`,
+        status: 'نجح',
+        dateTime: new Date(),
+        ipAddress: req.ip || '0.0.0.0'
+      });
+
+      res.status(200).json({ success: true, message: 'If an account exists, a reset link was sent' });
+    } catch (error: Error | unknown) {
+      console.error('Error in forgotPassword:', error);
+      res.status(500).json({ success: false, message: 'Failed to process request' });
+    }
+  }
+
+  /**
+   * POST /auth/reset-password
+   * Reset password using token
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, new_password } = req.body;
+
+      if (!token || !new_password) {
+        res.status(400).json({ success: false, message: 'Token and new password are required' });
+        return;
+      }
+
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Find account with valid token
+      const account = await this.accountRepository.findOne({
+        where: { reset_password_token: hashedToken }
+      });
+
+      if (!account || !account.reset_password_expires || account.reset_password_expires < new Date()) {
+        res.status(400).json({ success: false, message: 'Token is invalid or has expired' });
+        return;
+      }
+
+      // Update password
+      account.password = await bcrypt.hash(new_password, 10);
+      account.password_changed_at = new Date();
+      account.reset_password_token = null;
+      account.reset_password_expires = null;
+      
+      if (account.status === 'pending') {
+        account.status = 'active';
+      }
+      
+      await this.accountRepository.save(account);
+
+      // Audit Log
+      await this.auditLogService.createLog({
+        userName: account.email,
+        role: account.role || 'Unknown',
+        action: 'Reset Password',
+        module: 'Auth',
+        description: `Password reset successfully via token for ${account.email}`,
+        status: 'نجح',
+        dateTime: new Date(),
+        ipAddress: req.ip || '0.0.0.0'
+      });
+
+      res.status(200).json({ success: true, message: 'Password reset successfully' });
+    } catch (error: Error | unknown) {
+      console.error('Error in resetPassword:', error);
+      res.status(500).json({ success: false, message: 'Failed to reset password' });
     }
   }
 

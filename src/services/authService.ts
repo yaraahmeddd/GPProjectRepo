@@ -147,6 +147,22 @@ export const AuthService = {
     },
 
     /**
+     * Request a password reset email
+     */
+    forgotPassword: async (data: { email: string }) => {
+        const response = await api.post('/auth/forgot-password', data);
+        return response.data;
+    },
+
+    /**
+     * Reset password using token from email
+     */
+    resetPassword: async (data: { token: string; new_password: string }) => {
+        const response = await api.post('/auth/reset-password', data);
+        return response.data;
+    },
+
+    /**
      * Logout - clear stored authentication data
      */
     logout: () => {

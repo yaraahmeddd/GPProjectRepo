@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,9 @@ const Login: React.FC = () => {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loginType, setLoginType] = useState<'email' | 'national_id' | null>(null);
-
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotData, setForgotData] = useState({ email: '', national_id: '', new_password: '', confirm_password: '' });
+  const [successMessage, setSuccessMessage] = useState('');
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % BG_IMAGES.length);
@@ -136,6 +138,46 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({ email: '', password: '', api: '' });
+    setSuccessMessage('');
+
+    if (!forgotData.email) {
+      setErrors((prev) => ({ ...prev, api: tr('البريد الإلكتروني مطلوب', 'Email is required') }));
+      return;
+    }
+
+    if (!validateEmail(forgotData.email)) {
+      setErrors((prev) => ({ ...prev, api: tr('البريد الإلكتروني غير صحيح', 'Please enter a valid email address') }));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await AuthService.forgotPassword({
+        email: forgotData.email,
+      });
+
+      if (response.success) {
+        setSuccessMessage(tr('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني بنجاح.', 'A reset link has been successfully sent to your email.'));
+        setForgotData({ email: '', national_id: '', new_password: '', confirm_password: '' });
+        setTimeout(() => {
+          setIsForgotPassword(false);
+          setSuccessMessage('');
+        }, 5000);
+      }
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        (error instanceof Error ? error.message : tr('حدث خطأ. يرجى المحاولة مرة أخرى.', 'An error occurred. Please try again.'));
+      setErrors((prev) => ({ ...prev, api: errorMessage }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const redirectBasedOnRole = (user: UserInfo) => {
     const role = String(user.role || '').toUpperCase();
     const memberType = String(user.member_type || '').toUpperCase();
@@ -212,9 +254,22 @@ const Login: React.FC = () => {
               <img src={HUCLogo} alt={tr('نادي جامعة حلوان', 'Helwan University Club')} className="w-20 h-20 object-contain" />
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">{tr('مرحبًا بك من جديد', 'Welcome Back')}</h1>
-            <p className="text-gray-600 mb-10 text-sm md:text-base">{tr('سجل دخولك للمتابعة', 'Sign in to continue')}</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">
+              {isForgotPassword ? tr('إعادة تعيين كلمة المرور', 'Reset Password') : tr('مرحبًا بك من جديد', 'Welcome Back')}
+            </h1>
+            <p className="text-gray-600 mb-10 text-sm md:text-base">
+              {isForgotPassword ? tr('أدخل بياناتك لإعادة تعيين كلمة المرور', 'Enter your details to reset your password') : tr('سجل دخولك للمتابعة', 'Sign in to continue')}
+            </p>
           </div>
+
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
+              <div className="flex items-center gap-2 text-green-600">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-medium">{successMessage}</span>
+              </div>
+            </div>
+          )}
 
           {errors.api && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
@@ -225,100 +280,154 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          <div onKeyPress={handleKeyPress}>
-            <div className="mb-5">
-              <label htmlFor="email" className="block text-base md:text-lg text-gray-700 mb-2 font-medium">
-                {tr('البريد الإلكتروني أو الرقم القومي', 'Email or National ID')}
-              </label>
-              <div className="relative">
-                <input
-                  id="email"
-                  type={loginType === 'national_id' ? 'tel' : 'email'}
-                  dir="ltr"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  onBlur={() => handleBlur('email')}
-                  placeholder={loginType === 'national_id' ? '12345678901234' : 'example@email.com'}
-                  autoFocus
-                  maxLength={loginType === 'national_id' ? 14 : undefined}
-                  inputMode={loginType === 'national_id' ? 'numeric' : 'email'}
-                  className={`w-full text-left border ${errors.email && touched.email ? 'border-red-500' : 'border-gray-200'} rounded-2xl py-4 md:py-5 pr-5 pl-12 text-base md:text-lg focus:outline-none focus:ring-2 ${errors.email && touched.email ? 'focus:ring-red-500' : 'focus:ring-[#2596be]'} focus:border-transparent transition-all`}
-                />
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          {isForgotPassword ? (
+            <div onKeyPress={(e) => { if (e.key === 'Enter') handleForgotSubmit(e as any); }}>
+              <div className="mb-8">
+                <label className="block text-base md:text-lg text-gray-700 mb-2 font-medium">
+                  {tr('البريد الإلكتروني', 'Email')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    dir="ltr"
+                    value={forgotData.email}
+                    onChange={(e) => setForgotData({ ...forgotData, email: e.target.value })}
+                    placeholder="example@email.com"
+                    className="w-full text-left border border-gray-200 rounded-2xl py-4 md:py-5 pr-5 pl-12 text-base md:text-lg focus:outline-none focus:ring-2 focus:ring-[#2596be] focus:border-transparent transition-all"
+                  />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                </div>
               </div>
 
-              {errors.email && touched.email && (
-                <div className="flex items-center gap-1 mt-2 text-red-500 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{errors.email}</span>
-                </div>
-              )}
-            </div>
+              <button
+                type="button"
+                onClick={handleForgotSubmit}
+                disabled={isLoading}
+                className="w-full bg-[#2596be] hover:bg-[#1e7e9e] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 md:py-5 rounded-2xl font-bold text-lg mb-4 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {tr('جاري التحميل...', 'Loading...')}
+                  </span>
+                ) : (
+                  tr('إرسال رابط إعادة التعيين', 'Send Reset Link')
+                )}
+              </button>
 
-            <div className="mb-3">
-              <label htmlFor="password" className="block text-base md:text-lg text-gray-700 mb-2 font-medium">
-                {tr('كلمة المرور', 'Password')}
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  onBlur={() => handleBlur('password')}
-                  placeholder="••••••••"
-                  className={`w-full border ${errors.password && touched.password ? 'border-red-500' : 'border-gray-200'} rounded-2xl px-5 py-4 md:py-5 pr-12 pl-12 text-base md:text-lg focus:outline-none focus:ring-2 ${errors.password && touched.password ? 'focus:ring-red-500' : 'focus:ring-[#2596be]'} focus:border-transparent transition-all`}
-                />
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => { setIsForgotPassword(false); setErrors({ email: '', password: '', api: '' }); }}
+                className="w-full border-2 border-[#2596be] text-[#2596be] py-4 md:py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all duration-200"
+              >
+                {tr('العودة لتسجيل الدخول', 'Back to Login')}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div onKeyPress={handleKeyPress}>
+                <div className="mb-5">
+                  <label htmlFor="email" className="block text-base md:text-lg text-gray-700 mb-2 font-medium">
+                    {tr('البريد الإلكتروني أو الرقم القومي', 'Email or National ID')}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="email"
+                      type={loginType === 'national_id' ? 'tel' : 'email'}
+                      dir="ltr"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      onBlur={() => handleBlur('email')}
+                      placeholder={loginType === 'national_id' ? '12345678901234' : 'example@email.com'}
+                      autoFocus
+                      maxLength={loginType === 'national_id' ? 14 : undefined}
+                      inputMode={loginType === 'national_id' ? 'numeric' : 'email'}
+                      className={`w-full text-left border ${errors.email && touched.email ? 'border-red-500' : 'border-gray-200'} rounded-2xl py-4 md:py-5 pr-5 pl-12 text-base md:text-lg focus:outline-none focus:ring-2 ${errors.email && touched.email ? 'focus:ring-red-500' : 'focus:ring-[#2596be]'} focus:border-transparent transition-all`}
+                    />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  </div>
+
+                  {errors.email && touched.email && (
+                    <div className="flex items-center gap-1 mt-2 text-red-500 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{errors.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="password" className="block text-base md:text-lg text-gray-700 mb-2 font-medium">
+                    {tr('كلمة المرور', 'Password')}
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      onBlur={() => handleBlur('password')}
+                      placeholder="••••••••"
+                      className={`w-full text-left border ${errors.password && touched.password ? 'border-red-500' : 'border-gray-200'} rounded-2xl py-4 md:py-5 pr-12 pl-12 text-base md:text-lg focus:outline-none focus:ring-2 ${errors.password && touched.password ? 'focus:ring-red-500' : 'focus:ring-[#2596be]'} focus:border-transparent transition-all`}
+                    />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                      aria-label={showPassword ? tr('إخفاء كلمة المرور', 'Hide password') : tr('إظهار كلمة المرور', 'Show password')}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {errors.password && touched.password && (
+                    <div className="flex items-center gap-1 mt-2 text-red-500 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{errors.password}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-left mb-8" dir="ltr">
+                  <button 
+                    type="button"
+                    className="text-sm md:text-base text-[#2596be] hover:underline transition-all" 
+                    onClick={(e) => { e.preventDefault(); setIsForgotPassword(true); setErrors({ email: '', password: '', api: '' }); }}
+                  >
+                    {tr('نسيت كلمة المرور؟', 'Forgot password?')}
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                  aria-label={showPassword ? tr('إخفاء كلمة المرور', 'Hide password') : tr('إظهار كلمة المرور', 'Show password')}
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="w-full bg-[#2596be] hover:bg-[#1e7e9e] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 md:py-5 rounded-2xl font-bold text-lg mb-4 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {tr('جاري التحميل...', 'Loading...')}
+                    </span>
+                  ) : (
+                    tr('تسجيل الدخول', 'Sign In')
+                  )}
                 </button>
               </div>
-              {errors.password && touched.password && (
-                <div className="flex items-center gap-1 mt-2 text-red-500 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{errors.password}</span>
-                </div>
-              )}
-            </div>
 
-            <div className="text-left mb-8" dir="ltr">
-              <a className="text-sm md:text-base text-[#2596be] hover:underline transition-all" href="/forgot">
-                {tr('نسيت كلمة المرور؟', 'Forgot password?')}
-              </a>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="w-full bg-[#2596be] hover:bg-[#1e7e9e] disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 md:py-5 rounded-2xl font-bold text-lg mb-4 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {tr('جاري التحميل...', 'Loading...')}
-                </span>
-              ) : (
-                tr('تسجيل الدخول', 'Sign In')
-              )}
-            </button>
-          </div>
-
-          <p className="text-center text-sm md:text-base text-gray-600">
-            {tr('ليس لديك حساب؟', "Don't have an account?")}{' '}
-            <a href="/re" className="text-[#2596be] font-semibold hover:underline transition-all">
-              {tr('سجل الآن', 'Register now')}
-            </a>
-          </p>
+              <p className="text-center text-sm md:text-base text-gray-600">
+                {tr('ليس لديك حساب؟', "Don't have an account?")}{' '}
+                <a href="/re" className="text-[#2596be] font-semibold hover:underline transition-all">
+                  {tr('سجل الآن', 'Register now')}
+                </a>
+              </p>
+            </>
+          )}
         </div>
       </motion.div>
     </div>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نادي جامعة العاصمة — نظام الإدارة</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+  @page { size: 1440px 810px; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; }
+
+  .slide {
+    width: 1440px; height: 810px; position: relative; overflow: hidden;
+    page-break-after: always; display: flex;
+  }
+
+  /* ===== SLIDE 1 ===== */
+  .slide-1 { background: linear-gradient(135deg, #0e1c38 0%, #142a52 50%, #0e1c38 100%); color: #fff; }
+  .slide-1 .left { width: 45%; padding: 50px 50px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+  .slide-1 .right { width: 55%; position: relative; }
+  .slide-1 .logos { display: flex; gap: 16px; margin-bottom: 30px; align-items: center; }
+  .slide-1 .logos img { width: 64px; height: 64px; border-radius: 14px; object-fit: contain; background: #fff; padding: 4px; }
+  .slide-1 h1 { font-size: 38px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; }
+  .slide-1 h1 span { color: #f8941c; }
+  .slide-1 .tagline { color: #f8941c; font-size: 20px; font-weight: 700; margin-bottom: 24px; letter-spacing: 0.5px; }
+  .slide-1 .desc { font-size: 16px; color: #c5d0e0; line-height: 1.7; margin-bottom: 28px; }
+  .slide-1 .features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .slide-1 .feat { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; }
+  .slide-1 .feat strong { color: #2596be; font-weight: 700; }
+  .slide-1 .screenshot-stack { position: absolute; top: 30px; left: 20px; width: 95%; }
+  .slide-1 .ss1 { position: absolute; top: 0; left: 0; width: 92%; z-index: 2; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  .slide-1 .ss2 { position: absolute; top: 380px; left: 30px; width: 88%; z-index: 3; border: 2px solid rgba(37,150,190,0.4); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  .slide-1 .overlay-gradient { position: absolute; top: 0; right: 0; width: 120px; height: 100%; background: linear-gradient(to left, #0e1c38, transparent); z-index: 4; }
+  .slide-number { position: absolute; bottom: 20px; left: 30px; font-size: 15px; color: rgba(255,255,255,0.35); font-weight: 700; }
+
+  /* ===== SLIDE 2 ===== */
+  .slide-2 { background: #f5f7fb; color: #0e1c38; flex-direction: column; }
+  .slide-2 .header-bar { background: #0e1c38; padding: 20px 60px; display: flex; align-items: center; justify-content: space-between; }
+  .slide-2 .header-bar h2 { color: #fff; font-size: 28px; font-weight: 700; }
+  .slide-2 .header-bar h2 span { color: #f8941c; }
+  .slide-2 .header-bar .logos { display: flex; gap: 10px; }
+  .slide-2 .header-bar .logos img { height: 44px; width: 44px; border-radius: 10px; object-fit: contain; background: #fff; padding: 3px; }
+  .slide-2 .content { flex: 1; display: flex; gap: 28px; padding: 28px 50px; }
+  .slide-2 .card { flex: 1; background: #fff; border-radius: 18px; box-shadow: 0 4px 20px rgba(14,28,56,0.08); overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e8ecf2; }
+  .slide-2 .card-img { height: 280px; overflow: hidden; position: relative; }
+  .slide-2 .card-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .slide-2 .card-img .label { position: absolute; top: 14px; right: 14px; background: #0e1c38; color: #fff; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 8px; letter-spacing: 0.3px; }
+  .slide-2 .card-body { padding: 18px 22px; flex: 1; display: flex; flex-direction: column; }
+  .slide-2 .card-body h3 { font-size: 19px; font-weight: 700; margin-bottom: 12px; color: #0e1c38; }
+  .slide-2 .card-body ul { list-style: none; flex: 1; }
+  .slide-2 .card-body ul li { font-size: 14px; color: #4a5568; padding: 4px 0; padding-right: 20px; position: relative; line-height: 1.5; font-weight: 500; }
+  .slide-2 .card-body ul li::before { content: "✓"; position: absolute; right: 0; color: #2596be; font-weight: 700; }
+  .slide-2 .accent-bar { height: 4px; background: linear-gradient(to left, #2596be, #f8941c); }
+  .slide-2 .slide-number { color: rgba(14,28,56,0.25); }
+
+  /* ===== SLIDE 3 ===== */
+  .slide-3 { background: linear-gradient(135deg, #0e1c38 0%, #102040 100%); color: #fff; flex-direction: column; }
+  .slide-3 .header-bar { padding: 22px 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .slide-3 .header-bar h2 { font-size: 28px; font-weight: 700; }
+  .slide-3 .header-bar h2 span { color: #f8941c; }
+  .slide-3 .header-bar .logos { display: flex; gap: 10px; }
+  .slide-3 .header-bar .logos img { height: 44px; width: 44px; border-radius: 10px; object-fit: contain; background: #fff; padding: 3px; }
+  
+  .slide-3 .content-wrapper { display: flex; flex-direction: column; padding: 30px 50px; flex: 1; }
+  .slide-3 .top-section { display: flex; gap: 30px; margin-bottom: 24px; }
+  
+  .slide-3 .text-panel { flex: 0.35; display: flex; flex-direction: column; justify-content: center; }
+  .slide-3 .text-panel h3 { font-size: 24px; color: #f8941c; margin-bottom: 16px; font-weight: 700; }
+  .slide-3 .text-panel p { font-size: 15px; color: #c5d0e0; line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+  .slide-3 .text-panel ul { list-style: none; }
+  .slide-3 .text-panel ul li { font-size: 14px; margin-bottom: 10px; padding-right: 20px; position: relative; color: #fff; font-weight: 500; }
+  .slide-3 .text-panel ul li::before { content: "⚡"; position: absolute; right: 0; color: #2596be; }
+  
+  .slide-3 .admin-cards { flex: 0.65; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .slide-3 .admin-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .slide-3 .admin-card .img-container { height: 190px; overflow: hidden; border-bottom: 2px solid #2596be; }
+  .slide-3 .admin-card .img-container img { width: 100%; height: 100%; object-fit: cover; object-position: right top; }
+  .slide-3 .admin-card .caption { padding: 12px 16px; font-size: 15px; font-weight: 700; color: #fff; }
+  .slide-3 .admin-card .caption span { color: #8fa3c0; font-size: 13px; display: block; font-weight: 500; margin-top: 4px; }
+
+  .slide-3 .bottom-section { display: flex; gap: 20px; height: 260px; }
+  .slide-3 .admin-card-large { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; overflow: hidden; display: flex; }
+  .slide-3 .admin-card-large .img-container { flex: 0.6; overflow: hidden; border-left: 2px solid #2596be; }
+  .slide-3 .admin-card-large .img-container img { width: 100%; height: 100%; object-fit: cover; object-position: top right; }
+  .slide-3 .admin-card-large .info { flex: 0.4; padding: 24px; display: flex; flex-direction: column; justify-content: center; }
+  .slide-3 .admin-card-large .info h4 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .slide-3 .admin-card-large .info p { font-size: 14px; color: #8fa3c0; line-height: 1.6; margin-bottom: 16px; font-weight: 500; }
+
+</style>
+</head>
+<body>
+
+<!-- ==================== SLIDE 1 ==================== -->
+<div class="slide slide-1">
+  <div class="left">
+    <div class="logos">
+      <img src="logo.jpeg" alt="شعار النادي">
+      <img src="capuni.png" alt="جامعة العاصمة">
+    </div>
+    <h1>نادي <span>جامعة العاصمة</span></h1>
+    <div class="tagline">روح المنافسة.. طاقة المستقبل</div>
+    <p class="desc">
+      منصة إلكترونية حديثة ومتكاملة مصممة لرقمنة وتبسيط كافة جوانب عمليات النادي الرياضي — بدءاً من تفاعل الأعضاء وحتى الإدارة الداخلية للموظفين. تخدم أكثر من <strong style="color:#fff;">5,000 عضو</strong> عبر فروع متعددة.
+    </p>
+    <div class="features">
+      <div class="feat">🌐 <strong>ثنائي اللغة</strong> — دعم كامل للعربية والإنجليزية</div>
+      <div class="feat">🎨 <strong>واجهة عصرية</strong> — تصميم حديث وجذاب</div>
+      <div class="feat">🔐 <strong>آمن</strong> — صلاحيات مبنية على الأدوار (10+ أدوار)</div>
+      <div class="feat">📱 <strong>متجاوب</strong> — يعمل على الهاتف، اللوحي والكمبيوتر</div>
+      <div class="feat">⚡ <strong>وقت فعلي</strong> — تحديثات حية وإشعارات فورية</div>
+      <div class="feat">📊 <strong>إحصائيات</strong> — رسوم بيانية ولوحات بيانات</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="overlay-gradient"></div>
+    <img class="ss1" src="arabic_hero.png" alt="الصفحة الرئيسية">
+    <img class="ss2" src="arabic_branches.png" alt="استكشاف الفروع">
+  </div>
+  <div class="slide-number">01 / 03</div>
+</div>
+
+<!-- ==================== SLIDE 2 ==================== -->
+<div class="slide slide-2">
+  <div class="header-bar">
+    <h2>بوابة وخدمات <span>الأعضاء</span></h2>
+    <div class="logos">
+      <img src="logo.jpeg" alt="HUC">
+      <img src="capuni.png" alt="Capital Uni">
+    </div>
+  </div>
+  <div class="content">
+    <!-- Card 1: Sports Subscriptions -->
+    <div class="card">
+      <div class="card-img">
+        <img src="member_sport_subscription.png" alt="الاشتراك في الأكاديميات الرياضية">
+        <div class="label">الاشتراكات الرياضية</div>
+      </div>
+      <div class="accent-bar"></div>
+      <div class="card-body">
+        <h3>🏅 الاشتراك في الأكاديميات الرياضية</h3>
+        <ul>
+          <li>استكشاف الرياضات والاشتراك التفاعلي</li>
+          <li>عرض المواعيد في الوقت الفعلي واختيارها</li>
+          <li>ربط مباشر مع نظام إدارة الفرق</li>
+          <li>حساب تلقائي للرسوم والفواتير</li>
+          <li>متاح مباشرة من خلال بوابة العضو</li>
+        </ul>
+      </div>
+    </div>
+    <!-- Card 2: Court Bookings -->
+    <div class="card">
+      <div class="card-img">
+        <img src="member_court_booking.png" alt="حجز الملاعب">
+        <div class="label">حجز الملاعب</div>
+      </div>
+      <div class="accent-bar"></div>
+      <div class="card-body">
+        <h3>📅 نظام ذكي لحجز الملاعب</h3>
+        <ul>
+          <li>جدول متاح في الوقت الفعلي لجميع المرافق</li>
+          <li>تصفية حسب نوع الرياضة والملعب المحدد</li>
+          <li>اختيار فترات زمنية مع منع التضارب</li>
+          <li>إرسال دعوات حجز للأعضاء الآخرين</li>
+          <li>تأكيد فوري وتذكيرات للحجوزات</li>
+        </ul>
+      </div>
+    </div>
+    <!-- Card 3: Memberships -->
+    <div class="card">
+      <div class="card-img">
+        <img src="arabic_memberships.png" alt="تجديد العضوية">
+        <div class="label">تجديد العضويات</div>
+      </div>
+      <div class="accent-bar"></div>
+      <div class="card-body">
+        <h3>💳 الإدارة المرنة للاشتراكات</h3>
+        <ul>
+          <li>تصفح وترقية باقات العضوية المتاحة</li>
+          <li>إضافة أفراد الأسرة والتابعين بسهولة</li>
+          <li>رؤية واضحة لمميزات الباقات ومستوياتها</li>
+          <li>جاهزية لمعالجة الدفع الإلكتروني الآمن</li>
+          <li>تنبيهات التجديد التلقائية وتتبع الحالة</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-number">02 / 03</div>
+</div>
+
+<!-- ==================== SLIDE 3 ==================== -->
+<div class="slide slide-3">
+  <div class="header-bar">
+    <h2>القوة والتحكم <span>الإداري</span></h2>
+    <div class="logos">
+      <img src="logo.jpeg" alt="HUC">
+      <img src="capuni.png" alt="Capital Uni">
+    </div>
+  </div>
+  
+  <div class="content-wrapper">
+    <div class="top-section">
+      <div class="text-panel">
+        <h3>تحكم كامل للموظفين والإدارة</h3>
+        <p>تمنح لوحة تحكم الإدارة النظام القدرة على التحكم الكامل في العمليات، باستخدام بنية متطورة مصممة خصيصًا للأندية الرياضية.</p>
+        <ul>
+          <li><strong>نظام صلاحيات دقيق:</strong> تخصيص باقات صلاحيات للموظفين مع أكثر من 50 إذن مفصل.</li>
+          <li><strong>وحدات شاملة:</strong> إدارة كل شيء بدءاً من الأعضاء والرياضات وحتى الشؤون المالية.</li>
+          <li><strong>المراجعة والأمان:</strong> تتبع كل إجراء يتخذه الموظفون لتحقيق شفافية تشغيلية كاملة.</li>
+          <li><strong>إعداد ديناميكي:</strong> إضافة الرياضات، تعيين الأسعار، وفتح الملاعب بدون تغييرات برمجية.</li>
+        </ul>
+      </div>
+      
+      <div class="admin-cards">
+        <div class="admin-card">
+          <div class="img-container">
+            <img src="admin_privileges.png" alt="باقات الصلاحيات">
+          </div>
+          <div class="caption">
+            إدارة باقات الصلاحيات
+            <span>تحديد وتخصيص مجموعات أذونات شاملة لأدوار الموظفين المختلفة.</span>
+          </div>
+        </div>
+        
+        <div class="admin-card">
+          <div class="img-container">
+            <img src="admin_sports.png" alt="إدارة الرياضات">
+          </div>
+          <div class="caption">
+            إدارة الرياضات الديناميكية
+            <span>التحكم في الرياضات النشطة، تحديد الأسعار، والإشراف على اشتراكات الأعضاء.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bottom-section">
+      <div class="admin-card-large">
+        <div class="img-container">
+          <img src="admin_members.png" alt="إدارة الأعضاء">
+        </div>
+        <div class="info">
+          <h4>👥 دليل مركزي للأعضاء</h4>
+          <p>واجهة قوية للموظفين لإدارة أكثر من 5,000 عضو في النادي. تتضمن تصفية متقدمة، تتبع الحالة في الوقت الفعلي، وإجراءات سريعة.</p>
+          <ul style="list-style: none; color: #fff; font-size: 13px; margin-top: 10px; font-weight: 500;">
+            <li style="margin-bottom: 8px; padding-right: 20px; position: relative;"><span style="position: absolute; right: 0; color: #f8941c; font-weight: bold;">✓</span> الموافقة على طلبات التسجيل المعلقة</li>
+            <li style="margin-bottom: 8px; padding-right: 20px; position: relative;"><span style="position: absolute; right: 0; color: #f8941c; font-weight: bold;">✓</span> تعيين الأعضاء في الفرق الرياضية المحددة</li>
+            <li style="margin-bottom: 8px; padding-right: 20px; position: relative;"><span style="position: absolute; right: 0; color: #f8941c; font-weight: bold;">✓</span> مراقبة حالات الدفع والاشتراكات بشكل مستمر</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="slide-number">03 / 03</div>
+</div>
+
+</body>
+</html>

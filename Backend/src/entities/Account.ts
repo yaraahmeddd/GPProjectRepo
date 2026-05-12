@@ -41,6 +41,12 @@ export class Account {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  reset_password_token: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reset_password_expires: Date | null;
+
   @CreateDateColumn()
   created_at: Date;
 
