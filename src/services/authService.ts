@@ -1,4 +1,6 @@
 import api from '../api/axios';
+import axios from 'axios';
+import { BACKEND_API_BASE } from '../config/backend';
 import type { BasicInfoDTO, QuestionnaireDTO, RegistrationResponse } from '../types';
 
 export const AuthService = {
@@ -48,8 +50,32 @@ export const AuthService = {
      * Get all faculties from database
      */
     getFaculties: async () => {
-        const response = await api.get('/faculties/public/list'); // Public endpoint - no auth required
+        // Use a plain axios call (no auth interceptor) to avoid unintended 401 logout redirects on public registration flow.
+        const response = await axios.get(`${BACKEND_API_BASE}/faculties/public/list`, {
+            withCredentials: true,
+            timeout: 20000,
+        });
         return response.data;
+    },
+
+    /**
+     * Get all professions from database
+     */
+    getProfessions: async () => {
+        try {
+            const response = await axios.get(`${BACKEND_API_BASE}/professions/public/list`, {
+                withCredentials: true,
+                timeout: 20000,
+            });
+            return response.data;
+        } catch {
+            // Keep fallback plain as well to avoid firing global auth logout on registration page.
+            const fallback = await axios.get(`${BACKEND_API_BASE}/professions`, {
+                withCredentials: true,
+                timeout: 20000,
+            });
+            return fallback.data;
+        }
     },
 
     /**

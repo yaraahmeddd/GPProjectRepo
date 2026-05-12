@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { registerSchema, type RegisterFormValues } from './schemas/validation';
 import { prepareSubmissionData, debugFormData, type FileUploadMap } from './utils/submissionFactory';
@@ -29,7 +30,7 @@ const HUCLogo = "/assets/HUC logo.jpeg";
  * - Step 5: Files
  */
 const STEP_FIELDS: Record<number, readonly string[]> = {
-    0: [],                // Category — auto-advances on card click, no trigger needed
+    0: [],                // Category - auto-advances on card click, no trigger needed
     1: ['memberRole'],    // Role Selection
     2: [
         'first_name_ar', 'last_name_ar', 'first_name_en', 'last_name_en',
@@ -51,28 +52,27 @@ const STEP_FIELDS: Record<number, readonly string[]> = {
  */
 const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     const { watch } = useFormContext<RegisterFormValues>();
+    const { t, i18n } = useTranslation('registrations');
+    const isRTL = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar');
     const memberRole = watch('memberRole');
 
     // Define steps based on role
     const getSteps = () => {
         if (memberRole === 'sports_player') {
-            // Player: Category -> Role -> Basic Info -> Files (Details skipped)
             return [
-                { id: 0, label: 'الفئة' },
-                { id: 1, label: 'نوع العضوية' },
-                { id: 2, label: 'البيانات الأساسية' },
-                { id: 4, label: 'المستندات' },
-            ];
-        } else {
-            // Member: Category -> Role -> Basic Info -> Details -> Files
-            return [
-                { id: 0, label: 'الفئة' },
-                { id: 1, label: 'نوع العضوية' },
-                { id: 2, label: 'البيانات الأساسية' },
-                { id: 3, label: 'التفاصيل' },
-                { id: 4, label: 'المستندات' },
+                { id: 0, label: t('steps.category', 'الفئة') },
+                { id: 1, label: t('steps.membership_type', 'نوع العضوية') },
+                { id: 2, label: t('steps.basic_info', 'البيانات الأساسية') },
+                { id: 4, label: t('steps.documents', 'المستندات') },
             ];
         }
+        return [
+            { id: 0, label: t('steps.category', 'الفئة') },
+            { id: 1, label: t('steps.membership_type', 'نوع العضوية') },
+            { id: 2, label: t('steps.basic_info', 'البيانات الأساسية') },
+            { id: 3, label: t('steps.details', 'التفاصيل') },
+            { id: 4, label: t('steps.documents', 'المستندات') },
+        ];
     };
 
     // Map current internal step to visual progress
@@ -94,7 +94,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     const totalSteps = steps.length;
 
     return (
-        <div className="w-full max-w-3xl mx-auto mb-4" dir="rtl">
+        <div className="w-full max-w-3xl mx-auto mb-4" dir={isRTL ? "rtl" : "ltr"}>
             <div className="relative flex justify-between items-center z-0">
                 <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gray-200 -z-10 rounded-full" />
                 <motion.div
@@ -145,7 +145,7 @@ const mapToBasicDTO = (data: RegisterFormValues) => {
     };
     const membership_type_code = membershipTypeMap[data.category as string] || 'VISITOR';  // Default: VISITOR (for unmapped categories)
 
-    console.log('🗺️ mapToBasicDTO mapping:', {
+    console.log('mapToBasicDTO mapping:', {
         receivedCategory: data.category,
         mappedCode: membership_type_code,
         mapKeys: Object.keys(membershipTypeMap),
@@ -162,7 +162,7 @@ const mapToBasicDTO = (data: RegisterFormValues) => {
         phone: data.phone.trim(),
         national_id: idNumber,
         gender: data.gender,
-        nationality: data.nationality || 'مصر ى',
+        nationality: data.nationality || 'Egyptian',
         birthdate: data.dob,
         password: data.password,
         membership_type_code, // NEW: Pass membership type code to backend
@@ -170,6 +170,8 @@ const mapToBasicDTO = (data: RegisterFormValues) => {
 };
 
 export const RegisterPage = () => {
+    const { t, i18n } = useTranslation('registrations');
+    const isRTL = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar');
     const [step, setStep] = useState<number>(0); // Start at Step 0 (Role Selection)
     const [files, setFiles] = useState<FileUploadMap>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -231,7 +233,7 @@ export const RegisterPage = () => {
             password: '',
             confirmPassword: '',
             address: '',
-            nationality: 'مصرى',
+            nationality: 'Egyptian',
             nationalId: '',
             passportNumber: '',
             universityId: '',
@@ -320,7 +322,7 @@ export const RegisterPage = () => {
             // ========================================================================
             // DEBUG: Log form data at submission
             // ========================================================================
-            console.log('🎯 onSubmit - FULL FORM DATA:', {
+            console.log('onSubmit - FULL FORM DATA:', {
                 category: data.category,
                 memberRole: data.memberRole,
                 email: data.email,
@@ -330,7 +332,7 @@ export const RegisterPage = () => {
             // ========================================================================
             // DEBUG: Log files state
             // ========================================================================
-            console.log('📁 Files in state:', {
+            console.log('Files in state:', {
                 fileKeys: Object.keys(files),
                 filesWithValues: Object.entries(files)
                     .filter(([, f]) => f)
@@ -357,19 +359,19 @@ export const RegisterPage = () => {
 
             if (missingEssentialFiles.length > 0) {
                 const missingFileNames = missingEssentialFiles
-                    .map(f => {
+                    .map((f) => {
                         switch (f) {
-                            case 'photo': return 'صورة شخصية حديثة';
-                            case 'id_front': return 'صورة البطاقة (أمام)';
-                            case 'id_back': return 'صورة البطاقة (خلف)';
-                            case 'passport': return 'صورة جواز السفر';
-                            case 'medical': return 'التقرير الطبي';
+                            case 'photo': return t('files.photo', 'Recent Personal Photo');
+                            case 'id_front': return t('files.id_front', 'National ID (Front)');
+                            case 'id_back': return t('files.id_back', 'National ID (Back)');
+                            case 'passport': return t('files.passport', 'Passport Copy');
+                            case 'medical': return t('files.medical', 'Medical Report');
                             default: return f;
                         }
                     })
-                    .join('، ');
+                    .join(isRTL ? '، ' : ', ');
 
-                throw new Error(`المستندات الأساسية المطلوبة غير مرفوعة: ${missingFileNames}`);
+                throw new Error(t('validation.missing_essential_docs', { docs: missingFileNames, defaultValue: `Required essential documents are missing: ${missingFileNames}` }));
             }
 
             // Validate additional required files for team members (sports_player)
@@ -379,24 +381,19 @@ export const RegisterPage = () => {
 
                 if (missingAdditionalFiles.length > 0) {
                     const missingFileNames = missingAdditionalFiles
-                        .map(f => {
-                            switch (f) {
-                                case 'proof': return 'مستند إثبات';
-                                default: return f;
-                            }
-                        })
-                        .join('، ');
+                        .map((f) => f === 'proof' ? t('files.proof', 'Proof Document') : f)
+                        .join(isRTL ? '، ' : ', ');
 
-                    throw new Error(`المستندات الإضافية المطلوبة للاعبي الرياضة غير مرفوعة: ${missingFileNames}`);
+                    throw new Error(t('validation.missing_player_docs', { docs: missingFileNames, defaultValue: `Required additional sports-player documents are missing: ${missingFileNames}` }));
                 }
             }
 
             const basicData = mapToBasicDTO(data);
-            console.log('🔍 DEBUG: Frontend Form Data Category:', data.category);
-            console.log('🔍 DEBUG: Payload being sent to backend:', basicData);
-            console.log('🔍 DEBUG: Membership Type Code being sent:', basicData.membership_type_code);
-            console.log('🏆 Selected Sports:', data.selectedSports);
-            console.log('👤 Member Role:', data.memberRole);
+            console.log('DEBUG: Frontend Form Data Category:', data.category);
+            console.log('DEBUG: Payload being sent to backend:', basicData);
+            console.log('DEBUG: Membership Type Code being sent:', basicData.membership_type_code);
+            console.log('Selected Sports:', data.selectedSports);
+            console.log('Member Role:', data.memberRole);
 
             const basicRes = await AuthService.registerBasic(basicData);
 
@@ -412,7 +409,7 @@ export const RegisterPage = () => {
                 throw new Error('No valid ID returned from registration');
             }
 
-            console.log('✅ Basic registration successful. Role:', role, 'ID:', memberId);
+            console.log('Basic registration successful. Role:', role, 'ID:', memberId);
             // Keep member id for assignment/printing page
             localStorage.setItem('last_registered_member_id', String(memberId));
 
@@ -433,13 +430,13 @@ export const RegisterPage = () => {
             };
 
             const determineRes = await AuthService.determineMembership(determinationData);
-            console.log('✅ Membership determination successful:', determineRes.data);
+            console.log('Membership determination successful:', determineRes.data);
 
             // ========================================================================
             // TEAM MEMBER (Sports Player) Flow
             // ========================================================================
             if (data.memberRole === 'sports_player') {
-                console.log('🏃 Processing team member registration...');
+                console.log('Processing team member registration...');
 
                 // Step 1: Submit team member details (photos and address)
                 const teamMemberFormData = new FormData();
@@ -470,7 +467,7 @@ export const RegisterPage = () => {
                 }
 
                 await AuthService.submitTeamMemberDetails(teamMemberFormData);
-                console.log('✅ Team member details submitted successfully');
+                console.log('Team member details submitted successfully');
 
                 // Step 2: Select teams (map sport IDs to team names)
                 const teamNames = data.selectedSports
@@ -485,7 +482,7 @@ export const RegisterPage = () => {
                         member_id: memberId,
                         teams: teamNames,
                     });
-                    console.log('✅ Team selection submitted successfully:', teamNames);
+                    console.log('Team selection submitted successfully:', teamNames);
                 }
             }
             // ========================================================================
@@ -494,11 +491,11 @@ export const RegisterPage = () => {
             else {
                 const { endpoint, formData } = prepareSubmissionData(data, memberId, files);
 
-                console.log('📦 Submission Strategy:', { category: data.category, endpoint });
+                console.log('Submission Strategy:', { category: data.category, endpoint });
                 debugFormData(formData);
 
                 await AuthService.submitDetailedInfo(endpoint, formData);
-                console.log('✅ Detailed information submitted successfully');
+                console.log('Detailed information submitted successfully');
             }
 
             await AuthService.completeRegistration({
@@ -506,9 +503,9 @@ export const RegisterPage = () => {
                 membership_plan_code: determineRes.data?.next_step || 'FULL_ACCESS',
             });
 
-            console.log('✅ Registration completed successfully');
+            console.log('Registration completed successfully');
 
-            showToast('تم إرسال طلب العضوية بنجاح! سيتم مراجعة البيانات.', 'success');
+            showToast(t('messages.submit_success', 'Membership request submitted successfully. We will review your data.'), 'success');
 
             // Redirect to assignment page after a short delay
             setTimeout(() => {
@@ -516,9 +513,9 @@ export const RegisterPage = () => {
             }, 1500);
 
         } catch (error: unknown) {
-            console.error('❌ Registration Error:', error);
+            console.error('Registration Error:', error);
 
-            const errorMessage = error instanceof Error ? error.message : 'حدث خطأ أثناء التسجيل';
+            const errorMessage = error instanceof Error ? error.message : t('messages.submit_error', 'An error occurred during registration');
             showToast(errorMessage, 'error');
 
         } finally {
@@ -540,10 +537,10 @@ export const RegisterPage = () => {
     const renderStep = () => {
         switch (step) {
             case 0:
-                // Category Selection — shown for BOTH roles
+                // Category Selection - shown for BOTH roles
                 return <Step1Category onNext={nextStep} />;
             case 1:
-                // Role Selection (Member / Team Member) — shown for BOTH roles
+                // Role Selection (Member / Team Member) - shown for BOTH roles
                 return <Step0_RoleSelection />;
             case 2:
                 return <Step2BasicInfo onNext={nextStep} onPrev={prevStep} />;
@@ -560,8 +557,8 @@ export const RegisterPage = () => {
                         onSubmit={handleSubmit(
                             (data: RegisterFormValues) => onSubmit(data),
                             (errors) => {
-                                console.error('📋 Step 4 Form Validation Errors:', errors);
-                                showToast('يرجى التأكد من ملء جميع البيانات المطلوبة ورفع كافة المستندات', 'error');
+                                console.error('Step 4 Form Validation Errors:', errors);
+                                showToast(t('messages.complete_required_docs', 'Please complete all required fields and upload all required documents'), 'error');
                             }
                         )}
                         isSubmitting={isSubmitting}
@@ -578,7 +575,7 @@ export const RegisterPage = () => {
     const showNavButtons = step === 1; // Only Role step needs global nav (Category auto-advances on card click)
 
     return (
-        <div className="min-h-[100dvh] bg-slate-50 font-['Cairo'] text-right" dir="rtl">
+        <div className="min-h-[100dvh] bg-slate-50 font-['Cairo'] text-right" dir={isRTL ? "rtl" : "ltr"}>
             <div className="container mx-auto px-4 max-w-6xl py-2 md:py-3">
                 {/* Header with Logo and Back Button */}
                 <div className="flex items-center justify-between mb-3">
@@ -588,8 +585,8 @@ export const RegisterPage = () => {
                         className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-[#2596be] transition-colors rounded-lg hover:bg-white group"
                         type="button"
                     >
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        <span className="font-medium">العودة للرئيسية</span>
+                        <ArrowRight className={`w-5 h-5 transition-transform ${isRTL ? 'group-hover:translate-x-1' : 'rotate-180 group-hover:-translate-x-1'}`} />
+                        <span className="font-medium">{t('header.back_home', 'Back to Home')}</span>
                     </button>
 
                     {/* Logo */}
@@ -601,7 +598,7 @@ export const RegisterPage = () => {
                     >
                         <img
                             src={HUCLogo}
-                            alt="نادي جامعة حلوان"
+                            alt={t('header.logo_alt', 'Helwan University Club')}
                             className="h-16 w-auto object-contain"
                         />
                     </motion.div>
@@ -616,8 +613,8 @@ export const RegisterPage = () => {
                     <form onSubmit={handleSubmit(
                         (data: RegisterFormValues) => onSubmit(data),
                         (errors) => {
-                            console.error('📋 Form Validation Errors:', errors);
-                            showToast('يرجى التأكد من ملء جميع البيانات المطلوبة بشكل صحيح', 'error');
+                            console.error('Form Validation Errors:', errors);
+                            showToast(t('messages.complete_required_fields', 'Please ensure all required fields are correctly filled'), 'error');
                         }
                     )}>
                         <AnimatePresence mode="wait">
@@ -640,7 +637,8 @@ export const RegisterPage = () => {
                                                 }
                                             `}
                                         >
-                                            ← السابق
+                                            {isRTL ? '→ ' : '← '}
+                                            {t('actions.previous', 'Previous')}
                                         </button>
 
                                         <button
@@ -648,7 +646,8 @@ export const RegisterPage = () => {
                                             onClick={nextStep}
                                             className="px-5 py-2.5 rounded-xl bg-[#2596be] hover:bg-[#1a7a9a] text-white font-bold shadow-lg shadow-[#2596be]/20 transition-all flex items-center gap-2"
                                         >
-                                            التالي →
+                                            {t('actions.next', 'Next')}
+                                            {isRTL ? ' ←' : ' →'}
                                         </button>
                                     </div>
                                 )}
@@ -670,3 +669,4 @@ export const RegisterPage = () => {
 };
 
 export default RegisterPage;
+

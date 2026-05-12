@@ -52,6 +52,7 @@ const Router: React.FC = () => {
             <Route path="/memberportal" element={<MemberPortal />} />
             <Route path="/new" element={<NewRegister />} />
             <Route path="/re" element={<RegisterPage />} />
+            <Route path="/member/register" element={<RegisterPage />} />
             <Route path="/assignment" element={<AssignmentPage />} />
             <Route path="/form" element={<InviteMemberPage />} />
             <Route path="/invite" element={<InviteMemberPage />} />
